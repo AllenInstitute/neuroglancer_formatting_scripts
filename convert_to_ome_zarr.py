@@ -106,6 +106,7 @@ def main():
     parser.add_argument('--output_dir', type=str, default=None)
     parser.add_argument('--input_dir', type=str, default=default_input)
     parser.add_argument('--clobber', default=False, action='store_true')
+    parser.add_argument('--downscale', type=int, default=2)
     args = parser.parse_args()
 
     assert args.output_dir is not None
@@ -143,7 +144,6 @@ def main():
 
     gene_list = list(gene_to_path.keys())
     gene_list.sort()
-    downscale = 2
 
     for gene in gene_list:
         fname = gene_to_path[gene]
@@ -159,10 +159,6 @@ def main():
         y_scale = float(img.GetMetaData('pixdim[2]'))
         z_scale = float(img.GetMetaData('pixdim[3]'))
 
-        (_,
-         list_of_nx_ny) = _create_empty_pyramid(
-                              base=arr,
-                              downscale=downscale)
 
         coord_transform = [[
             {'scale': [float(x_scale),
@@ -170,12 +166,20 @@ def main():
                        float(z_scale)],
              'type': 'scale'}]]
 
-        for nxny in list_of_nx_ny:
-            this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
-                                     y_scale*arr.shape[1]/nxny[1],
-                                     z_scale],
-                           'type': 'scale'}]
-            coord_transform.append(this_coord)
+        if args.downscale > 1:
+            (_,
+             list_of_nx_ny) = _create_empty_pyramid(
+                                  base=arr,
+                                  downscale=args.downscale)
+
+            del _
+
+            for nxny in list_of_nx_ny:
+                this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
+                                         y_scale*arr.shape[1]/nxny[1],
+                                         z_scale],
+                               'type': 'scale'}]
+                coord_transform.append(this_coord)
 
         axes = [
             {"name": "x",
@@ -188,9 +192,16 @@ def main():
              "type": "space",
              "unit": "millimeter"}]
 
+        if args.downscale > 1:
+            scaler = XYScaler(
+                        method='gaussian',
+                        downscale=args.downscale)
+        else:
+            scaler = None
+
         write_image(
             image=arr,
-            scaler=XYScaler(method='gaussian'),
+            scaler=scaler,
             group=this_group,
             coordinate_transformations=coord_transform,
             axes=axes,
