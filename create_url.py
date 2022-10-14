@@ -1,88 +1,94 @@
 import argparse
+import json
+
+def get_pct_to_char():
+    result = {
+        "%20": " ",
+        "%5C": "\\",
+        "%22": '"',
+        "%2C": ",",
+        "%7B": "{",
+        "%7D": "}",
+        "%5B": "[",
+        "%5D": "]",
+        "%28": "(",
+        "%29": ")",
+        "%2A": "*",
+        "%3B": ";"
+        }
+
+    return result
+
+
+def get_char_to_pct():
+    pct_to_char = get_pct_to_char()
+    result = dict()
+    for k in pct_to_char:
+        result[pct_to_char[k]] = k
+    return result
+
+
+def url_to_json(url):
+    result = ""
+    ii = 0
+    pct_to_char = get_pct_to_char()
+    while ii < len(url):
+        if url[ii] != '%':
+            result += url[ii]
+            ii += 1
+        else:
+            pct = url[ii:ii+3]
+            print(ii,pct[ii:ii+5])
+            result += pct_to_char[pct]
+            ii += 3
+
+    return result
+
+def json_to_url(json_data):
+    char_to_pct = get_char_to_pct()
+    result = ""
+    for c in json_data:
+        if c in char_to_pct:
+            result += char_to_pct[c]
+        else:
+            result += c
+    return result
 
 def get_base_url():
-    return "https://neuroglancer-demo.appspot.com/#!%7B%22layers%22:"
+    return "https://neuroglancer-demo.appspot.com/#!"
 
-def sanitize_name(name):
-    return f"{name.replace(' ','%20')}"
-
-def add_segmentation(
-        base_url,
+def get_segmentation(
         segmentation_bucket,
-        segmentation_name='segmentation'):
-    """
-    Add a segmentation layer to the base_url. Return URL with reference to the
-    segmentation layer.
+        segmentation_name):
 
-    Parameters
-    ----------
-    base_url: str
-        The URL to which we are appending a segmentation layer
-
-    segmentation_bucket: str
-        The name of the S3 bucket containing the segmentation
-
-    segmentation_name: str
-        The name that will appear in the segmentation tab in neuroglancer
-    """
-
-    prefix = "%5B%7B%22type%22:%22segmentation%22%2C%22source%22:"
-    prefix += "%22precomputed://"
-
-    segmentation_name = sanitize_name(segmentation_name)
-
-    suffix = "%22%2C%22tab%22:%22source%22%2C%22name%22:"
-    suffix += f"%22{segmentation_name}%22%7D%5D%2C%22"
-    suffix += "selectedLayer%22:%7B%22visible%22:true%2C%22"
-    suffix += f"layer%22:%22{segmentation_name}%22"
-
-    new_url = f"{base_url}{prefix}s3://{segmentation_bucket}{suffix}"
+    return {"type": "segmentation",
+            "source": f"precomputed://s3://{segmentation_bucket}",
+            "tab": "source",
+            "name": segmentation_name}
 
 
-    return new_url
+def get_shader_code(color):
+
+    code = "#uicontrol invlerp normalized\nvoid main()"
+    code += " {\n  emitRGB(normalized()*"
+    code += "vec3("
+    code += f"{color[0]}, {color[1]}, {color[2]}"
+    code += "));\n}\n"
+    return code
 
 
-def add_mfish_layer(
-        base_url,
+def get_mfish(
         mfish_bucket,
         mfish_gene,
         mfish_color):
-    """
-    Parameters
-    ----------
-    base_url: str
-        The URL before this layer was added
 
-    mfish_bucket: str
-        Name of the bucket containing the mFISH data
-
-    mfish_gene: str
-        Name of the gene being displayed
-
-    mifish_color: (int, int, int)
-        RGB color of mfish layer
-    """
-
-    gene_name = sanitize_name(mfish_gene)
-
-    prefix = "%7D%2C%7B%22type%22:%22image%22%2C%22source%22:%22zarr://"
-
-    color_code = "%22%2C%22tab%22:%22rendering%22%2C%22shader%22:"
-    color_code += "%22#uicontrol%20invlerp%20normalized%5Cnvoid%20main%28%29%20%7B%5Cn%20%20"
-    color_code += "emitRGB%28normalized%28%29%2A"
-    color_code += f"vec3%28{mfish_color[0]}%2C%20{mfish_color[1]}%2C%20{mfish_color[2]}"
-    color_code += "%29%29%3B%5Cn%7D%5Cn%22%2C%22"
-
-    name_code = f"name%22:{gene_name}%22"
-
-    this_url = f"{prefix}s3://{mfish_bucket}/{gene_name}{color_code}{name_code}"
-    return f"{base_url}{this_url}"
-
-def add_global_suffix(base_url):
-
-    suffix = "%7D%2C%22layout%22:%224panel%22%7D"
-    new_url = f"{base_url}{suffix}"
-    return new_url
+    result = dict()
+    result["type"] = "image"
+    result["source"] = f"zarr://s3://{mfish_bucket}/{mfish_gene}",
+    result["name"] = mfish_gene
+    result["blend"] = "additive"
+    result["shader"] = get_shader_code(mfish_color)
+    return result
 
 
 def main():
@@ -102,18 +108,24 @@ def main():
 
     url = get_base_url()
 
-    url = add_segmentation(
-                base_url=url,
-                segmentation_bucket=args.segmentation_bucket,
-                segmentation_name=args.segmentation_name)
+    segmentation_layer = get_segmentation(
+                            segmentation_bucket=args.segmentation_bucket,
+                            segmentation_name="segmentation")
 
-    url = add_mfish_layer(
-                base_url=url,
-                mfish_bucket=args.mfish_bucket,
-                mfish_gene='Prox1',
-                mfish_color=(232, 6, 7))
+    mfish_layer = get_mfish(
+                    mfish_bucket=args.mfish_bucket,
+                    mfish_gene='Prox1',
+                    mfish_color=(1, 0, 0))
 
-    url = add_global_suffix(url)
+    mfish_layer2 = get_mfish(
+                    mfish_bucket=args.mfish_bucket,
+                    mfish_gene='Cpne9',
+                    mfish_color=(0, 1, 0))
+
+    layers = {"layers": [segmentation_layer, mfish_layer, mfish_layer2]}
+    layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
+    layers["layout"] = "4panel"
+    url = f"{url}{json_to_url(json.dumps(layers))}"
 
     print(url)
 
