@@ -3,6 +3,8 @@ import argparse
 def get_base_url():
     return "https://neuroglancer-demo.appspot.com/#!%7B%22layers%22:"
 
+def sanitize_name(name):
+    return f"{name.replace(' ','%20')}"
 
 def add_segmentation(
         base_url,
@@ -27,10 +29,12 @@ def add_segmentation(
     prefix = "%5B%7B%22type%22:%22segmentation%22%2C%22source%22:"
     prefix += "%22precomputed://"
 
+    segmentation_name = sanitize_name(segmentation_name)
+
     suffix = "%22%2C%22tab%22:%22source%22%2C%22name%22:"
-    suffix += f"%22{segmentation_name.replace(' ','%20')}%22%7D%5D%2C%22"
+    suffix += f"%22{segmentation_name}%22%7D%5D%2C%22"
     suffix += "selectedLayer%22:%7B%22visible%22:true%2C%22"
-    suffix += "layer%22:%22new%20layer%22"
+    suffix += f"layer%22:%22{segmentation_name}%22"
 
     new_url = f"{base_url}{prefix}s3://{segmentation_bucket}{suffix}"
 
