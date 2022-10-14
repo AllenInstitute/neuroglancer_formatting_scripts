@@ -42,6 +42,42 @@ def add_segmentation(
     return new_url
 
 
+def add_mfish_layer(
+        base_url,
+        mfish_bucket,
+        mfish_gene,
+        mfish_color):
+    """
+    Parameters
+    ----------
+    base_url: str
+        The URL before this layer was added
+
+    mfish_bucket: str
+        Name of the bucket containing the mFISH data
+
+    mfish_gene: str
+        Name of the gene being displayed
+
+    mifish_color: (int, int, int)
+        RGB color of mfish layer
+    """
+
+    gene_name = sanitize_name(mfish_gene)
+
+    prefix = "%7D%2C%7B%22type%22:%22image%22%2C%22source%22:%22zarr://"
+
+    color_code = "%22%2C%22tab%22:%22rendering%22%2C%22shader%22:"
+    color_code += "%22#uicontrol%20invlerp%20normalized%5Cnvoid%20main%28%29%20%7B%5Cn%20%20"
+    color_code += "emitRGB%28normalized%28%29%2A"
+    color_code += f"vec3%28{mfish_color[0]}%2C%20{mfish_color[1]}%2C%20{mfish_color[2]}"
+    color_code += "%29%29%3B%5Cn%7D%5Cn%22%2C%22"
+
+    name_code = f"name%22:{gene_name}%22"
+
+    this_url = f"{prefix}s3://{mfish_bucket}/{gene_name}{color_code}{name_code}"
+    return f"{base_url}{this_url}"
+
 def add_global_suffix(base_url):
 
     suffix = "%7D%2C%22layout%22:%224panel%22%7D"
@@ -58,14 +94,25 @@ def main():
     parser.add_argument('--segmentation_name',
                         type=str,
                         default='segmentation')
+    parser.add_argument('--mfish_bucket',
+                        type=str,
+                        default='mouse1-mfish-prototype')
 
     args = parser.parse_args()
 
     url = get_base_url()
+
     url = add_segmentation(
                 base_url=url,
                 segmentation_bucket=args.segmentation_bucket,
                 segmentation_name=args.segmentation_name)
+
+    url = add_mfish_layer(
+                base_url=url,
+                mfish_bucket=args.mfish_bucket,
+                mfish_gene='Prox1',
+                mfish_color=(232, 6, 7))
+
     url = add_global_suffix(url)
 
     print(url)
