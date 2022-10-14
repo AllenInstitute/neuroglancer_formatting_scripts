@@ -30,13 +30,19 @@ def add_segmentation(
     suffix = "%22%2C%22tab%22:%22source%22%2C%22name%22:"
     suffix += f"%22{segmentation_name.replace(' ','%20')}%22%7D%5D%2C%22"
     suffix += "selectedLayer%22:%7B%22visible%22:true%2C%22"
-    suffix += "layer%22:%22new%20layer%22%7D%2C%22layout%22:%224panel%22%7D"
+    suffix += "layer%22:%22new%20layer%22"
 
     new_url = f"{base_url}{prefix}s3://{segmentation_bucket}{suffix}"
 
 
     return new_url
 
+
+def add_global_suffix(base_url):
+
+    suffix = "%7D%2C%22layout%22:%224panel%22%7D"
+    new_url = f"{base_url}{suffix}"
+    return new_url
 
 
 def main():
@@ -56,6 +62,7 @@ def main():
                 base_url=url,
                 segmentation_bucket=args.segmentation_bucket,
                 segmentation_name=args.segmentation_name)
+    url = add_global_suffix(url)
 
     print(url)
 
