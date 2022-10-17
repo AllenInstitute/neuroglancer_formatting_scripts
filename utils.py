@@ -1,8 +1,70 @@
-from typing import List
+from typing import List, Any
 import numpy as np
 from ome_zarr.scale import Scaler
 from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
+from ome_zarr.writer import write_image
+
+
+def write_array_to_group(
+        arr: np.ndarray,
+        group: Any,
+        x_scale: float,
+        y_scale: float,
+        z_scale: float,
+        downscale: int = 1):
+
+    shape = arr.shape
+
+    coord_transform = [[
+        {'scale': [x_scale,
+                   y_scale,
+                   z_scale],
+         'type': 'scale'}]]
+
+    if downscale > 1:
+        (_,
+         list_of_nx_ny) = _create_empty_pyramid(
+                              base=arr,
+                              downscale=downscale)
+
+        del _
+
+        for nxny in list_of_nx_ny:
+            this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
+                                     y_scale*arr.shape[1]/nxny[1],
+                                     z_scale],
+                           'type': 'scale'}]
+            coord_transform.append(this_coord)
+
+    axes = [
+        {"name": "x",
+         "type": "space",
+         "unit": "millimeter"},
+        {"name": "y",
+         "type": "space",
+         "unit": "millimeter"},
+        {"name": "z",
+         "type": "space",
+         "unit": "millimeter"}]
+
+    if downscale > 1:
+        scaler = XYScaler(
+                   method='gaussian',
+                   downscale=downscale)
+    else:
+        scaler = None
+
+    write_image(
+        image=arr,
+        scaler=scaler,
+        group=group,
+        coordinate_transformations=coord_transform,
+        axes=axes,
+        storage_options={'chunks':(shape[0]//4,
+                                   shape[1]//4,
+                                   shape[2]//4)})
+
 
 
 def _create_empty_pyramid(base, downscale=2):

@@ -1,12 +1,11 @@
 import pathlib
 from ome_zarr.io import parse_url
-from ome_zarr.writer import write_image
 import zarr
 import numpy as np
 import SimpleITK
 import argparse
 import shutil
-from utils import _create_empty_pyramid, XYScaler
+from utils import write_array_to_group
 
 
 def gene_from_fname(fname):
@@ -69,61 +68,19 @@ def main():
 
         arr = SimpleITK.GetArrayFromImage(img)
         arr = arr.transpose(2, 1, 0)
-        shape = arr.shape
 
         x_scale = float(img.GetMetaData('pixdim[1]'))
         y_scale = float(img.GetMetaData('pixdim[2]'))
         z_scale = float(img.GetMetaData('pixdim[3]'))
 
-
-        coord_transform = [[
-            {'scale': [float(x_scale),
-                       float(y_scale),
-                       float(z_scale)],
-             'type': 'scale'}]]
-
-        if args.downscale > 1:
-            (_,
-             list_of_nx_ny) = _create_empty_pyramid(
-                                  base=arr,
-                                  downscale=args.downscale)
-
-            del _
-
-            for nxny in list_of_nx_ny:
-                this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
-                                         y_scale*arr.shape[1]/nxny[1],
-                                         z_scale],
-                               'type': 'scale'}]
-                coord_transform.append(this_coord)
-
-        axes = [
-            {"name": "x",
-             "type": "space",
-             "unit": "millimeter"},
-            {"name": "y",
-             "type": "space",
-             "unit": "millimeter"},
-            {"name": "z",
-             "type": "space",
-             "unit": "millimeter"}]
-
-        if args.downscale > 1:
-            scaler = XYScaler(
-                        method='gaussian',
-                        downscale=args.downscale)
-        else:
-            scaler = None
-
-        write_image(
-            image=arr,
-            scaler=scaler,
+        write_array_to_group(
+            arr=arr,
             group=this_group,
-            coordinate_transformations=coord_transform,
-            axes=axes,
-            storage_options={'chunks':(shape[0]//4,
-                                       shape[1]//4,
-                                       shape[2]//4)})
+            x_scale=x_scale,
+            y_scale=y_scale,
+            z_scale=z_scale,
+            downscale=args.downscale)
+
 
 if __name__ == "__main__":
     main()
