@@ -5,7 +5,7 @@ import numpy as np
 import SimpleITK
 import argparse
 import shutil
-from utils import write_array_to_group
+from data_utils import write_array_to_group
 
 
 def gene_from_fname(fname):
