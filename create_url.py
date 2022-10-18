@@ -12,7 +12,8 @@ from url_utils import (
 def get_mfish(
         mfish_bucket,
         mfish_gene,
-        mfish_color):
+        mfish_color,
+        range_max):
 
     rgb_color = get_color_lookup()[mfish_color]
     result = dict()
@@ -20,7 +21,7 @@ def get_mfish(
     result["source"] = f"zarr://s3://{mfish_bucket}/{mfish_gene}",
     result["name"] = f"{mfish_gene} ({mfish_color})"
     result["blend"] = "default"
-    result["shader"] = get_shader_code(rgb_color)
+    result["shader"] = get_shader_code(rgb_color, range_max=range_max)
     result["opacity"] = 1
     return result
 
@@ -28,7 +29,8 @@ def get_mfish(
 def get_gene_layers(
         mfish_bucket,
         gene_list,
-        color_list):
+        color_list,
+        range_max_list):
 
     with open("mouse1_gene_list.json", "rb") as in_file:
         legal_genes = set(json.load(in_file))
@@ -39,14 +41,17 @@ def get_gene_layers(
              f"{len(color_list)} colors")
 
     layers = []
-    for gene, color in zip(gene_list, color_list):
+    for gene, color, range_max in zip(gene_list,
+                                      color_list,
+                                      range_max_list):
         if gene not in legal_genes:
             raise RuntimeError(
                 f"{gene} is not a legal gene")
         layers.append(get_mfish(
                           mfish_bucket=mfish_bucket,
                           mfish_gene=gene,
-                          mfish_color=color))
+                          mfish_color=color,
+                          range_max=range_max))
     return layers
 
 def main():
@@ -69,10 +74,17 @@ def main():
                         nargs='+',
                         default=None)
 
+    parser.add_argument('--range_max',
+                        type=float,
+                        nargs='+',
+                        default=20.0)
+
     parser.add_argument('--colors',
                         type=str,
                         nargs='+',
                         default=None)
+
+
 
     args = parser.parse_args()
 
@@ -86,6 +98,15 @@ def main():
     else:
         colors = args.colors
 
+    if isinstance(args.range_max, int):
+        range_max = [args.range_max]*len(colors)
+    else:
+        range_max = args.range_max
+
+    if len(colors) != len(genes) or len(range_max) != len(genes):
+        raise RuntimeError(
+            "len mismatch")
+
     url = get_base_url()
 
     segmentation_layer = get_segmentation(
@@ -95,7 +116,8 @@ def main():
     gene_layers = get_gene_layers(
                     mfish_bucket=args.mfish_bucket,
                     gene_list=genes,
-                    color_list=colors)
+                    color_list=colors,
+                    range_max_list=range_max)
 
     layers = {"layers": gene_layers + [segmentation_layer]}
     layers["selectedLayer"] = {"visible": True, "layer": "new layer"}

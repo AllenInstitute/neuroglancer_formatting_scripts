@@ -2,14 +2,14 @@
 def get_base_url():
     return "https://neuroglancer-demo.appspot.com/#!"
 
-def get_shader_code(color, transparent=True):
+def get_shader_code(color, transparent=True, range_max=20.0):
 
     if transparent:
         default = 'emitTransparent()'
     else:
         default = 'emitRGB(vec3(0, 0, 0))'
 
-    code = "#uicontrol invlerp normalized(range=[0, 20])\n"
+    code = f"#uicontrol invlerp normalized(range=[0, {range_max}])\n"
     code += "void main()"
     code += " {\n  "
     code += "    if(getDataValue(0)>0.0){\n"
