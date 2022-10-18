@@ -24,7 +24,9 @@ def get_pct_to_char():
         "%28": "(",
         "%29": ")",
         "%2A": "*",
-        "%3B": ";"
+        "%3B": ";",
+        "%3E": ">",
+        "%3C": "<"
         }
 
     return result
@@ -48,7 +50,6 @@ def url_to_json(url):
             ii += 1
         else:
             pct = url[ii:ii+3]
-            print(ii,pct[ii:ii+5])
             result += pct_to_char[pct]
             ii += 3
 
