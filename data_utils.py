@@ -118,7 +118,7 @@ class XYScaler(Scaler):
                 results[nxny][:, :, iz] = img
 
         output = [base]
-        return output + [np.round(results[key]).astype(base.dtype)
+        return output + [results[key].astype(base.dtype)
                          for key in list_of_nx_ny]
 
 
