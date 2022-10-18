@@ -124,6 +124,10 @@ class XYScaler(Scaler):
 
     def gaussian(self, base: np.ndarray) -> List[np.ndarray]:
 
+        # I wouldn't expect this to be okay, but apparently
+        # this code never actually executes
+        raise RuntimeError("gaussian")
+
         (results,
          list_of_nx_ny) = _create_empty_pyramid(
                               base,
