@@ -75,7 +75,8 @@ def get_segmentation(
     return {"type": "segmentation",
             "source": f"precomputed://s3://{segmentation_bucket}",
             "tab": "source",
-            "name": segmentation_name}
+            "name": segmentation_name,
+            "selectedAlpha": 0.11}
 
 
 def get_shader_code(color, transparent=True):
@@ -186,7 +187,7 @@ def main():
                     gene_list=genes,
                     color_list=colors)
 
-    layers = {"layers": [segmentation_layer] + gene_layers}
+    layers = {"layers": gene_layers + [segmentation_layer]}
     layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
     layers["layout"] = "4panel"
     url = f"{url}{json_to_url(json.dumps(layers))}"
