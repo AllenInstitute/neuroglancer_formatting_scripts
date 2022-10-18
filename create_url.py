@@ -77,13 +77,23 @@ def get_segmentation(
             "name": segmentation_name}
 
 
-def get_shader_code(color):
+def get_shader_code(color, transparent=True):
+
+    if transparent:
+        default = 'emitTransparent()'
+    else:
+        default = 'emitRGB(vec3(0, 0, 0))'
 
     code = "#uicontrol invlerp normalized\nvoid main()"
-    code += " {\n  emitRGB(normalized()*"
+    code += " {\n  "
+    code += "    if(getDataValue(0)>0.0){\n"
+    code += "        emitRGB(normalized()*"
     code += "vec3("
     code += f"{color[0]}, {color[1]}, {color[2]}"
-    code += "));\n}\n"
+    code += "));\n}"
+    code += "    else{\n"
+    code += f"{default}"
+    code += ";}\n}"
     return code
 
 
@@ -97,7 +107,7 @@ def get_mfish(
     result["type"] = "image"
     result["source"] = f"zarr://s3://{mfish_bucket}/{mfish_gene}",
     result["name"] = f"{mfish_gene} ({mfish_color})"
-    result["blend"] = "additive"
+    result["blend"] = "default"
     result["shader"] = get_shader_code(rgb_color)
     result["opacity"] = 1
     return result
