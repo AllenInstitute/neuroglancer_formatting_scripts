@@ -54,6 +54,38 @@ def get_gene_layers(
                           range_max=range_max))
     return layers
 
+
+def create_mfish_url(
+       mfish_bucket,
+       genes,
+       colors,
+       range_max,
+       segmentation_bucket,
+       segmentation_name):
+
+    if len(colors) != len(genes) or len(range_max) != len(genes):
+        raise RuntimeError(
+            "len mismatch")
+
+    url = get_base_url()
+
+    segmentation_layer = get_segmentation(
+                            segmentation_bucket=segmentation_bucket,
+                            segmentation_name="segmentation")
+
+    gene_layers = get_gene_layers(
+                    mfish_bucket=mfish_bucket,
+                    gene_list=genes,
+                    color_list=colors,
+                    range_max_list=range_max)
+
+    layers = {"layers": gene_layers + [segmentation_layer]}
+    layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
+    layers["layout"] = "4panel"
+    url = f"{url}{json_to_url(json.dumps(layers))}"
+
+    return url
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -84,8 +116,6 @@ def main():
                         nargs='+',
                         default=None)
 
-
-
     args = parser.parse_args()
 
     if isinstance(args.genes, str):
@@ -103,26 +133,13 @@ def main():
     else:
         range_max = args.range_max
 
-    if len(colors) != len(genes) or len(range_max) != len(genes):
-        raise RuntimeError(
-            "len mismatch")
-
-    url = get_base_url()
-
-    segmentation_layer = get_segmentation(
-                            segmentation_bucket=args.segmentation_bucket,
-                            segmentation_name="segmentation")
-
-    gene_layers = get_gene_layers(
-                    mfish_bucket=args.mfish_bucket,
-                    gene_list=genes,
-                    color_list=colors,
-                    range_max_list=range_max)
-
-    layers = {"layers": gene_layers + [segmentation_layer]}
-    layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
-    layers["layout"] = "4panel"
-    url = f"{url}{json_to_url(json.dumps(layers))}"
+    url = create_mfish_url(
+            mfish_bucket=args.mfish_bucket,
+            genes=genes,
+            colors=colors,
+            range_max=range_max,
+            segmentation_bucket=args.segmentation_bucket,
+            segmentation_name=args.segmentation_name)
 
     print(url)
 
