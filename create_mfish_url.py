@@ -21,7 +21,9 @@ def get_mfish(
     result["source"] = f"zarr://s3://{mfish_bucket}/{mfish_gene}",
     result["name"] = f"{mfish_gene} ({mfish_color})"
     result["blend"] = "default"
-    result["shader"] = get_shader_code(rgb_color, range_max=range_max)
+    result["shader"] = get_shader_code(rgb_color,
+                                       transparent=False,
+                                       range_max=range_max)
     result["opacity"] = 1
     return result
 
