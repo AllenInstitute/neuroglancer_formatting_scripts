@@ -32,7 +32,7 @@ def get_gene_layers(
         color_list,
         range_max_list):
 
-    with open("mouse1_gene_list.json", "rb") as in_file:
+    with open("data/mouse1_gene_list.json", "rb") as in_file:
         legal_genes = set(json.load(in_file))
 
     if len(gene_list) != len(color_list):
