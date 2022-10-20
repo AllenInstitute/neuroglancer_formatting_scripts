@@ -2,3 +2,4 @@ numpy
 SimpleITK
 cloud-volume
 ome-zarr
+dominate
