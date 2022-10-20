@@ -19,7 +19,7 @@ def write_mfish_html(
         gene_list = json.load(in_file)
     gene_list.sort()
 
-    title = "Mouse1 MFISH experssion maps"
+    title = "Mouse1 MFISH expression maps"
 
     doc = dominate.document(title=title)
     doc += dominate.tags.h1(title)
