@@ -11,9 +11,11 @@ def write_mfish_html(
         output_path=None,
         gene_list_path=pathlib.Path("data/mouse1_gene_list.json"),
         mfish_bucket="mouse1-mfish-prototype",
-        segmentation_bucket="mouse1-atlas-prototype"):
+        segmentation_bucket="mouse1-atlas-prototype",
+        quantile_path="data/mouse1_gene_quantiles.json"):
 
-    
+    with open(quantile_path, 'rb') as in_file:
+        quantile_lookup = json.load(in_file)
 
     with open(gene_list_path, 'rb') as in_file:
         gene_list = json.load(in_file)
@@ -34,11 +36,12 @@ def write_mfish_html(
         with dominate.tags.table().add(dominate.tags.tbody(cls="list")) as this_table:
 
             for gene_name in gene_list:
+                range_max = quantile_lookup[gene_name]['0.9']
                 gene_url = create_mfish_url(
                                 mfish_bucket=mfish_bucket,
                                 genes=[gene_name,],
                                 colors=['green', ],
-                                range_max=[10.0, ],
+                                range_max=[range_max, ],
                                 segmentation_bucket=segmentation_bucket,
                                 segmentation_name='segmentation')
                 this_row = dominate.tags.tr()
@@ -68,7 +71,7 @@ def write_mfish_html(
 
 def main():
     html_dir = pathlib.Path('html')
-    write_mfish_html(output_path=html_dir / 'dummy.html')
+    write_mfish_html(output_path=html_dir / 'mouse1_mfish_maps.html')
 
 
 if __name__ == "__main__":
