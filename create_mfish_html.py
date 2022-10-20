@@ -17,7 +17,7 @@ def write_mfish_html(
 
     with open(gene_list_path, 'rb') as in_file:
         gene_list = json.load(in_file)
-
+    gene_list.sort()
 
     title = "Mouse1 MFISH experssion maps"
 
