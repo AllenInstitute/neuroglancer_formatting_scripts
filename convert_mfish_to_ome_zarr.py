@@ -1,11 +1,6 @@
 import pathlib
-from ome_zarr.io import parse_url
-import zarr
-import numpy as np
-import SimpleITK
 import argparse
-import shutil
-from data_utils import write_nii_to_group
+from data_utils import write_nii_file_list_to_ome_zarr
 
 
 def gene_from_fname(fname):
@@ -29,47 +24,30 @@ def main():
 
     output_dir = pathlib.Path(args.output_dir)
     input_dir = pathlib.Path(args.input_dir)
-    if output_dir.exists():
-        if not args.clobber:
-            raise RuntimeError(f"{output_dir} exists")
-        else:
-            shutil.rmtree(output_dir)
-    assert not output_dir.exists()
-    output_dir.mkdir()
-    assert output_dir.is_dir()
 
     assert input_dir.is_dir()
 
     fname_list = [n for n in input_dir.rglob('*nii.gz')]
 
-    store = parse_url(output_dir, mode="w").store
-    root_group = zarr.group(store=store)
-
     fname_list.sort()
 
-    gene_to_path = dict()
+    genes_loaded = set()
+    gene_list = []
     for fname in fname_list:
         gene = gene_from_fname(fname)
-        if gene in gene_to_path:
+        if gene in genes_loaded:
             msg = f"{gene} appears twice\n"
             msg += f"{fname}\n"
             msg += f"{gene_to_path[gene]}"
             raise RuntimeError(msg)
-        gene_to_path[gene] = fname
+        gene_list.append(gene)
 
-    gene_list = list(gene_to_path.keys())
-    gene_list.sort()
-
-    for gene in gene_list:
-        fname = gene_to_path[gene]
-
-        print(f"processing {fname.name}")
-
-        write_nii_to_group(
-            root_group=root_group,
-            group_name=gene,
-            nii_file_path=fname,
-            downscale=args.downscale)
+    write_nii_file_list_to_ome_zarr(
+        file_path_list=fname_list,
+        group_name_list=gene_list,
+        output_dir=output_dir,
+        downscale=args.downscale,
+        clobber=args.clobber)
 
 
 if __name__ == "__main__":

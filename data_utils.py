@@ -1,10 +1,57 @@
 from typing import List, Any
 import numpy as np
 import SimpleITK
+import pathlib
+import shutil
+import zarr
 from ome_zarr.scale import Scaler
+from ome_zarr.io import parse_url
 from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
 from ome_zarr.writer import write_image
+
+
+def write_nii_file_list_to_ome_zarr(
+        file_path_list,
+        group_name_list,
+        output_dir,
+        downscale=2,
+        clobber=False):
+    """
+    file_path_list -- list of paths to files to be written
+
+    group_name_list -- list of names of groups for files
+
+    output_dir -- dir for parent ome-zarr group
+
+    clobber -- if False, do not overwrite
+    """
+    if not isinstance(output_dir, pathlib.Path):
+        output_dir = pathlib.Path(output_dir)
+
+    if output_dir.exists():
+        if not clobber:
+            raise RuntimeError(f"{output_dir} exists")
+        else:
+            shutil.rmtree(output_dir)
+    assert not output_dir.exists()
+    output_dir.mkdir()
+    assert output_dir.is_dir()
+
+    store = parse_url(output_dir, mode="w").store
+    root_group = zarr.group(store=store)
+
+    if len(file_path_list) != len(group_name_list):
+        msg = f"\ngave {len(file_path_list)} file paths but\n"
+        msg += f"{len(group_name_list)} group names"
+
+    for f_path, grp_name in zip(file_path_list,
+                                group_name_list):
+        write_nii_to_group(
+            root_group=root_group,
+            group_name=grp_name,
+            nii_file_path=f_path,
+            downscale=downscale)
 
 
 def write_nii_to_group(
@@ -40,6 +87,8 @@ def write_nii_to_group(
         y_scale=y_scale,
         z_scale=z_scale,
         downscale=downscale)
+
+    print(f"wrote {nii_file_path} to {group_name}")
 
 
 def write_array_to_group(
