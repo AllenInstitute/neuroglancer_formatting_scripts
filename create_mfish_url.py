@@ -23,7 +23,7 @@ def get_template(
     result["shader"] = get_grayscale_shader_code(
                            transparent=False,
                            range_max=range_max)
-    result["opacity"] = 0.25
+    result["opacity"] = 0.4
     result["visible"] = False
     result["name"] = "template"
     return result
