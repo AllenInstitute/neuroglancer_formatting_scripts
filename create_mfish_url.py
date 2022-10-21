@@ -25,7 +25,7 @@ def get_template(
                            range_max=range_max)
     result["opacity"] = 0.4
     result["visible"] = True
-    result["name"] = "template"
+    result["name"] = "CCF template"
     return result
 
 
@@ -100,7 +100,7 @@ def create_mfish_url(
 
     segmentation_layer = get_segmentation(
                             segmentation_bucket=segmentation_bucket,
-                            segmentation_name="segmentation")
+                            segmentation_name="CCF segmentation")
 
     gene_layers = get_gene_layers(
                     mfish_bucket=mfish_bucket,
