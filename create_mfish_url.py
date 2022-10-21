@@ -109,11 +109,6 @@ def create_mfish_url(
 
     layer_list = gene_layers + [template_layer, segmentation_layer]
 
-    for layer in layer_list:
-        if "shader" in layer:
-            print(layer["shader"])
-            print("")
-
     layers = {"layers": layer_list}
     layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
     layers["layout"] = "4panel"
