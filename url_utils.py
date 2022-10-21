@@ -2,7 +2,11 @@
 def get_base_url():
     return "https://neuroglancer-demo.appspot.com/#!"
 
-def get_shader_code(color, transparent=True, range_max=20.0):
+def get_rgb_shader_code(
+        color,
+        transparent=True,
+        range_max=20.0,
+        threshold=0.0):
 
     if transparent:
         default = 'emitTransparent()'
@@ -12,11 +16,36 @@ def get_shader_code(color, transparent=True, range_max=20.0):
     code = f"#uicontrol invlerp normalized(range=[0, {range_max}])\n"
     code += "void main()"
     code += " {\n  "
-    code += "    if(getDataValue(0)>0.0){\n"
+    code += f"    if(getDataValue(0)>{threshold})"
+    code += "{\n"
     code += "        emitRGB(normalized()*"
     code += "vec3("
     code += f"{color[0]}, {color[1]}, {color[2]}"
     code += "));\n}"
+    code += "    else{\n"
+    code += f"{default}"
+    code += ";}\n}"
+    return code
+
+
+def get_grayscale_shader_code(
+        transparent=True,
+        range_max=20.0,
+        threshold=0.0):
+
+    if transparent:
+        default = 'emitTransparent()'
+    else:
+        default = 'emitRGB(vec3(0, 0, 0))'
+
+    code = f"#uicontrol invlerp normalized(range=[0,{range_max}])\n"
+    code += "void main()"
+    code += " {\n  "
+    #code += "emitGrayscale(normalized());\n}"
+    code += f"    if(getDataValue(0)>{threshold})"
+    code += "{\n"
+    code += "        emitGrayscale(normalized())"
+    code += ";\n}"
     code += "    else{\n"
     code += f"{default}"
     code += ";}\n}"
@@ -31,7 +60,7 @@ def get_segmentation(
             "source": f"precomputed://s3://{segmentation_bucket}",
             "tab": "source",
             "name": segmentation_name,
-            "selectedAlpha": 0.25}
+            "selectedAlpha": 0.15}
 
 
 def get_color_lookup():

@@ -3,10 +3,29 @@ import json
 
 from url_utils import (
     get_base_url,
-    get_shader_code,
+    get_rgb_shader_code,
+    get_grayscale_shader_code,
     get_segmentation,
     get_color_lookup,
-    json_to_url)
+    json_to_url,
+    url_to_json)
+
+
+def get_template(
+        template_bucket,
+        template_name='template',
+        range_max=700):
+
+    result = dict()
+    result["type"] = "image"
+    result["source"] = f"zarr://s3://{template_bucket}/{template_name}"
+    result["blend"] = "default"
+    result["shader"] = get_grayscale_shader_code(
+                           transparent=False,
+                           range_max=range_max)
+    result["opacity"] = 1
+    result["name"] = "template"
+    return result
 
 
 def get_mfish(
@@ -18,13 +37,13 @@ def get_mfish(
     rgb_color = get_color_lookup()[mfish_color]
     result = dict()
     result["type"] = "image"
-    result["source"] = f"zarr://s3://{mfish_bucket}/{mfish_gene}",
+    result["source"] = f"zarr://s3://{mfish_bucket}/{mfish_gene}"
     result["name"] = f"{mfish_gene} ({mfish_color})"
     result["blend"] = "default"
-    result["shader"] = get_shader_code(rgb_color,
+    result["shader"] = get_rgb_shader_code(rgb_color,
                                        transparent=False,
                                        range_max=range_max)
-    result["opacity"] = 1
+    result["opacity"] = 0.5
     return result
 
 
@@ -63,13 +82,19 @@ def create_mfish_url(
        colors,
        range_max,
        segmentation_bucket,
-       segmentation_name):
+       segmentation_name,
+       template_bucket='mouse1-template-prototype'):
 
     if len(colors) != len(genes) or len(range_max) != len(genes):
         raise RuntimeError(
             "len mismatch")
 
     url = get_base_url()
+
+    template_layer = get_template(
+                template_bucket=template_bucket,
+                template_name="template",
+                range_max=700)
 
     segmentation_layer = get_segmentation(
                             segmentation_bucket=segmentation_bucket,
@@ -81,7 +106,14 @@ def create_mfish_url(
                     color_list=colors,
                     range_max_list=range_max)
 
-    layers = {"layers": gene_layers + [segmentation_layer]}
+    layer_list = [template_layer] + gene_layers + [segmentation_layer]
+
+    for layer in layer_list:
+        if "shader" in layer:
+            print(layer["shader"])
+            print("")
+
+    layers = {"layers": layer_list}
     layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
     layers["layout"] = "4panel"
     url = f"{url}{json_to_url(json.dumps(layers))}"
@@ -142,6 +174,10 @@ def main():
             range_max=range_max,
             segmentation_bucket=args.segmentation_bucket,
             segmentation_name=args.segmentation_name)
+
+    params = url.split('#!')
+    print(url_to_json(params[1]))
+    print('')
 
     print(url)
 
