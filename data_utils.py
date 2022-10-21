@@ -26,6 +26,15 @@ def write_nii_file_list_to_ome_zarr(
 
     clobber -- if False, do not overwrite
     """
+    if not isinstance(file_path_list, list):
+        file_path_list = [file_path_list,]
+    if not isinstance(group_name_list, list):
+        group_name_list = [group_name_list,]
+
+    if len(file_path_list) != len(group_name_list):
+        msg = f"\ngave {len(file_path_list)} file paths but\n"
+        msg += f"{len(group_name_list)} group names"
+
     if not isinstance(output_dir, pathlib.Path):
         output_dir = pathlib.Path(output_dir)
 
@@ -40,10 +49,6 @@ def write_nii_file_list_to_ome_zarr(
 
     store = parse_url(output_dir, mode="w").store
     root_group = zarr.group(store=store)
-
-    if len(file_path_list) != len(group_name_list):
-        msg = f"\ngave {len(file_path_list)} file paths but\n"
-        msg += f"{len(group_name_list)} group names"
 
     for f_path, grp_name in zip(file_path_list,
                                 group_name_list):
