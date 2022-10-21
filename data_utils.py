@@ -78,12 +78,11 @@ def write_nii_to_group(
     this_group = root_group.create_group(f"{group_name}")
     img = SimpleITK.ReadImage(nii_file_path)
 
-    arr = SimpleITK.GetArrayFromImage(img)
-    arr = arr.transpose(2, 1, 0)
+    arr = get_array_from_img(img)
 
-    x_scale = float(img.GetMetaData('pixdim[1]'))
-    y_scale = float(img.GetMetaData('pixdim[2]'))
-    z_scale = float(img.GetMetaData('pixdim[3]'))
+    (x_scale,
+     y_scale,
+     z_scale) = get_scales_from_img(img)
 
     write_array_to_group(
         arr=arr,
@@ -94,6 +93,78 @@ def write_nii_to_group(
         downscale=downscale)
 
     print(f"wrote {nii_file_path} to {group_name}")
+
+def get_array_from_img(img):
+    """
+    Takes a SimpleITK img;
+    Returns numpy arry with axes transposed as we want them
+    """
+    arr = SimpleITK.GetArrayFromImage(img)
+    arr = arr.transpose(2, 1, 0)
+    return arr
+
+def get_scales_from_img(img):
+    """
+    Takes in a SimpleITK image;
+    returns (x_scale, y_scale, z_scale)
+    """
+    x_scale = float(img.GetMetaData('pixdim[1]'))
+    y_scale = float(img.GetMetaData('pixdim[2]'))
+    z_scale = float(img.GetMetaData('pixdim[3]'))
+    return (x_scale, y_scale, z_scale)
+
+
+def write_summed_array_to_group(
+        file_path_list,
+        group,
+        downscale = 2):
+    """
+    Sum the arrays in all of the files in file_path list
+    into a single array and write that to the specified group
+    """
+
+    main_array = None
+    for file_path in file_path_list:
+        img = SimpleITK.ReadImage(file_path)
+
+        this_array = get_array_from_img(img)
+
+        (this_x_scale,
+         this_y_scale,
+         this_z_scale) = get_scales_from_img(img)
+
+        if main_array is None:
+            main_array = this_array
+            x_scale = this_x_scale
+            y_scale = this_y_scale
+            z_scale = this_z_scale
+            main_pth = file_path
+            continue
+
+        if this_array.shape != main_array.shape:
+            msg = f"\n{main_path} has shape {main_array.shape}\n"
+            msg += f"{file_path} has shape {this_array.shape}\n"
+            msg += "cannot sum"
+            raise RuntimeError(msg)
+
+        if not np.allclose([x_scale, y_scale, z_scale],
+                           [this_x_scale, this_y_scale, this_z_scale]):
+            msg = f"\n{main_path} has scales ("
+            msg += f"{x_scale}, {y_scale}, {z_scale})\n"
+            msg += f"{file_path} has scales ("
+            msg += f"{this_x_scale}, {this_y_scale}, this_z_scale})\n"
+            msg += "cannot sum"
+            raise RuntimeError
+
+        main_array += this_array
+
+    write_array_to_group(
+        arr=main_array,
+        group=group,
+        x_scale=x_scale,
+        y_scale=y_scale,
+        z_scale=z_scale,
+        downscale=downscale)
 
 
 def write_array_to_group(
