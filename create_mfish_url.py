@@ -23,7 +23,8 @@ def get_template(
     result["shader"] = get_grayscale_shader_code(
                            transparent=False,
                            range_max=range_max)
-    result["opacity"] = 1
+    result["opacity"] = 0.25
+    result["visible"] = False
     result["name"] = "template"
     return result
 
@@ -43,7 +44,7 @@ def get_mfish(
     result["shader"] = get_rgb_shader_code(rgb_color,
                                        transparent=False,
                                        range_max=range_max)
-    result["opacity"] = 0.5
+    result["opacity"] = 1.0
     return result
 
 
@@ -106,7 +107,7 @@ def create_mfish_url(
                     color_list=colors,
                     range_max_list=range_max)
 
-    layer_list = [template_layer] + gene_layers + [segmentation_layer]
+    layer_list = gene_layers + [template_layer, segmentation_layer]
 
     for layer in layer_list:
         if "shader" in layer:
