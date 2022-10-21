@@ -1,9 +1,45 @@
 from typing import List, Any
 import numpy as np
+import SimpleITK
 from ome_zarr.scale import Scaler
 from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
 from ome_zarr.writer import write_image
+
+
+def write_nii_to_group(
+        root_group,
+        group_name,
+        nii_file_path,
+        downscale):
+    """
+    root_group is the ome_zarr group that the new group will
+    be a child of.
+
+    group_name is the name of the group being created for this data
+
+    nii_file_path is the path to the nii file being written
+
+    downscale is an int controlling downscaling
+    """
+
+    this_group = root_group.create_group(f"{group_name}")
+    img = SimpleITK.ReadImage(nii_file_path)
+
+    arr = SimpleITK.GetArrayFromImage(img)
+    arr = arr.transpose(2, 1, 0)
+
+    x_scale = float(img.GetMetaData('pixdim[1]'))
+    y_scale = float(img.GetMetaData('pixdim[2]'))
+    z_scale = float(img.GetMetaData('pixdim[3]'))
+
+    write_array_to_group(
+        arr=arr,
+        group=this_group,
+        x_scale=x_scale,
+        y_scale=y_scale,
+        z_scale=z_scale,
+        downscale=downscale)
 
 
 def write_array_to_group(

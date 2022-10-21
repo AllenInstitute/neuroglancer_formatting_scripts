@@ -5,7 +5,7 @@ import numpy as np
 import SimpleITK
 import argparse
 import shutil
-from data_utils import write_array_to_group
+from data_utils import write_nii_to_group
 
 
 def gene_from_fname(fname):
@@ -62,23 +62,13 @@ def main():
 
     for gene in gene_list:
         fname = gene_to_path[gene]
+
         print(f"processing {fname.name}")
-        this_group = root_group.create_group(f"{gene}")
-        img = SimpleITK.ReadImage(fname)
 
-        arr = SimpleITK.GetArrayFromImage(img)
-        arr = arr.transpose(2, 1, 0)
-
-        x_scale = float(img.GetMetaData('pixdim[1]'))
-        y_scale = float(img.GetMetaData('pixdim[2]'))
-        z_scale = float(img.GetMetaData('pixdim[3]'))
-
-        write_array_to_group(
-            arr=arr,
-            group=this_group,
-            x_scale=x_scale,
-            y_scale=y_scale,
-            z_scale=z_scale,
+        write_nii_to_group(
+            root_group=root_group,
+            group_name=gene,
+            nii_file_path=fname,
             downscale=args.downscale)
 
 
