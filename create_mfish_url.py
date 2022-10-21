@@ -24,7 +24,7 @@ def get_template(
                            transparent=False,
                            range_max=range_max)
     result["opacity"] = 0.4
-    result["visible"] = False
+    result["visible"] = True
     result["name"] = "template"
     return result
 
@@ -45,6 +45,7 @@ def get_mfish(
                                        transparent=False,
                                        range_max=range_max)
     result["opacity"] = 1.0
+    result["visible"] = True
     return result
 
 

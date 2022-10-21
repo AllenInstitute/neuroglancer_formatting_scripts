@@ -60,7 +60,8 @@ def get_segmentation(
             "source": f"precomputed://s3://{segmentation_bucket}",
             "tab": "source",
             "name": segmentation_name,
-            "selectedAlpha": 0.25}
+            "selectedAlpha": 0.25,
+            "visible": False}
 
 
 def get_color_lookup():
