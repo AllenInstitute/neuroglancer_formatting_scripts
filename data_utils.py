@@ -152,7 +152,7 @@ def write_summed_array_to_group(
             msg = f"\n{main_path} has scales ("
             msg += f"{x_scale}, {y_scale}, {z_scale})\n"
             msg += f"{file_path} has scales ("
-            msg += f"{this_x_scale}, {this_y_scale}, this_z_scale})\n"
+            msg += f"{this_x_scale}, {this_y_scale}, {this_z_scale})\n"
             msg += "cannot sum"
             raise RuntimeError
 
