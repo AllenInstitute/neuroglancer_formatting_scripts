@@ -49,6 +49,26 @@ def get_class_lookup(
     return subclass_to_clusters, class_to_clusters, valid_clusters
 
 
+def write_summed_object(
+        cluster_to_path,
+        obj_to_clusters,
+        root_group,
+        downscale=2):
+
+    key_list = list(obj_to_clusters.keys())
+    key_list.sort()
+    for key in key_list:
+        this_group = root_group.create_group(key)
+        cluster_list = obj_to_clusters[key]
+        file_path_list = [cluster_to_path[c] for c in cluster_list]
+        write_summed_nii_files_to_group(
+                file_path_list=file_path_list,
+                group=this_group,
+                downscale=downscale)
+
+        print(f"wrote group {key}")
+    return root_group
+
 def main():
 
     default_input = '/allen/programs/celltypes/workgroups/'
@@ -84,6 +104,7 @@ def main():
     fpath_list = [n for n in input_dir.rglob('*nii.gz')]
     fpath_list.sort()
     cluster_name_list = []
+    cluster_to_path = dict()
     for fpath in fpath_list:
         fname = fpath.name
         params = fname.split('_')
@@ -91,6 +112,7 @@ def main():
         cluster_name = cluster_name.replace(suffix, "")
         assert cluster_name in valid_clusters
         cluster_name_list.append(cluster_name)
+        cluster_to_path[cluster_name] = fpath
 
     root_group = write_nii_file_list_to_ome_zarr(
             file_path_list=fpath_list,
@@ -99,6 +121,17 @@ def main():
             downscale=args.downscale,
             clobber=args.clobber)
 
+    root_group = write_summed_object(
+            cluster_to_path=cluster_to_path,
+            obj_to_clusters=subclass_to_clusters,
+            root_group=root_group,
+            downscale=args.downscale)
+
+    root_group = write_summed_object(
+            cluster_to_path=cluster_to_path,
+            obj_to_clusters=class_to_clusters,
+            root_group=root_group,
+            downscale=args.downscale)
 
 if __name__ == "__main__":
     main()
