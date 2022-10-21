@@ -36,7 +36,7 @@ def write_mfish_html(
         with dominate.tags.table().add(dominate.tags.tbody(cls="list")) as this_table:
 
             for gene_name in gene_list:
-                range_max = quantile_lookup[gene_name]['0.9']
+                range_max = 10.0
                 gene_url = create_mfish_url(
                                 mfish_bucket=mfish_bucket,
                                 genes=[gene_name,],
