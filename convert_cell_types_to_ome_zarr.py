@@ -58,15 +58,18 @@ def write_summed_object(
     key_list = list(obj_to_clusters.keys())
     key_list.sort()
     for key in key_list:
-        this_group = root_group.create_group(key)
         cluster_list = obj_to_clusters[key]
-        file_path_list = [cluster_to_path[c] for c in cluster_list]
-        write_summed_nii_files_to_group(
+        file_path_list = [cluster_to_path[c] for c in cluster_list
+                          if c in cluster_to_path]
+
+        if len(file_path_list) > 0:
+            this_group = root_group.create_group(key)
+            write_summed_nii_files_to_group(
                 file_path_list=file_path_list,
                 group=this_group,
                 downscale=downscale)
 
-        print(f"wrote group {key}")
+            print(f"wrote group {key}")
     return root_group
 
 def main():
