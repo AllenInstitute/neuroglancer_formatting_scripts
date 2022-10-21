@@ -2,7 +2,7 @@ import pathlib
 import argparse
 from data_utils import (
     write_nii_file_list_to_ome_zarr,
-    write_array_to_group)
+    write_summed_nii_files_to_group)
 
 
 def sanitize_cluster_name(name):
@@ -33,10 +33,10 @@ def get_class_lookup(
         for line in in_file:
             params = line.replace('"', '').strip().split(',')
             assert len(params) == 4
-            cluster_name = sanitize_name(params[1])
+            cluster_name = sanitize_cluster_name(params[1])
             valid_clusters.add(cluster_name)
-            subclass_name = sanitize_name(params[2])
-            class_name = sanitize_name(params[3])
+            subclass_name = sanitize_cluster_name(params[2])
+            class_name = sanitize_cluster_name(params[3])
 
             if subclass_name not in subclass_to_clusters:
                 subclass_to_clusters[subclass_name] = []
@@ -75,27 +75,29 @@ def main():
 
     assert input_dir.is_dir()
 
-    fname_list = [n for n in input_dir.rglob('*nii.gz')]
+    suffix = "_AppliedWarpAllSlc.nii.gz"
 
-    fname_list.sort()
+    (subclass_to_clusters,
+     class_to_clusters,
+     valid_clusters) = get_class_lookup(args.annotation_path)
 
-    genes_loaded = set()
-    gene_list = []
-    for fname in fname_list:
-        gene = gene_from_fname(fname)
-        if gene in genes_loaded:
-            msg = f"{gene} appears twice\n"
-            msg += f"{fname}\n"
-            msg += f"{gene_to_path[gene]}"
-            raise RuntimeError(msg)
-        gene_list.append(gene)
+    fpath_list = [n for n in input_dir.rglob('*nii.gz')]
+    fpath_list.sort()
+    cluster_name_list = []
+    for fpath in fpath_list:
+        fname = fpath.name
+        params = fname.split('_')
+        cluster_name = fname.replace(f"{params[0]}_", "")
+        cluster_name = cluster_name.replace(suffix, "")
+        assert cluster_name in valid_clusters
+        cluster_name_list.append(cluster_name)
 
-    write_nii_file_list_to_ome_zarr(
-        file_path_list=fname_list,
-        group_name_list=gene_list,
-        output_dir=output_dir,
-        downscale=args.downscale,
-        clobber=args.clobber)
+    root_group = write_nii_file_list_to_ome_zarr(
+            file_path_list=fpath_list,
+            group_name_list=cluster_name_list,
+            output_dir=args.output_dir,
+            downscale=args.downscale,
+            clobber=args.clobber)
 
 
 if __name__ == "__main__":

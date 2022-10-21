@@ -25,6 +25,8 @@ def write_nii_file_list_to_ome_zarr(
     output_dir -- dir for parent ome-zarr group
 
     clobber -- if False, do not overwrite
+
+    Return the root group
     """
     if not isinstance(file_path_list, list):
         file_path_list = [file_path_list,]
@@ -57,6 +59,8 @@ def write_nii_file_list_to_ome_zarr(
             group_name=grp_name,
             nii_file_path=f_path,
             downscale=downscale)
+
+    return root_group
 
 
 def write_nii_to_group(
@@ -114,7 +118,7 @@ def get_scales_from_img(img):
     return (x_scale, y_scale, z_scale)
 
 
-def write_summed_array_to_group(
+def write_summed_nii_files_to_group(
         file_path_list,
         group,
         downscale = 2):
