@@ -3,6 +3,7 @@ import numpy as np
 import SimpleITK
 import pathlib
 import shutil
+import time
 import zarr
 import multiprocessing
 from ome_zarr.scale import Scaler
@@ -39,6 +40,7 @@ def write_nii_file_list_to_ome_zarr(
 
     Return the root group
     """
+    t0 = time.time()
     if not isinstance(file_path_list, list):
         file_path_list = [file_path_list,]
     if not isinstance(group_name_list, list):
@@ -84,6 +86,10 @@ def write_nii_file_list_to_ome_zarr(
 
     for p in process_list:
         p.join()
+
+    duration = time.time() - t0
+    if prefix is not None:
+        print(f"{prefix} took {duration:.2e} seconds")
 
     return root_group
 

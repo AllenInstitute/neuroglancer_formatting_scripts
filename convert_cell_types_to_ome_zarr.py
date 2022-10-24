@@ -60,16 +60,10 @@ def write_summed_object(
         n_processors=4,
         prefix=None):
 
-    raw_group_list = list(obj_to_clusters.keys())
-    raw_group_list.sort()
-
-    full_group_list = []
-    for group in raw_group_list:
-        cluster_list = obj_to_clusters[group]
-        file_path_list = [cluster_to_path[c] for c in cluster_list
-                          if c in cluster_to_path]
-        if len(file_path_list) > 0:
-            full_group_list.append(group)
+    t0 = time.time()
+    full_group_list = _get_valid_group_list(
+                        obj_to_clusters=obj_to_clusters,
+                        cluster_to_path=cluster_to_path)
 
     if len(full_group_list) == 0:
         return root_group
@@ -91,13 +85,14 @@ def write_summed_object(
                         'obj_to_clusters': obj_to_clusters,
                         'cluster_to_path': cluster_to_path,
                         'downscale': downscale})
-        print(f"starting {i0} {i1} {len(full_group_list)} {n_per_processor}")
         p.start()
         process_list.append(p)
 
     for p in process_list:
         p.join()
 
+    duration = time.time()-t0
+    print(f"{prefix} took {duration:.2e} seconds")
     return root_group
 
 
@@ -122,6 +117,25 @@ def _write_summed_object_worker(
                 downscale=downscale)
 
             print(f"wrote group {key}")
+
+
+def _get_valid_group_list(
+        obj_to_clusters,
+        cluster_to_path):
+    """
+    Returns list of objects that have non-zero number
+    of valid cluster files
+    """
+    raw_group_list = list(obj_to_clusters.keys())
+    raw_group_list.sort()
+    full_group_list = []
+    for group in raw_group_list:
+        cluster_list = obj_to_clusters[group]
+        file_path_list = [cluster_to_path[c] for c in cluster_list
+                          if c in cluster_to_path]
+        if len(file_path_list) > 0:
+            full_group_list.append(group)
+    return full_group_list
 
 
 def main():
@@ -170,7 +184,6 @@ def main():
         cluster_name_list.append(cluster_name)
         cluster_to_path[cluster_name] = fpath
 
-    t0 = time.time()
     root_group = write_nii_file_list_to_ome_zarr(
             file_path_list=fpath_list,
             group_name_list=cluster_name_list,
@@ -179,28 +192,20 @@ def main():
             n_processors=args.n_processors,
             clobber=args.clobber,
             prefix="clusters")
-    duration = time.time()-t0
-    print(f"clusters took {duration:.2e} seconds")
 
-    t0 = time.time()
     root_group = write_summed_object(
             cluster_to_path=cluster_to_path,
             obj_to_clusters=subclass_to_clusters,
             root_group=root_group,
             downscale=args.downscale,
             prefix="subclasses")
-    duration = time.time()-t0
-    print(f"subclasses took {duration:.2e} seconds")
 
-    t0 = time.time()
     root_group = write_summed_object(
             cluster_to_path=cluster_to_path,
             obj_to_clusters=class_to_clusters,
             root_group=root_group,
             downscale=args.downscale,
             prefix="classes")
-    duration = time.time()
-    print(f"classes took {duration:.2e} seconds")
 
 
 if __name__ == "__main__":
