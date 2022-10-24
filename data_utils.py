@@ -4,6 +4,7 @@ import SimpleITK
 import pathlib
 import shutil
 import zarr
+import multiprocessing
 from ome_zarr.scale import Scaler
 from ome_zarr.io import parse_url
 from skimage.transform import pyramid_gaussian
@@ -16,6 +17,7 @@ def write_nii_file_list_to_ome_zarr(
         group_name_list,
         output_dir,
         downscale=2,
+        n_processors=4,
         clobber=False,
         prefix=None):
     """
@@ -59,15 +61,40 @@ def write_nii_file_list_to_ome_zarr(
     else:
         parent_group = root_group
 
+    n_per_list = np.ceil(len(file_path_list)/n_processors).astype(int)
+    process_list = []
+    for i0 in range(0, len(file_path_list), n_per_list):
+        i1 = min(i0+n_per_list, len(file_path_list))
+        file_sub = file_path_list[i0:i1]
+        group_sub = group_name_list[i0:i1]
+        p = multiprocessing.Process(
+                target=_write_nii_file_list_worker,
+                kwargs={'file_path_list': file_sub,
+                        'group_name_list': group_sub,
+                        'root_group': parent_group,
+                        'downscale': downscale})
+        p.start()
+        process_list.append(p)
+
+    for p in process_list:
+        p.join()
+
+    return root_group
+
+
+def _write_nii_file_list_worker(
+        file_path_list,
+        group_name_list,
+        root_group,
+        downscale):
+
     for f_path, grp_name in zip(file_path_list,
                                 group_name_list):
         write_nii_to_group(
-            root_group=parent_group,
+            root_group=root_group,
             group_name=grp_name,
             nii_file_path=f_path,
             downscale=downscale)
-
-    return root_group
 
 
 def write_nii_to_group(
