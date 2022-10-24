@@ -1,5 +1,6 @@
 import pathlib
 import argparse
+import time
 from data_utils import (
     write_nii_file_list_to_ome_zarr,
     write_summed_nii_files_to_group)
@@ -125,6 +126,7 @@ def main():
         cluster_name_list.append(cluster_name)
         cluster_to_path[cluster_name] = fpath
 
+    t0 = time.time()
     root_group = write_nii_file_list_to_ome_zarr(
             file_path_list=fpath_list,
             group_name_list=cluster_name_list,
@@ -132,6 +134,8 @@ def main():
             downscale=args.downscale,
             clobber=args.clobber,
             prefix="clusters")
+    duration = time.time()-t0
+    print(f"clusters took {duration:.2e}")
 
     root_group = write_summed_object(
             cluster_to_path=cluster_to_path,
