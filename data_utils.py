@@ -11,6 +11,7 @@ from ome_zarr.io import parse_url
 from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
 from ome_zarr.writer import write_image
+from multiprocessing_utils import _winnow_process_list
 
 # importing zarr causes multiprocessing to emit a warning about
 # leaked semaphore objects. *Probably* this is fine. It's just
@@ -69,10 +70,14 @@ def write_nii_file_list_to_ome_zarr(
     else:
         parent_group = root_group
 
-    n_per_list = np.ceil(len(file_path_list)/n_processors).astype(int)
+    n_workers = max(1, n_processors-1)
+
+    n_per_process = max(np.floor(len(file_path_list)/n_workers).astype(int),
+                        1)
+
     process_list = []
-    for i0 in range(0, len(file_path_list), n_per_list):
-        i1 = min(i0+n_per_list, len(file_path_list))
+    for i0 in range(0, len(file_path_list), n_per_process):
+        i1 = min(i0+n_per_process, len(file_path_list))
         file_sub = file_path_list[i0:i1]
         group_sub = group_name_list[i0:i1]
         p = multiprocessing.Process(
@@ -83,6 +88,8 @@ def write_nii_file_list_to_ome_zarr(
                         'downscale': downscale})
         p.start()
         process_list.append(p)
+        while len(process_list) >= n_workers:
+            process_list = _winnow_process_list(process_list)
 
     for p in process_list:
         p.join()

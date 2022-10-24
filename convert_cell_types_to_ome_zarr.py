@@ -3,6 +3,7 @@ import argparse
 import time
 import numpy as np
 import multiprocessing
+from multiprocessing_utils import _winnow_process_list
 from data_utils import (
     write_nii_file_list_to_ome_zarr,
     write_summed_nii_files_to_group)
@@ -73,7 +74,10 @@ def write_summed_object(
     else:
         parent_group = root_group
 
-    n_per_processor = np.ceil(len(full_group_list)/n_processors).astype(int)
+    n_workers = max(1, n_processors-1)
+
+    n_per_processor = max(1,
+                          np.floor(len(full_group_list)/n_workers).astype(int))
     process_list = []
     for i0 in range(0, len(full_group_list), n_per_processor):
         i1 = min(i0+n_per_processor, len(full_group_list))
@@ -87,6 +91,8 @@ def write_summed_object(
                         'downscale': downscale})
         p.start()
         process_list.append(p)
+        while len(process_list) >= n_workers:
+            process_list = _winnow_process_list(process_list)
 
     for p in process_list:
         p.join()
