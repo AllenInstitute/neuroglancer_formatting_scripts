@@ -136,6 +136,7 @@ def main():
             prefix="clusters")
     duration = time.time()-t0
     print(f"clusters took {duration:.2e}")
+    exit()
 
     root_group = write_summed_object(
             cluster_to_path=cluster_to_path,
