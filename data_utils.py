@@ -16,7 +16,8 @@ def write_nii_file_list_to_ome_zarr(
         group_name_list,
         output_dir,
         downscale=2,
-        clobber=False):
+        clobber=False,
+        prefix=None):
     """
     file_path_list -- list of paths to files to be written
 
@@ -25,6 +26,8 @@ def write_nii_file_list_to_ome_zarr(
     output_dir -- dir for parent ome-zarr group
 
     clobber -- if False, do not overwrite
+
+    prefix -- optional sub-group in which all data is written
 
     Return the root group
     """
@@ -51,11 +54,15 @@ def write_nii_file_list_to_ome_zarr(
 
     store = parse_url(output_dir, mode="w").store
     root_group = zarr.group(store=store)
+    if prefix is not None:
+        parent_group = root_group.create_group(prefix)
+    else:
+        parent_group = root_group
 
     for f_path, grp_name in zip(file_path_list,
                                 group_name_list):
         write_nii_to_group(
-            root_group=root_group,
+            root_group=parent_group,
             group_name=grp_name,
             nii_file_path=f_path,
             downscale=downscale)
