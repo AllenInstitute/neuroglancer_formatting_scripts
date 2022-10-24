@@ -1,6 +1,8 @@
 import pathlib
 import argparse
 import time
+import numpy as np
+import multiprocessing
 from data_utils import (
     write_nii_file_list_to_ome_zarr,
     write_summed_nii_files_to_group)
@@ -55,17 +57,58 @@ def write_summed_object(
         obj_to_clusters,
         root_group,
         downscale=2,
+        n_processors=4,
         prefix=None):
 
-    key_list = list(obj_to_clusters.keys())
-    key_list.sort()
+    raw_group_list = list(obj_to_clusters.keys())
+    raw_group_list.sort()
+
+    full_group_list = []
+    for group in raw_group_list:
+        cluster_list = obj_to_clusters[group]
+        file_path_list = [cluster_to_path[c] for c in cluster_list
+                          if c in cluster_to_path]
+        if len(file_path_list) > 0:
+            full_group_list.append(group)
+
+    if len(full_group_list) == 0:
+        return root_group
 
     if prefix is not None:
         parent_group = root_group.create_group(prefix)
     else:
         parent_group = root_group
 
-    for key in key_list:
+    n_per_processor = np.ceil(len(full_group_list)/n_processors).astype(int)
+    process_list = []
+    for i0 in range(0, len(full_group_list), n_per_processor):
+        i1 = min(i0+n_per_processor, len(full_group_list))
+        group_list = full_group_list[i0:i1]
+        p = multiprocessing.Process(
+                target=_write_summed_object_worker,
+                kwargs={'parent_group': parent_group,
+                        'group_list': group_list,
+                        'obj_to_clusters': obj_to_clusters,
+                        'cluster_to_path': cluster_to_path,
+                        'downscale': downscale})
+        print(f"starting {i0} {i1} {len(full_group_list)} {n_per_processor}")
+        p.start()
+        process_list.append(p)
+
+    for p in process_list:
+        p.join()
+
+    return root_group
+
+
+def _write_summed_object_worker(
+        parent_group,
+        group_list,
+        obj_to_clusters,
+        cluster_to_path,
+        downscale):
+
+    for key in group_list:
         cluster_list = obj_to_clusters[key]
         file_path_list = [cluster_to_path[c] for c in cluster_list
                           if c in cluster_to_path]
@@ -79,7 +122,7 @@ def write_summed_object(
                 downscale=downscale)
 
             print(f"wrote group {key}")
-    return root_group
+
 
 def main():
 
@@ -97,6 +140,7 @@ def main():
     parser.add_argument('--annotation_path', type=str, default=default_anno)
     parser.add_argument('--clobber', default=False, action='store_true')
     parser.add_argument('--downscale', type=int, default=2)
+    parser.add_argument('--n_processors', type=int, default=4)
     args = parser.parse_args()
 
     assert args.output_dir is not None
@@ -132,25 +176,32 @@ def main():
             group_name_list=cluster_name_list,
             output_dir=args.output_dir,
             downscale=args.downscale,
+            n_processors=args.n_processors,
             clobber=args.clobber,
             prefix="clusters")
     duration = time.time()-t0
-    print(f"clusters took {duration:.2e}")
-    exit()
+    print(f"clusters took {duration:.2e} seconds")
 
+    t0 = time.time()
     root_group = write_summed_object(
             cluster_to_path=cluster_to_path,
             obj_to_clusters=subclass_to_clusters,
             root_group=root_group,
             downscale=args.downscale,
             prefix="subclasses")
+    duration = time.time()-t0
+    print(f"subclasses took {duration:.2e} seconds")
 
+    t0 = time.time()
     root_group = write_summed_object(
             cluster_to_path=cluster_to_path,
             obj_to_clusters=class_to_clusters,
             root_group=root_group,
             downscale=args.downscale,
             prefix="classes")
+    duration = time.time()
+    print(f"classes took {duration:.2e} seconds")
+
 
 if __name__ == "__main__":
     main()
