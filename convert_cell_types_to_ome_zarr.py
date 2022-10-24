@@ -53,7 +53,8 @@ def write_summed_object(
         cluster_to_path,
         obj_to_clusters,
         root_group,
-        downscale=2):
+        downscale=2,
+        prefix=None):
 
     key_list = list(obj_to_clusters.keys())
     key_list.sort()
@@ -63,7 +64,11 @@ def write_summed_object(
                           if c in cluster_to_path]
 
         if len(file_path_list) > 0:
-            this_group = root_group.create_group(key)
+            if prefix is None:
+                group_name = key
+            else:
+                group_name = f"{prefix}_{key}"
+            this_group = root_group.create_group(group_name)
             write_summed_nii_files_to_group(
                 file_path_list=file_path_list,
                 group=this_group,
@@ -128,13 +133,15 @@ def main():
             cluster_to_path=cluster_to_path,
             obj_to_clusters=subclass_to_clusters,
             root_group=root_group,
-            downscale=args.downscale)
+            downscale=args.downscale,
+            prefix="subclass")
 
     root_group = write_summed_object(
             cluster_to_path=cluster_to_path,
             obj_to_clusters=class_to_clusters,
             root_group=root_group,
-            downscale=args.downscale)
+            downscale=args.downscale,
+            prefix="class")
 
 if __name__ == "__main__":
     main()
