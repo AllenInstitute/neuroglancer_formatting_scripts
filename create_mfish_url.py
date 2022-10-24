@@ -8,45 +8,9 @@ from url_utils import (
     get_segmentation,
     get_color_lookup,
     json_to_url,
-    url_to_json)
-
-
-def get_template(
-        template_bucket,
-        template_name='template',
-        range_max=700):
-
-    result = dict()
-    result["type"] = "image"
-    result["source"] = f"zarr://s3://{template_bucket}/{template_name}"
-    result["blend"] = "default"
-    result["shader"] = get_grayscale_shader_code(
-                           transparent=False,
-                           range_max=range_max)
-    result["opacity"] = 0.4
-    result["visible"] = True
-    result["name"] = "CCF template"
-    return result
-
-
-def get_mfish(
-        mfish_bucket,
-        mfish_gene,
-        mfish_color,
-        range_max):
-
-    rgb_color = get_color_lookup()[mfish_color]
-    result = dict()
-    result["type"] = "image"
-    result["source"] = f"zarr://s3://{mfish_bucket}/{mfish_gene}"
-    result["name"] = f"{mfish_gene} ({mfish_color})"
-    result["blend"] = "default"
-    result["shader"] = get_rgb_shader_code(rgb_color,
-                                       transparent=False,
-                                       range_max=range_max)
-    result["opacity"] = 1.0
-    result["visible"] = True
-    return result
+    url_to_json,
+    get_template_layer,
+    get_image_layer)
 
 
 def get_gene_layers(
@@ -70,10 +34,11 @@ def get_gene_layers(
         if gene not in legal_genes:
             raise RuntimeError(
                 f"{gene} is not a legal gene")
-        layers.append(get_mfish(
-                          mfish_bucket=mfish_bucket,
-                          mfish_gene=gene,
-                          mfish_color=color,
+        layers.append(get_image_layer(
+                          bucket_name=mfish_bucket,
+                          dataset_name=gene,
+                          public_name=gene,
+                          color=color,
                           range_max=range_max))
     return layers
 
@@ -93,7 +58,7 @@ def create_mfish_url(
 
     url = get_base_url()
 
-    template_layer = get_template(
+    template_layer = get_template_layer(
                 template_bucket=template_bucket,
                 template_name="template",
                 range_max=700)

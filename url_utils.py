@@ -2,6 +2,44 @@
 def get_base_url():
     return "https://neuroglancer-demo.appspot.com/#!"
 
+def get_template_layer(
+        template_bucket,
+        template_name='template',
+        range_max=700):
+
+    result = dict()
+    result["type"] = "image"
+    result["source"] = f"zarr://s3://{template_bucket}/{template_name}"
+    result["blend"] = "default"
+    result["shader"] = get_grayscale_shader_code(
+                           transparent=False,
+                           range_max=range_max)
+    result["opacity"] = 0.4
+    result["visible"] = True
+    result["name"] = "CCF template"
+    return result
+
+
+def get_image_layer(
+        bucket_name,
+        dataset_name,
+        public_name,
+        color,
+        range_max):
+
+    rgb_color = get_color_lookup()[color]
+    result = dict()
+    result["type"] = "image"
+    result["source"] = f"zarr://s3://{bucket_name}/{dataset_name}"
+    result["name"] = f"{public_name} ({color})"
+    result["blend"] = "default"
+    result["shader"] = get_rgb_shader_code(rgb_color,
+                                       transparent=False,
+                                       range_max=range_max)
+    result["opacity"] = 1.0
+    result["visible"] = True
+    return result
+
 def get_rgb_shader_code(
         color,
         transparent=True,

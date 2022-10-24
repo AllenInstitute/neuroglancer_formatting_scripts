@@ -8,7 +8,8 @@ from url_utils import (
     get_segmentation,
     get_color_lookup,
     json_to_url,
-    url_to_json)
+    url_to_json,
+    get_image_layer)
 
 
 def get_type_layer(
@@ -55,8 +56,9 @@ def main():
 
     url = get_base_url()
 
-    layers_list = [get_type_layer(bucket_name=args.celltype_bucket,
+    layers_list = [get_image_layer(bucket_name=args.celltype_bucket,
                                   dataset_name=args.celltype,
+                                  public_name=args.celltype.split('/')[0],
                                   color=args.color,
                                   range_max=args.range_max)]
 
