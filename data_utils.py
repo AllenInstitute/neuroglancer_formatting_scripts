@@ -11,6 +11,12 @@ from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
 from ome_zarr.writer import write_image
 
+# importing zarr causes multiprocessing to emit a warning about
+# leaked semaphore objects. *Probably* this is fine. It's just
+# scary. The zarr developers are working on this
+#
+# https://github.com/zarr-developers/numcodecs/issues/230
+
 
 def write_nii_file_list_to_ome_zarr(
         file_path_list,
