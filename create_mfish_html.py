@@ -31,6 +31,14 @@ def write_mfish_html(
                     type="text/css",
                     media="all")
 
+    # Chrome was not loading changes, due its internal cache
+    # https://stackoverflow.com/questions/34851243/how-to-make-index-html-not-to-cache-when-the-site-contents-are-changes-in-angula
+    # https://stackoverflow.com/questions/46535832/how-to-declare-metadata-tags-using-python-dominate
+    doc.head += dominate.tags.meta(http_equiv="Cache-control",
+                              content="no-cache, no-store, must-revalidate")
+    doc.head += dominate.tags.meta(http_equiv="Pragma",
+                              content="no-cache")
+
     with dominate.tags.div(id='mfish_maps') as this_div:
         this_div += dominate.tags.input_(cls="search", placeholder="Search")
         with dominate.tags.table().add(dominate.tags.tbody(cls="list")) as this_table:
