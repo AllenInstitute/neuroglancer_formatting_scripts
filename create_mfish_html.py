@@ -50,8 +50,7 @@ def write_mfish_html(
                                 genes=[gene_name,],
                                 colors=['green', ],
                                 range_max=[range_max, ],
-                                segmentation_bucket=segmentation_bucket,
-                                segmentation_name='segmentation')
+                                segmentation_bucket=segmentation_bucket)
                 this_row = dominate.tags.tr()
                 this_row += dominate.tags.td(dominate.tags.a(gene_name),
                                              cls='gene_name')

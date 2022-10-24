@@ -1,3 +1,33 @@
+import json
+
+def get_final_url(
+        image_layer_list,
+        template_bucket='mouse1-template-prototype',
+        segmentation_bucket='mouse1-segmentation-prototype'):
+    """
+    Image layers with template and segmentation layer
+    """
+
+    url = get_base_url()
+
+    template_layer = get_template_layer(
+            template_bucket=template_bucket,
+            template_name="template",
+            range_max=700)
+
+    segmentation_layer = get_segmentation_layer(
+            segmentation_bucket=segmentation_bucket,
+            segmentation_name="CCF segmentation")
+
+    layer_list = image_layer_list + [template_layer, segmentation_layer]
+
+    layers = {"layers": layer_list}
+    layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
+    layers["layout"] = "4panel"
+    url = f"{url}{json_to_url(json.dumps(layers))}"
+
+    return url
+
 
 def get_base_url():
     return "https://neuroglancer-demo.appspot.com/#!"
@@ -90,7 +120,7 @@ def get_grayscale_shader_code(
     return code
 
 
-def get_segmentation(
+def get_segmentation_layer(
         segmentation_bucket,
         segmentation_name):
 

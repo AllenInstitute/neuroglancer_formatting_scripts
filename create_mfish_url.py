@@ -2,14 +2,8 @@ import argparse
 import json
 
 from url_utils import (
-    get_base_url,
-    get_rgb_shader_code,
-    get_grayscale_shader_code,
-    get_segmentation,
-    get_color_lookup,
-    json_to_url,
     url_to_json,
-    get_template_layer,
+    get_final_url,
     get_image_layer)
 
 
@@ -48,24 +42,12 @@ def create_mfish_url(
        genes,
        colors,
        range_max,
-       segmentation_bucket,
-       segmentation_name,
+       segmentation_bucket='mouse1-segmenation-prototype',
        template_bucket='mouse1-template-prototype'):
 
     if len(colors) != len(genes) or len(range_max) != len(genes):
         raise RuntimeError(
             "len mismatch")
-
-    url = get_base_url()
-
-    template_layer = get_template_layer(
-                template_bucket=template_bucket,
-                template_name="template",
-                range_max=700)
-
-    segmentation_layer = get_segmentation(
-                            segmentation_bucket=segmentation_bucket,
-                            segmentation_name="CCF segmentation")
 
     gene_layers = get_gene_layers(
                     mfish_bucket=mfish_bucket,
@@ -73,12 +55,10 @@ def create_mfish_url(
                     color_list=colors,
                     range_max_list=range_max)
 
-    layer_list = gene_layers + [template_layer, segmentation_layer]
-
-    layers = {"layers": layer_list}
-    layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
-    layers["layout"] = "4panel"
-    url = f"{url}{json_to_url(json.dumps(layers))}"
+    url = get_final_url(
+            image_layer_list=gene_layers,
+            template_bucket=template_bucket,
+            segmentation_bucket=segmentation_bucket)
 
     return url
 
@@ -88,10 +68,6 @@ def main():
     parser.add_argument('--segmentation_bucket',
                         type=str,
                         default='mouse1-atlas-prototype')
-
-    parser.add_argument('--segmentation_name',
-                        type=str,
-                        default='segmentation')
 
     parser.add_argument('--mfish_bucket',
                         type=str,
@@ -134,8 +110,7 @@ def main():
             genes=genes,
             colors=colors,
             range_max=range_max,
-            segmentation_bucket=args.segmentation_bucket,
-            segmentation_name=args.segmentation_name)
+            segmentation_bucket=args.segmentation_bucket)
 
     params = url.split('#!')
     print(url_to_json(params[1]))
