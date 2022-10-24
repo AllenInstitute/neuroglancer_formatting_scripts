@@ -5,6 +5,7 @@ import pathlib
 import shutil
 import time
 import zarr
+from numcodecs import Zstd
 import multiprocessing
 from ome_zarr.scale import Scaler
 from ome_zarr.io import parse_url
@@ -18,6 +19,9 @@ from multiprocessing_utils import _winnow_process_list
 # scary. The zarr developers are working on this
 #
 # https://github.com/zarr-developers/numcodecs/issues/230
+
+
+zarr.storage.default_compressor = Zstd(level=3)
 
 
 def write_nii_file_list_to_ome_zarr(
