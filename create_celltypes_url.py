@@ -33,7 +33,7 @@ def main():
 
     layers_list = [get_image_layer(bucket_name=args.celltype_bucket,
                                   dataset_name=args.celltype,
-                                  public_name=args.celltype.split('/')[0],
+                                  public_name=args.celltype.split('/')[-1],
                                   color=args.color,
                                   range_max=args.range_max)]
 
