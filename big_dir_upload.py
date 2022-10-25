@@ -24,7 +24,7 @@ def get_log(data_dir, log_path):
 
 def save_log(log_path, log_data):
     with open(log_path, 'w') as out_file:
-        out_file.write(json.dumps(log_data, indent=2))
+        out_file.write(json.dumps(dict(log_data), indent=2))
 
 def print_timing(t0, ct, tot, prefix=None):
     duration = time.time()-t0
