@@ -135,6 +135,7 @@ def main():
     parser.add_argument('--dir', type=str, default=None)
     parser.add_argument('--bucket', type=str, default=None)
     parser.add_argument('--log', type=str, default=None)
+    parser.add_argument('--n_processors', type=int, default=6)
     parser.add_argument('--clobber', default=False, action='store_true')
     args = parser.parse_args()
 
@@ -147,7 +148,8 @@ def main():
 
     upload_files(data_dir=data_dir,
                  bucket_name=args.bucket,
-                 log_path=log_path)
+                 log_path=log_path,
+                 n_processors=args.n_processors)
 
 
 if __name__ == "__main__":
