@@ -2,9 +2,9 @@ import argparse
 import json
 
 from url_utils import (
-    get_base_url,
     get_image_layer,
-    json_to_url)
+    json_to_url,
+    get_final_url)
 
 
 def main():
@@ -29,18 +29,18 @@ def main():
 
     args = parser.parse_args()
 
-    url = get_base_url()
+    image_layers = get_image_layer(
+                       bucket_name=args.celltype_bucket,
+                       dataset_name=args.celltype,
+                       public_name=args.celltype.split('/')[-1],
+                       color=args.color,
+                       range_max=args.range_max)
 
-    layers_list = [get_image_layer(bucket_name=args.celltype_bucket,
-                                  dataset_name=args.celltype,
-                                  public_name=args.celltype.split('/')[-1],
-                                  color=args.color,
-                                  range_max=args.range_max)]
+    url = get_final_url(
+            image_layer_list=image_layers,
+            template_bucket='mouse1-template-prototype',
+            segmentation_bucket='mouse1-atlas-prototype')
 
-    layers = {"layers": layers_list}
-    layers["SelectedLayer"] = {"visible": True, "layer": "new layer"}
-    layers["layout"] = "4panel"
-    url = f"{url}{json_to_url(json.dumps(layers))}"
     print(url)
 
 

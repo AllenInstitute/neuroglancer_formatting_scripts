@@ -8,6 +8,9 @@ def get_final_url(
     Image layers with template and segmentation layer
     """
 
+    if not isinstance(image_layer_list, list):
+        image_layer_list = [image_layer_list]
+
     url = get_base_url()
 
     template_layer = get_template_layer(
