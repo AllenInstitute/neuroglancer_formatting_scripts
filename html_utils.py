@@ -65,7 +65,7 @@ def write_basic_table(
                 this_table += this_row
 
         doc += this_div
-    doc.body += dominate.tags.script(src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js")
+    doc.body += dominate.tags.script(src="https://cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js")
 
     jcode = \
     '''

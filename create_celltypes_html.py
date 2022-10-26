@@ -18,13 +18,15 @@ def find_valid_celltypes(
         bucket,
         subclass_list,
         class_list,
-        cluster_list):
+        cluster_list,
+        pass_all=False):
     """
     Determine which cell types have actually been loaded into S3
     """
-    s3_client = boto3.client(
-                    's3',
-                    config=Config(signature_version=UNSIGNED))
+    if not pass_all:
+        s3_client = boto3.client(
+                        's3',
+                        config=Config(signature_version=UNSIGNED))
 
     valid_celltypes = []
 
@@ -33,6 +35,9 @@ def find_valid_celltypes(
                                 ('clusters', cluster_list)]:
         for this_type in child_list:
             type_key = f"{child}/{this_type}"
+            if pass_all:
+                valid_celltypes.append(type_key)
+                continue
             test_key = f"{type_key}/.zattrs"
             response = s3_client.list_objects_v2(
                     Bucket=bucket,
@@ -60,7 +65,8 @@ def write_celltypes_html(
         segmentation_bucket="mouse1-atlas-prototype",
         template_bucket="mouse1-template-prototype",
         range_max=0.1,
-        color='green'):
+        color='green',
+        pass_all=False):
 
     (subclass_to_clusters,
      class_to_clusters,
@@ -77,7 +83,8 @@ def write_celltypes_html(
                             bucket=bucket,
                             class_list=class_list,
                             subclass_list=subclass_list,
-                            cluster_list=cluster_list)
+                            cluster_list=cluster_list,
+                            pass_all=pass_all)
 
     sort_by = []
     for celltype in valid_celltypes:
@@ -132,12 +139,14 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--annotation_path', type=str, default=default_anno)
+    parser.add_argument('--pass_all', default=False, action='store_true')
     args = parser.parse_args()
 
     html_dir = pathlib.Path('html')
     write_celltypes_html(
         output_path=html_dir / 'mouse1_celltype_maps.html',
-        annotation_path=pathlib.Path(args.annotation_path))
+        annotation_path=pathlib.Path(args.annotation_path),
+        pass_all=args.pass_all)
     print("wrote html")
 
 if __name__ == "__main__":
