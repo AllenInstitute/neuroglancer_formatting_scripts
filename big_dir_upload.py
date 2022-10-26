@@ -68,6 +68,7 @@ def _upload_files(
         s3_dest = f"s3://{bucket_name}"
         if bucket_prefix is not None:
             s3_dest += f"/{bucket_prefix}"
+        s3_dest += f"/{file_path.name}"
         if file_path.is_dir():
             s3_cmd = f"aws s3 sync {file_path} {s3_dest}"
         else:
