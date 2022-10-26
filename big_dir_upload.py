@@ -26,7 +26,7 @@ def save_log(log_path, log_data):
     with open(log_path, 'w') as out_file:
         out_file.write(json.dumps(dict(log_data), indent=2))
 
-def print_timing(t0, ct, tot, prefix=None):
+def print_timing(t0, ct, tot, prefix=None, log_path=None):
     duration = time.time()-t0
     if ct == 0:
         print(f"uploaded {ct} in {duration:.2e} seconds")
@@ -37,8 +37,15 @@ def print_timing(t0, ct, tot, prefix=None):
 
     pred = pred/3600.0
     remain = remain/3600.0
-    print(f"{prefix} uploaded {ct} of {tot} in {duration:.2e} seconds; "
-          f"{remain:.2e} hrs remaining of {pred:.2e}")
+
+    msg = f"{prefix} uploaded {ct} of {tot} in {duration:.2e} seconds; "
+    msg += f"{remain:.2e} hrs remaining of {pred:.2e}"
+
+    if log_path is not None:
+        with open(log_path, "a") as out_file:
+           out_file.write(msg)
+    else:
+        print(msg)
 
 
 def _upload_files(
@@ -47,6 +54,8 @@ def _upload_files(
         bucket_name,
         bucket_prefix,
         shared_log,
+        timing_log_path,
+        lock,
         thread_id):
 
     this_log = dict()
@@ -65,10 +74,22 @@ def _upload_files(
             break
         ct_uploaded += 1
         this_log[file_path] = True
+
+        with lock:
+            print_timing(
+                t0=t0,
+                ct=ct_uploaded,
+                tot=to_upload,
+                prefix=f"thread {thread_id}",
+                log_path=timing_log_path)
+
     for file_path in this_log:
         shared_log[file_path] = this_log[file_path]
-    print_timing(t0=t0, ct=ct_uploaded, tot=to_upload,
-                 prefix=f"Ending thread {thread_id}")
+
+    with lock:
+        print_timing(t0=t0, ct=ct_uploaded, tot=to_upload,
+                     prefix=f"Ending thread {thread_id}",
+                     log_path=timing_log_path)
 
 
 def upload_files(
@@ -76,6 +97,7 @@ def upload_files(
         bucket_name,
         bucket_prefix,
         log_path,
+        timing_log_path,
         n_processors=6):
 
     log_data = get_log(
@@ -98,6 +120,7 @@ def upload_files(
     files_to_upload.sort()
 
     mgr = multiprocessing.Manager()
+    lock = mgr.Lock()
     shared_log = mgr.dict()
     shared_log.update(log_data)
 
@@ -116,6 +139,8 @@ def upload_files(
                         'data_dir': data_dir,
                         'bucket_name': bucket_name,
                         'shared_log': shared_log,
+                        'timing_log_path': timing_log_path,
+                        'lock': lock,
                         'thread_id': ii})
         p.start()
         process_list.append(p)
@@ -131,6 +156,7 @@ def main():
     parser.add_argument('--bucket', type=str, default=None)
     parser.add_argument('--bucket_prefix', type=str, default=None)
     parser.add_argument('--log', type=str, default=None)
+    parser.add_argument('--timing_log', type=str, default=None)
     parser.add_argument('--n_processors', type=int, default=6)
     parser.add_argument('--clobber', default=False, action='store_true')
     args = parser.parse_args()
@@ -142,10 +168,14 @@ def main():
     data_dir = pathlib.Path(args.dir)
     assert data_dir.is_dir()
 
+    if args.timing_log is not None:
+        timing_log_path = pathlib.Path(args.timing_log)
+
     upload_files(data_dir=data_dir,
                  bucket_name=args.bucket,
                  bucket_prefix=args.bucket_prefix,
                  log_path=log_path,
+                 timing_log_path=timing_log_path,
                  n_processors=args.n_processors)
 
 
