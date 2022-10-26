@@ -77,7 +77,7 @@ def _upload_files(
         if cmd_status != 0:
             break
         ct_uploaded += 1
-        this_log[file_path] = True
+        this_log[str(file_path.resolve().absolute())] = True
 
         with lock:
             print_timing(
