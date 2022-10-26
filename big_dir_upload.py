@@ -16,9 +16,8 @@ def get_log(data_dir, log_path):
     file_path_list.sort()
     log_data = dict()
     for file_pth in file_path_list:
-        if file_pth.is_file():
-            str_pth = str(file_pth.resolve().absolute())
-            log_data[str_pth] = False
+        str_pth = str(file_pth.resolve().absolute())
+        log_data[str_pth] = False
     return log_data
 
 
@@ -69,7 +68,7 @@ def _upload_files(
         s3_cmd += f"s3://{bucket_name}"
         if bucket_prefix is not None:
             s3_cmd += f"/{bucket_prefix}"
-        cmd_status = os.sytem(s3_cmd)
+        cmd_status = os.system(s3_cmd)
         if cmd_status != 0:
             break
         ct_uploaded += 1
@@ -136,6 +135,7 @@ def upload_files(
                 kwargs={'file_path_list': sub_lists[ii],
                         'data_dir': data_dir,
                         'bucket_name': bucket_name,
+                        'bucket_prefix': bucket_prefix,
                         'shared_log': shared_log,
                         'timing_log_path': timing_log_path,
                         'lock': lock,
