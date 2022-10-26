@@ -42,7 +42,7 @@ def print_timing(t0, ct, tot, prefix=None, log_path=None):
 
     if log_path is not None:
         with open(log_path, "a") as out_file:
-           out_file.write(msg)
+           out_file.write(msg + "\n")
     else:
         print(msg)
 
@@ -64,10 +64,15 @@ def _upload_files(
 
     abs_dir = data_dir.resolve().absolute()
     for file_path in file_path_list:
-        s3_cmd = f"aws s3 sync {file_path} "
-        s3_cmd += f"s3://{bucket_name}"
+        file_path = pathlib.Path(file_path)
+        s3_dest = f"s3://{bucket_name}"
         if bucket_prefix is not None:
-            s3_cmd += f"/{bucket_prefix}"
+            s3_dest += f"/{bucket_prefix}"
+        if file_path.is_dir():
+            s3_cmd = f"aws s3 sync {file_path} {s3_dest}"
+        else:
+            s3_cmd = f"aws s3 cp {file_path} {s3_dest}"
+
         cmd_status = os.system(s3_cmd)
         if cmd_status != 0:
             break
