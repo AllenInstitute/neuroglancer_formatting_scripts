@@ -1,5 +1,6 @@
 import dominate
 import dominate.tags
+import numpy as np
 import json
 import argparse
 
@@ -41,6 +42,17 @@ def find_valid_celltypes(
     return valid_celltypes
 
 
+def idx_from_cluster_name(cluster_name):
+    params = cluster_name.split('_')
+    if len(params) == 0:
+        return 0
+    try:
+        idx = int(params[0])
+    except ValueError:
+        idx = 0
+    return idx
+
+
 def write_celltypes_html(
         output_path=None,
         annotation_path=None,
@@ -61,13 +73,22 @@ def write_celltypes_html(
     for l in (subclass_list, class_list, cluster_list):
         l.sort()
 
-
-
     valid_celltypes = find_valid_celltypes(
                             bucket=bucket,
                             class_list=class_list,
                             subclass_list=subclass_list,
                             cluster_list=cluster_list)
+
+    sort_by = []
+    for celltype in valid_celltypes:
+        this_type = celltype.split('/')[-1]
+        actual_type = desanitizer[this_type]
+        idx = idx_from_cluster_name(actual_type)
+        sort_by.append(idx)
+    sort_by = np.array(sort_by)
+    valid_celltypes = np.array(valid_celltypes)
+    sorted_dex = np.argsort(sort_by)
+    valid_celltypes = valid_celltypes[sorted_dex]
 
     celltype_to_link = dict()
     for celltype in valid_celltypes:
