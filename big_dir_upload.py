@@ -107,8 +107,6 @@ def upload_files(
     file_path_list = list(log_data.keys())
     file_path_list.sort()
 
-    s3_client = boto3.client('s3')
-
     t0 = time.time()
     ct_uploaded = 0
     to_upload = 0
