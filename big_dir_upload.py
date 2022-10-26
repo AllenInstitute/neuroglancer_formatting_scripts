@@ -1,9 +1,9 @@
 import time
-import boto3
 import pathlib
 import numpy as np
 import argparse
 import json
+import os
 import multiprocessing
 
 
@@ -12,7 +12,7 @@ def get_log(data_dir, log_path):
         with open(log_path, 'rb') as in_file:
             return json.load(in_file)
 
-    file_path_list = [n for n in data_dir.rglob('*')]
+    file_path_list = [n for n in data_dir.iterdir()]
     file_path_list.sort()
     log_data = dict()
     for file_pth in file_path_list:
@@ -45,41 +45,36 @@ def _upload_files(
         file_path_list,
         data_dir,
         bucket_name,
+        bucket_prefix,
         shared_log,
         thread_id):
 
-    s3_client = boto3.client('s3')
     this_log = dict()
     t0 = time.time()
     ct_uploaded = 0
     to_upload = len(file_path_list)
 
     abs_dir = data_dir.resolve().absolute()
-    try:
-        for file_path in file_path_list:
-            s3_key_path = pathlib.Path(file_path).relative_to(abs_dir)
-            s3_key = str(s3_key_path)
-            #print(f"{file_path} -> {s3_key}")
-            with open(file_path, 'rb') as data:
-                s3_client.upload_fileobj(
-                    Fileobj=data,
-                    Bucket=bucket_name,
-                    Key=s3_key)
-            this_log[file_path] = True
-            ct_uploaded += 1
-            if ct_uploaded % 500 == 0:
-                print_timing(t0=t0, ct=ct_uploaded, tot=to_upload,
-                             prefix=f"thread {thread_id}")
-    finally:
-        for file_path in this_log:
-            shared_log[file_path] = True
-        print_timing(t0=t0, ct=ct_uploaded, tot=to_upload,
-                     prefix=f"Ending thread {thread_id}")
+    for file_path in file_path_list:
+        s3_cmd = f"aws s3 sync {file_path} "
+        s3_cmd += f"s3://{bucket_name}"
+         if bucket_prefix is not None:
+            s3_cmd += f"/{bucket_prefix}"
+        cmd_status = os.sytem(s3_cmd)
+        if cmd_status != 0:
+            break
+        ct_uploaded += 1
+        this_log[file_path] = True
+    for file_path in this_log:
+        shared_log[file_path] = this_log[file_path]
+    print_timing(t0=t0, ct=ct_uploaded, tot=to_upload,
+                 prefix=f"Ending thread {thread_id}")
 
 
 def upload_files(
         data_dir,
         bucket_name,
+        bucket_prefix,
         log_path,
         n_processors=6):
 
@@ -134,6 +129,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir', type=str, default=None)
     parser.add_argument('--bucket', type=str, default=None)
+    parser.add_argument('--bucket_prefix', type=str, default=None)
     parser.add_argument('--log', type=str, default=None)
     parser.add_argument('--n_processors', type=int, default=6)
     parser.add_argument('--clobber', default=False, action='store_true')
@@ -148,6 +144,7 @@ def main():
 
     upload_files(data_dir=data_dir,
                  bucket_name=args.bucket,
+                 bucket_prefix=args.bucket_prefix,
                  log_path=log_path,
                  n_processors=args.n_processors)
 
