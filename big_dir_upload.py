@@ -80,13 +80,14 @@ def _upload_files(
         ct_uploaded += 1
         this_log[str(file_path.resolve().absolute())] = True
 
-        with lock:
-            print_timing(
-                t0=t0,
-                ct=ct_uploaded,
-                tot=to_upload,
-                prefix=f"thread {thread_id}",
-                log_path=timing_log_path)
+        if ct_uploaded % 10 == 0:
+            with lock:
+                print_timing(
+                    t0=t0,
+                    ct=ct_uploaded,
+                    tot=to_upload,
+                    prefix=f"thread {thread_id}",
+                    log_path=timing_log_path)
 
     for file_path in this_log:
         shared_log[file_path] = this_log[file_path]
