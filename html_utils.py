@@ -9,7 +9,21 @@ def write_basic_table(
         title=None,
         key_to_link=None,
         div_name=None,
-        cls_name=None):
+        cls_name=None,
+        search_by=None):
+    """
+    div_name is the name of the main div in the html
+
+    cls_name is the name of the title field for the row
+
+    search_by is a list of columns that can be searched by
+    (will always include cls_name)
+    """
+
+    if search_by is None:
+        search_by = []
+    if cls_name not in search_by:
+        search_by.append(cls_name)
 
     key_list = list(key_to_link.keys())
     key_list.sort()
@@ -50,7 +64,7 @@ def write_basic_table(
     '''
     var options = {
     '''
-    jcode += f"valueNames: [ '{cls_name}', ]"
+    jcode += f"valueNames: {search_by}"
     jcode += \
     '''
     };
