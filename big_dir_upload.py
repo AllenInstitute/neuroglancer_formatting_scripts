@@ -58,7 +58,7 @@ def _upload_files(
     for file_path in file_path_list:
         s3_cmd = f"aws s3 sync {file_path} "
         s3_cmd += f"s3://{bucket_name}"
-         if bucket_prefix is not None:
+        if bucket_prefix is not None:
             s3_cmd += f"/{bucket_prefix}"
         cmd_status = os.sytem(s3_cmd)
         if cmd_status != 0:
