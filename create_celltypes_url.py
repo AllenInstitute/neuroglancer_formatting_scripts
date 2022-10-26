@@ -7,6 +7,29 @@ from url_utils import (
     get_final_url)
 
 
+def create_celltypes_url(
+        bucket=None,
+        celltype=None,
+        range_max=0.1,
+        color='green',
+        template_bucket='mouse1-template-prototype',
+        segmentation_bucket='mouse1-atlas-prototype'):
+
+    image_layers = get_image_layer(
+                       bucket_name=bucket,
+                       dataset_name=celltype,
+                       public_name=celltype.split('/')[-1],
+                       color=color,
+                       range_max=range_max)
+
+    url = get_final_url(
+            image_layer_list=image_layers,
+            template_bucket=template_bucket,
+            segmentation_bucket=segmentation_bucket)
+
+    return url
+
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -29,20 +52,13 @@ def main():
 
     args = parser.parse_args()
 
-    image_layers = get_image_layer(
-                       bucket_name=args.celltype_bucket,
-                       dataset_name=args.celltype,
-                       public_name=args.celltype.split('/')[-1],
-                       color=args.color,
-                       range_max=args.range_max)
-
-    url = get_final_url(
-            image_layer_list=image_layers,
-            template_bucket='mouse1-template-prototype',
-            segmentation_bucket='mouse1-atlas-prototype')
+    url = create_celltypes_url(
+               bucket=args.celltype_bucket,
+               celltype=args.celltype,
+               range_max=args.range_max,
+               color=args.color)
 
     print(url)
-
 
 if __name__ == "__main__":
     main()
