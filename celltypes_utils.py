@@ -23,22 +23,50 @@ def get_class_lookup(
     class_to_clusters = dict()
     valid_clusters = set()
 
+    desanitizer = dict()
+
     with open(anno_path, "r") as in_file:
         header = in_file.readline()
         for line in in_file:
             params = line.replace('"', '').strip().split(',')
             assert len(params) == 4
-            cluster_name = sanitize_cluster_name(params[1])
-            valid_clusters.add(cluster_name)
-            subclass_name = sanitize_cluster_name(params[2])
-            class_name = sanitize_cluster_name(params[3])
+            cluster_name = params[1]
+            subclass_name = params[2]
+            class_name = params[3]
+
+            sanitized_cluster_name = sanitize_cluster_name(cluster_name)
+            sanitized_subclass_name = sanitize_cluster_name(subclass_name)
+            sanitized_class_name = sanitize_cluster_name(class_name)
+
+            for dirty, clean in zip((cluster_name,
+                                     subclass_name,
+                                     class_name),
+                                    (sanitized_cluster_name,
+                                     sanitized_subclass_name,
+                                     sanitized_class_name)):
+                if clean in desanitizer:
+                    if desanitizer[clean] != dirty:
+                        msg = "\nmore than one way to desanitize "
+                        msg += f"{clean}\n"
+                        msg += f"{dirty}\n"
+                        msg += f"{desanitizer[clean]}\n"
+                        raise RuntimeError(msg)
+                desanitizer[clean] = dirty
+
+            valid_clusters.add(sanitized_cluster_name)
 
             if subclass_name not in subclass_to_clusters:
-                subclass_to_clusters[subclass_name] = []
+                subclass_to_clusters[sanitized_subclass_name] = []
             if class_name not in class_to_clusters:
-                class_to_clusters[class_name] = []
+                class_to_clusters[sanitized_class_name] = []
 
-            subclass_to_clusters[subclass_name].append(cluster_name)
-            class_to_clusters[class_name].append(cluster_name)
+            subclass_to_clusters[sanitized_subclass_name].append(
+                sanitized_cluster_name)
 
-    return subclass_to_clusters, class_to_clusters, valid_clusters
+            class_to_clusters[sanitized_class_name].append(
+                sanitized_cluster_name)
+
+    return (subclass_to_clusters,
+            class_to_clusters,
+            valid_clusters,
+            desanitizer)

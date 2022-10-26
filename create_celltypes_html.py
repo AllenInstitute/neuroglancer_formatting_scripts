@@ -52,7 +52,8 @@ def write_celltypes_html(
 
     (subclass_to_clusters,
      class_to_clusters,
-     cluster_set) = get_class_lookup(annotation_path)
+     cluster_set,
+     desanitizer) = get_class_lookup(annotation_path)
 
     subclass_list = list(subclass_to_clusters.keys())
     class_list = list(class_to_clusters.keys())
@@ -76,9 +77,13 @@ def write_celltypes_html(
                         range_max=range_max,
                         color=color,
                         template_bucket=template_bucket,
-                        segmentation_bucket=segmentation_bucket)
+                        segmentation_bucket=segmentation_bucket,
+                        desanitizer=desanitizer)
 
-        celltype_to_link[celltype] = this_url
+        hierarchy = celltype.split('/')[0]
+        dirty = desanitizer[celltype.split('/')[-1]]
+
+        celltype_to_link[f"{hierarchy}/{dirty}"] = this_url
 
     title = "Mouse1 MFISH cell type count maps"
     div_name = "celltype_maps"

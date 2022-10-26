@@ -14,12 +14,17 @@ def create_celltypes_url(
         color='green',
         template_bucket='mouse1-template-prototype',
         segmentation_bucket='mouse1-atlas-prototype',
-        starting_position=None):
+        starting_position=None,
+        desanitizer=None):
+
+    public_name = celltype.split('/')[-1]
+    if desanitizer is not None:
+        public_name = desanitizer[public_name]
 
     image_layers = get_image_layer(
                        bucket_name=bucket,
                        dataset_name=celltype,
-                       public_name=celltype.split('/')[-1],
+                       public_name=public_name,
                        color=color,
                        range_max=range_max)
 

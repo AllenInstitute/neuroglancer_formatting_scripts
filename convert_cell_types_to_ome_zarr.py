@@ -134,7 +134,8 @@ def main():
 
     (subclass_to_clusters,
      class_to_clusters,
-     valid_clusters) = get_class_lookup(args.annotation_path)
+     valid_clusters,
+     desanitizer) = get_class_lookup(args.annotation_path)
 
     fpath_list = [n for n in input_dir.rglob('*nii.gz')]
     fpath_list.sort()
