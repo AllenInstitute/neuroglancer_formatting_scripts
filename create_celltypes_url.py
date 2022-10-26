@@ -13,7 +13,8 @@ def create_celltypes_url(
         range_max=0.1,
         color='green',
         template_bucket='mouse1-template-prototype',
-        segmentation_bucket='mouse1-atlas-prototype'):
+        segmentation_bucket='mouse1-atlas-prototype',
+        starting_position=None):
 
     image_layers = get_image_layer(
                        bucket_name=bucket,
@@ -25,7 +26,8 @@ def create_celltypes_url(
     url = get_final_url(
             image_layer_list=image_layers,
             template_bucket=template_bucket,
-            segmentation_bucket=segmentation_bucket)
+            segmentation_bucket=segmentation_bucket,
+            starting_position=starting_position)
 
     return url
 

@@ -3,7 +3,8 @@ import json
 def get_final_url(
         image_layer_list,
         template_bucket='mouse1-template-prototype',
-        segmentation_bucket='mouse1-segmentation-prototype'):
+        segmentation_bucket='mouse1-segmentation-prototype',
+        starting_position=None):
     """
     Image layers with template and segmentation layer
     """
@@ -24,9 +25,18 @@ def get_final_url(
 
     layer_list = image_layer_list + [template_layer, segmentation_layer]
 
-    layers = {"layers": layer_list}
+    layers = dict()
+    layers["dimensions"] = {"x": [1.0e-5, "m"],
+                            "y": [1.0e-5, "m"],
+                            "z": [0.0001, "m"]}
+    layers["crossSectionScale"] = 2.6
+    layers["projectionScale"] = 2048
+    layers["layers"] = layer_list
     layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
     layers["layout"] = "4panel"
+
+    if starting_position is not None:
+        layers["position"] = [float(x) for x in starting_position]
     url = f"{url}{json_to_url(json.dumps(layers))}"
 
     return url
