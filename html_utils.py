@@ -9,21 +9,22 @@ def write_basic_table(
         title=None,
         key_to_link=None,
         div_name=None,
-        cls_name=None,
-        search_by=None):
+        search_by=None,
+        key_to_other_cols=None):
     """
     div_name is the name of the main div in the html
 
-    cls_name is the name of the title field for the row
 
     search_by is a list of columns that can be searched by
     (will always include cls_name)
+
+    key_to_other_cols maps same key as key_to_link to
+    a dict with keys 'names', 'values' which point to
+    ordered lists of data to be displayed (optional)
     """
 
     if search_by is None:
         search_by = []
-    if cls_name not in search_by:
-        search_by.append(cls_name)
 
     key_list = list(key_to_link.keys())
     key_list.sort()
@@ -51,10 +52,16 @@ def write_basic_table(
             for key_name in key_list:
                 this_url = key_to_link[key_name]
                 this_row = dominate.tags.tr()
-                this_row += dominate.tags.td(dominate.tags.a(key_name),
-                                             cls=cls_name)
+
+                if key_to_other_cols is not None:
+                    this_data = key_to_other_cols[key_name]
+                    for colname, colval in zip(this_data['names'], this_data['values']):
+                        this_row += dominate.tags.td(dominate.tags.a(str(colval)),
+                                                     cls=colname)
+
                 this_row += dominate.tags.td(dominate.tags.a('link',
                                                              href=this_url))
+
                 this_table += this_row
 
         doc += this_div

@@ -24,6 +24,7 @@ def write_mfish_html(
         gene_list = json.load(in_file)
 
     gene_to_link = dict()
+    gene_to_cols = dict()
     for gene_name in gene_list:
         gene_url = create_mfish_url(
                         mfish_bucket=mfish_bucket,
@@ -32,17 +33,20 @@ def write_mfish_html(
                         range_max=[range_max, ],
                         segmentation_bucket=segmentation_bucket)
         gene_to_link[gene_name] = gene_url
+        these_cols = {'names': ['gene_name'],
+                      'values': [gene_name]}
+        gene_to_cols[gene_name] = these_cols
 
     title = "Mouse1 MFISH transcript count maps"
     div_name = "mfish_maps"
-    cls_name = "gene_name"
 
     write_basic_table(
         output_path=output_path,
         title=title,
         key_to_link=gene_to_link,
         div_name=div_name,
-        cls_name=cls_name)
+        key_to_other_cols=gene_to_cols,
+        search_by=['gene_name'])
 
 
 def main():

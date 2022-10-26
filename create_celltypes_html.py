@@ -91,6 +91,7 @@ def write_celltypes_html(
     valid_celltypes = valid_celltypes[sorted_dex]
 
     celltype_to_link = dict()
+    celltype_to_cols = dict()
     for celltype in valid_celltypes:
         this_url = create_celltypes_url(
                         bucket=bucket,
@@ -104,7 +105,10 @@ def write_celltypes_html(
         hierarchy = celltype.split('/')[0]
         dirty = desanitizer[celltype.split('/')[-1]]
 
-        celltype_to_link[f"{hierarchy}/{dirty}"] = this_url
+        celltype_to_link[celltype] = this_url
+        these_cols = {'names': ['celltype_name', 'hierarchy'],
+                      'values': [dirty, hierarchy]}
+        celltype_to_cols[celltype] = these_cols
 
     title = "Mouse1 MFISH cell type count maps"
     div_name = "celltype_maps"
@@ -115,7 +119,9 @@ def write_celltypes_html(
         title=title,
         key_to_link=celltype_to_link,
         div_name=div_name,
-        cls_name=cls_name)
+        key_to_other_cols=celltype_to_cols,
+        search_by=['celltype_name',
+                   'hierarchy'])
 
 
 def main():
