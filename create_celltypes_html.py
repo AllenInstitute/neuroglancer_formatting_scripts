@@ -117,7 +117,7 @@ def write_celltypes_html(
                       'values': [dirty, hierarchy]}
         celltype_to_cols[celltype] = these_cols
 
-    title = "Mouse1 MFISH cell type count maps"
+    title = "Mouse1 cell type count maps"
     div_name = "celltype_maps"
     cls_name = "celltype_name"
 
