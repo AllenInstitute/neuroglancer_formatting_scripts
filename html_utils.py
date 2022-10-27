@@ -65,7 +65,7 @@ def write_basic_table(
                     if key_to_other_cols is not None:
                         this_data = key_to_other_cols[key_name]
                         for colname, colval in zip(this_data['names'], this_data['values']):
-                            this_row += dominate.tags.td(dominate.tags.a(str(colval)),
+                            this_row += dominate.tags.td(dominate.tags.a(colval),
                                                          cls=colname)
 
                     this_row += dominate.tags.td(dominate.tags.a('link',
