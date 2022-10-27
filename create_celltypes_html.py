@@ -127,6 +127,7 @@ def write_celltypes_html(
         output_path=output_path,
         title=title,
         key_to_link=celltype_to_link,
+        key_order=valid_celltypes,
         div_name=div_name,
         key_to_other_cols=celltype_to_cols,
         search_by=['celltype_name',

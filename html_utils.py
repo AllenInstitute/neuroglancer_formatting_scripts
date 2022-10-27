@@ -8,6 +8,7 @@ def write_basic_table(
         output_path=None,
         title=None,
         key_to_link=None,
+        key_order=None,
         div_name=None,
         search_by=None,
         key_to_other_cols=None):
@@ -26,8 +27,11 @@ def write_basic_table(
     if search_by is None:
         search_by = []
 
-    key_list = list(key_to_link.keys())
-    key_list.sort()
+    if key_order is not None:
+        key_list = key_order
+    else:
+        key_list = list(key_to_link.keys())
+        key_list.sort()
 
     doc = dominate.document(title=title)
     doc += dominate.tags.h1(title)
