@@ -47,22 +47,31 @@ def write_basic_table(
 
     with dominate.tags.div(id=div_name) as this_div:
         this_div += dominate.tags.input_(cls="search", placeholder="Search")
-        with dominate.tags.table().add(dominate.tags.tbody(cls="list")) as this_table:
+        with dominate.tags.table() as this_table:
 
-            for key_name in key_list:
-                this_url = key_to_link[key_name]
-                this_row = dominate.tags.tr()
+            with this_table.add(dominate.tags.thead()) as this_table_header:
+                header_row = dominate.tags.tr()
+                for name in key_to_other_cols[key_list[0]]['names']:
+                    header_row += dominate.tags.th(dominate.tags.a(name))
+                header_row += dominate.tags.th(dominate.tags.a('URL'))
+                this_table_header += header_row
 
-                if key_to_other_cols is not None:
-                    this_data = key_to_other_cols[key_name]
-                    for colname, colval in zip(this_data['names'], this_data['values']):
-                        this_row += dominate.tags.td(dominate.tags.a(str(colval)),
-                                                     cls=colname)
+            with this_table.add(dominate.tags.tbody(cls="list")) as this_table_body:
 
-                this_row += dominate.tags.td(dominate.tags.a('link',
-                                                             href=this_url))
+                for key_name in key_list:
+                    this_url = key_to_link[key_name]
+                    this_row = dominate.tags.tr()
 
-                this_table += this_row
+                    if key_to_other_cols is not None:
+                        this_data = key_to_other_cols[key_name]
+                        for colname, colval in zip(this_data['names'], this_data['values']):
+                            this_row += dominate.tags.td(dominate.tags.a(str(colval)),
+                                                         cls=colname)
+
+                    this_row += dominate.tags.td(dominate.tags.a('link',
+                                                                 href=this_url))
+
+                    this_table_body += this_row
 
         doc += this_div
     doc.body += dominate.tags.script(src="https://cdnjs.cloudflare.com/ajax/libs/list.js/2.3.1/list.min.js")
