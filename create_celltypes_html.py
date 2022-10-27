@@ -3,6 +3,7 @@ import dominate.tags
 import numpy as np
 import json
 import argparse
+import zarr
 
 import pathlib
 from create_celltypes_url import create_celltypes_url
@@ -66,7 +67,8 @@ def write_celltypes_html(
         template_bucket="mouse1-template-prototype",
         range_max=0.1,
         color='green',
-        pass_all=False):
+        pass_all=False,
+        data_dir=None):
 
     (subclass_to_clusters,
      class_to_clusters,
@@ -132,6 +134,9 @@ def write_celltypes_html(
 
 
 def main():
+    default_data = '/allen/programs/celltypes/workgroups/'
+    default_data += 'rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/'
+    default_data += 'mouse/atlas/mouse_1/alignment/warpedCellTypes_Mouse1'
 
     default_anno = '/allen/programs/celltypes/'
     default_anno += 'workgroups/rnaseqanalysis/mFISH'
@@ -140,13 +145,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--annotation_path', type=str, default=default_anno)
     parser.add_argument('--pass_all', default=False, action='store_true')
+    parser.add_argument('--data_dir', type=str, default=default_data)
     args = parser.parse_args()
+
+    data_dir = pathlib.Path(default_data)
+    if not data_dir.is_dir():
+        data_dir = None
 
     html_dir = pathlib.Path('html')
     write_celltypes_html(
         output_path=html_dir / 'mouse1_celltype_maps.html',
         annotation_path=pathlib.Path(args.annotation_path),
-        pass_all=args.pass_all)
+        pass_all=args.pass_all,
+        data_dir=data_dir)
     print("wrote html")
 
 if __name__ == "__main__":
