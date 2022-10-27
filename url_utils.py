@@ -43,6 +43,7 @@ def get_final_url(
 
 
 def get_base_url():
+    #return "https://neuromancer-seung-import.appspot.com/#!"
     return "https://neuroglancer-demo.appspot.com/#!"
 
 def get_template_layer(
