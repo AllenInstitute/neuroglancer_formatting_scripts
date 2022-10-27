@@ -19,6 +19,9 @@ def get_ct_data(
         data_dir,
         celltype):
 
+    print(data_dir)
+    print(celltype)
+    print((data_dir / celltype).is_dir())
     arr = np.array(zarr.open(data_dir / celltype, 'r')['0'])
     plane_sums = np.sum(arr, axis=(0,1))
     max_z = np.argmax(plane_sums)
@@ -37,11 +40,12 @@ def find_valid_celltypes(
         subclass_list,
         class_list,
         cluster_list,
-        pass_all=False):
+        pass_all=False,
+        data_dir=None):
     """
     Determine which cell types have actually been loaded into S3
     """
-    if not pass_all:
+    if not pass_all and data_dir is not None:
         s3_client = boto3.client(
                         's3',
                         config=Config(signature_version=UNSIGNED))
@@ -55,13 +59,17 @@ def find_valid_celltypes(
             type_key = f"{child}/{this_type}"
             if pass_all:
                 valid_celltypes.append(type_key)
-                continue
-            test_key = f"{type_key}/.zattrs"
-            response = s3_client.list_objects_v2(
-                    Bucket=bucket,
-                    Prefix=test_key)
-            if response['KeyCount'] > 0:
-                valid_celltypes.append(type_key)
+            elif data_dir is not None:
+                full_dir = data_dir / type_key
+                if full_dir.is_dir():
+                    valid_celltypes.append(type_key)
+            else: 
+                test_key = f"{type_key}/.zattrs"
+                response = s3_client.list_objects_v2(
+                        Bucket=bucket,
+                        Prefix=test_key)
+                if response['KeyCount'] > 0:
+                    valid_celltypes.append(type_key)
     return valid_celltypes
 
 
@@ -103,7 +111,8 @@ def write_celltypes_html(
                             class_list=class_list,
                             subclass_list=subclass_list,
                             cluster_list=cluster_list,
-                            pass_all=pass_all)
+                            pass_all=pass_all,
+                            data_dir=data_dir)
 
     sort_by = []
     for celltype in valid_celltypes:
@@ -137,7 +146,7 @@ def write_celltypes_html(
                         template_bucket=template_bucket,
                         segmentation_bucket=segmentation_bucket,
                         desanitizer=desanitizer,
-                        starting_position=max_plane)
+                        starting_position=starting_position)
 
         hierarchy = celltype.split('/')[0]
         dirty = desanitizer[celltype.split('/')[-1]]
@@ -148,7 +157,7 @@ def write_celltypes_html(
 
         if data_dir is not None:
             these_cols['names'].append('counts')
-            these_cols['values'].appent(total_cts)
+            these_cols['values'].append(f"{total_cts:.3e}")
 
         celltype_to_cols[celltype] = these_cols
 
@@ -168,9 +177,6 @@ def write_celltypes_html(
 
 
 def main():
-    default_data = '/allen/programs/celltypes/workgroups/'
-    default_data += 'rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/'
-    default_data += 'mouse/atlas/mouse_1/alignment/warpedCellTypes_Mouse1'
 
     default_anno = '/allen/programs/celltypes/'
     default_anno += 'workgroups/rnaseqanalysis/mFISH'
@@ -179,12 +185,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--annotation_path', type=str, default=default_anno)
     parser.add_argument('--pass_all', default=False, action='store_true')
-    parser.add_argument('--data_dir', type=str, default=default_data)
+    parser.add_argument('--data_dir', type=str, default=None)
     args = parser.parse_args()
 
-    data_dir = pathlib.Path(default_data)
-    if not data_dir.is_dir():
-        data_dir = None
+    data_dir = None
+    if args.data_dir is not None:
+        data_dir = pathlib.Path(args.data_dir)
 
     html_dir = pathlib.Path('html')
     write_celltypes_html(
