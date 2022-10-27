@@ -15,6 +15,23 @@ from botocore.client import Config
 import boto3
 
 
+def get_ct_data(
+        data_dir,
+        celltype):
+
+    arr = np.array(zarr.open(data_dir / celltype, 'r')['0'])
+    plane_sums = np.sum(arr, axis=(0,1))
+    max_z = np.argmax(plane_sums)
+    all_ct = np.sum(plane_sums)
+
+    # units are counts per 10x10x25 slice
+    # these voxels are each 10x10x100
+    # so multiply each voxel's count value by 4
+    all_ct *= 4.0
+
+    print(f"read ct data for {celltype}")
+    return (max_z, all_ct)
+
 def find_valid_celltypes(
         bucket,
         subclass_list,
@@ -101,7 +118,17 @@ def write_celltypes_html(
 
     celltype_to_link = dict()
     celltype_to_cols = dict()
+
     for celltype in valid_celltypes:
+
+        starting_position = None
+        if data_dir is not None:
+            (max_plane,
+             total_cts) = get_ct_data(
+                            data_dir=data_dir,
+                            celltype=celltype)
+            starting_position=[550, 550, max_plane]
+
         this_url = create_celltypes_url(
                         bucket=bucket,
                         celltype=celltype,
@@ -109,7 +136,8 @@ def write_celltypes_html(
                         color=color,
                         template_bucket=template_bucket,
                         segmentation_bucket=segmentation_bucket,
-                        desanitizer=desanitizer)
+                        desanitizer=desanitizer,
+                        starting_position=max_plane)
 
         hierarchy = celltype.split('/')[0]
         dirty = desanitizer[celltype.split('/')[-1]]
@@ -117,6 +145,11 @@ def write_celltypes_html(
         celltype_to_link[celltype] = this_url
         these_cols = {'names': ['celltype_name', 'hierarchy'],
                       'values': [dirty, hierarchy]}
+
+        if data_dir is not None:
+            these_cols['names'].append('counts')
+            these_cols['values'].appent(total_cts)
+
         celltype_to_cols[celltype] = these_cols
 
     title = "Mouse1 cell type count maps"
