@@ -351,6 +351,34 @@ def get_mask_lookup(mask_dir, n_processors):
 
     return dict(result)
 
+def reformat_census(census, structure_name_lookup):
+
+    metadata = dict()
+    result = dict()
+    for gene_name in census['genes']:
+        zarr_path = census['genes'][gene_name]['zarr_path']
+        metadata[gene_name] = zarr_path
+        for struct_name in census['genes'][gene_name]['census']:
+            human_name = structure_name_lookup[struct_name]
+            if human_name not in result:
+                result[human_name] = dict()
+                result[human_name]['genes'] = dict()
+            this_census = census['genes'][gene_name]['census'][struct_name]
+            result[human_name]['genes'][gene_name] = this_census
+
+    for struct_name in census['genes'][gene_name]['census']:
+        human_name = structure_name_lookup[struct_name]
+        result[human_name]['celltypes'] = dict()
+        for child in ('classes', 'subclasses', 'clusters'):
+            result[human_name]['celltypes'][child] = dict()
+            for class_name in census['celltypes'][child]:
+                this_census = census['celltypes'][child][class_name]['census'][struct_name]
+                result[human_name]['celltypes'][child][class_name] = this_census
+                zarr_path = census['celltypes'][child][class_name]['zarr_path']
+                metadata[f"{child}/{class_name}"] = zarr_path
+
+    return result, metadata
+
 
 def main():
 
@@ -368,9 +396,9 @@ def main():
     parser.add_argument('--celltypes_dir', type=str, default=None)
     parser.add_argument('--mfish_dir', type=str, default=None)
     parser.add_argument('--annotation_path', type=str, default=default_anno)
-    parser.add_argument('--structure_lookup', type=str, default=None,
-                        nargs='+')
+    parser.add_argument('--structure_lookup', type=str, default=None)
     parser.add_argument('--n_processors', type=int, default=4)
+    parser.add_argument('--output_path', type=str, default='census.json')
     args = parser.parse_args()
 
     mask_dir = pathlib.Path(args.mask_dir)
@@ -408,12 +436,24 @@ def main():
         celltypes_desanitizer=desanitizer,
         n_processors=args.n_processors)
 
-    with open('test_census.json', 'w') as out_file:
-        out_file.write(json.dumps(census, indent=2))
-    with open('test_mask.json', 'w') as out_file:
-        this_dict = {ii:mask_pixel_lookup[ii]['path']
-                     for ii in mask_pixel_lookup}
-        out_file.write(json.dumps(this_dict, indent=2))
+    (census,
+     zarr_paths) = reformat_census(
+                census=census,
+                structure_name_lookup=structure_name_lookup)
+
+    final_census = dict()
+    final_census['census'] = census
+    final_census['zarr_paths'] = zarr_paths
+    mask_paths = dict()
+    for k in mask_pixel_lookup.keys():
+        human_name = structure_name_lookup[k]
+        assert human_name not in mask_paths
+        mask_paths[human_name] = mask_pixel_lookup[k]['path']
+    final_census['mask_paths'] = mask_paths
+
+    with open(args.output_path, 'w') as out_file:
+        out_file.write(json.dumps(final_census, indent=2))
+    print(f"wrote {args.output_path}")
 
 
 if __name__ == "__main__":
