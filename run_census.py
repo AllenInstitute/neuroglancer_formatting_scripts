@@ -5,9 +5,10 @@ import numpy as np
 import argparse
 import json
 import SimpleITK
+import multiprocessing
 
 
-def census_for_structure_lookup(
+def census_from_structure_lookup(
         structure_mask_lookup,
         mfish_dir,
         celltypes_dir,
@@ -105,15 +106,14 @@ def census_from_mask_and_zarr_dir(
             raise RuntimeError(msg)
 
         data_arr = np.array(
-                zarr.open(sub_dir, 'r')['0']).transpose(2, 0, 1)
+                zarr.open(sub_dir, 'r')['0']).transpose(2, 1, 0)
         this_census = census_from_mask_lookup_and_arr(
-            mask_lookup=mask_lookup,
+            mask_lookup=mask_pixel_lookup,
             data_arr=data_arr)
 
-        result[human_name] = this_census
-        print(f"census from {sub_dir}")
-        print(this_census)
-        exit()
+        result[human_name] = {'census': this_census,
+                              'zarr_path': str(sub_dir.resolve().absolute())}
+        break
 
     return result
 
@@ -139,14 +139,13 @@ def census_from_mask_lookup_and_arr(
 
     result = dict()
     for mask_key in mask_lookup:
-        print(f"mask_key {mask_key}")
-        mask_pixels = mask_lookup[mask_key]
+        mask_pixels = mask_lookup[mask_key]['mask']
         valid = data_arr[mask_pixels]
         total = valid.sum()
         idx = np.argmax(valid)
-        voxel = [mask_pixels[ii][idx]
+        voxel = [int(mask_pixels[ii][idx])
                  for ii in range(len(mask_pixels))]
-        this_result = {'counts': total,
+        this_result = {'counts': float(total),
                        'max_voxel': voxel}
         result[mask_key] = this_result
     return result
@@ -220,7 +219,7 @@ def _get_structure_name_from_json(filepath):
         result[id_val] = name_val
     return result
 
-def get_mask_lookup(mask_dir):
+def _get_mask_lookup_worker(file_path_list, output_dict, lock):
     """
     get a dict mapping integer ID to mask pixels
 
@@ -235,18 +234,63 @@ def get_mask_lookup(mask_dir):
     """
 
     result = dict()
-    file_path_list = [n for n in mask_dir.rglob('*nii.gz')]
     for file_path in file_path_list:
         id_val = int(file_path.name.split('_')[0])
-        assert id_val not in result
-        print(f"getting mask {id_val} -- {len(file_path_list)}")
         mask = SimpleITK.GetArrayFromImage(
                     SimpleITK.ReadImage(file_path))
         mask_pixels = np.where(mask==1)
-        result[id_val] = mask_pixels
+        result[id_val] = {'mask': mask_pixels,
+                          'path': str(file_path.resolve().absolute())}
 
-    print("got mask pixel lookup")
-    return result
+    with lock:
+        for id_val in result:
+            output_dict[id_val] = result[id_val]
+
+def get_mask_lookup(mask_dir, n_processors):
+    """
+    get a dict mapping integer ID to mask pixels
+
+    Parametrs
+    ---------
+    mask_dir: pathlib.Path
+        directory to scann for all nii.gz files
+
+    n_processors: int
+
+    Returns
+    -------
+    dict
+    """
+    file_path_list = [n for n in mask_dir.rglob('*nii.gz')]
+    id_set = set([int(f.name.split('_')[0])
+                  for f in file_path_list])
+    assert len(id_set) == len(file_path_list)
+
+    file_path_list.sort()
+
+    mgr = multiprocessing.Manager()
+    result = mgr.dict()
+    lock = mgr.Lock()
+
+    sub_lists = []
+    for ii in range(n_processors):
+        sub_lists.append([])
+    for ii in range(len(file_path_list)):
+        sub_lists[ii%n_processors].append(file_path_list[ii])
+    process_list = []
+    for ii in range(n_processors):
+        p = multiprocessing.Process(
+                target=_get_mask_lookup_worker,
+                args=(sub_lists[ii],
+                      result,
+                      lock))
+        p.start()
+        process_list.append(p)
+
+    for p in process_list:
+        p.join()
+
+    return dict(result)
 
 
 def main():
@@ -264,9 +308,10 @@ def main():
     parser.add_argument('--mask_dir', type=str, default=default_mask)
     parser.add_argument('--celltypes_dir', type=str, default=None)
     parser.add_argument('--mfish_dir', type=str, default=None)
-    parser.add_argument('--annotation_path', type=str, default=None)
+    parser.add_argument('--annotation_path', type=str, default=default_anno)
     parser.add_argument('--structure_lookup', type=str, default=None,
                         nargs='+')
+    parser.add_argument('--n_processors', type=int, default=4)
     args = parser.parse_args()
 
     mask_dir = pathlib.Path(args.mask_dir)
@@ -287,8 +332,9 @@ def main():
                                 path_list=structure_lookup_list)
     print("got structure name lookup")
 
-    mask_pixel_lookup = get_mask_lookup(mask_dir)
-    print("got mask pixel lookup")
+    mask_pixel_lookup = get_mask_lookup(mask_dir,
+                            n_processors=args.n_processors)
+    print(f"got mask pixel lookup -- {len(mask_pixel_lookup)}")
 
     (subclass_to_clusters,
      class_to_clusters,
@@ -296,12 +342,19 @@ def main():
      desanitizer) = get_class_lookup(args.annotation_path)
     print("got class lookup")
 
-    census_from_structure_lookup(
+    census = census_from_structure_lookup(
         structure_mask_lookup=mask_pixel_lookup,
         mfish_dir=mfish_dir,
         celltypes_dir=celltypes_dir,
         celltypes_desanitizer=desanitizer)
 
+    with open('test_census.json', 'w') as out_file:
+        out_file.write(json.dumps(census, indent=2))
+    with open('test_mask.json', 'w') as out_file:
+        this_dict = {ii:mask_pixel_lookup[ii]['path']
+                     for ii in mask_pixel_lookup}
+        out_file.write(json.dumps(this_dict, indent=2))
+
 
 if __name__ == "__main__":
-    main() 
+    main()
