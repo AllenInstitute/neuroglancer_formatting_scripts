@@ -30,10 +30,40 @@ def check_census(
 def main():
     with open('test_census.json', 'rb') as in_file:
         census_data = json.load(in_file)
-    with open('test_mask.json', 'rb') as in_file:
-        mask_lookup = json.load(in_file)
 
     rng = np.random.default_rng(22130)
+    census = census_data['census']
+    zarr_paths = census_data['zarr_paths']
+    mask_paths = census_data['mask_paths']
+    for struct_name in census:
+        this_census = census[struct_name]
+        gene_names = list(this_census['genes'].keys())
+        gene_names.sort()
+        rng.shuffle(gene_names)
+        print('genes')
+        for gene in gene_names[:5]:
+            actual = this_census['genes'][gene]
+            max_v = check_census(zarr_path=zarr_paths[gene],
+                                 mask_path=mask_paths[struct_name],
+                                 census=actual)
+            print(f"{actual} -- {max_v}")
+
+        for child in ('classes', 'subclasses', 'clusters'):
+            print(child)
+            k_list = list(this_census['celltypes'][child].keys())
+            k_list.sort()
+            rng.shuffle(k_list)
+            for k in k_list[:5]:
+                actual = this_census['celltypes'][child][k]
+                zarr_path = zarr_paths[f"{child}/{k}"]
+                mask_path = mask_paths[struct_name]
+                max_v = check_census(
+                         zarr_path=zarr_path,
+                         mask_path=mask_path,
+                         census=actual)
+                print(f"{actual} -- {max_v}")
+
+    exit()
     for parent in (census_data['genes'],
                    census_data['celltypes']['classes'],
                    census_data['celltypes']['subclasses'],
