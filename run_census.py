@@ -1,3 +1,4 @@
+import os
 from celltypes_utils import get_class_lookup
 import pathlib
 import zarr
@@ -6,13 +7,15 @@ import argparse
 import json
 import SimpleITK
 import multiprocessing
+import time
 
 
 def census_from_structure_lookup(
         structure_mask_lookup,
         mfish_dir,
         celltypes_dir,
-        celltypes_desanitizer):
+        celltypes_desanitizer,
+        n_processors):
     """
     Parameters
     ----------
@@ -39,7 +42,8 @@ def census_from_structure_lookup(
     result['genes'] = census_from_mask_and_zarr_dir(
                         mask_pixel_lookup=structure_mask_lookup,
                         zarr_dir=mfish_dir,
-                        desanitizer=None)
+                        desanitizer=None,
+                        n_processors=n_processors)
 
     celltype_census = dict()
     for child in ('classes', 'subclasses', 'clusters'):
@@ -47,7 +51,8 @@ def census_from_structure_lookup(
         celltype_census[child] = census_from_mask_and_zarr_dir(
                             mask_pixel_lookup=structure_mask_lookup,
                             zarr_dir=this_dir,
-                            desanitizer=celltypes_desanitizer)
+                            desanitizer=celltypes_desanitizer,
+                            n_processors=n_processors)
 
     result['celltypes'] = celltype_census
 
@@ -57,7 +62,8 @@ def census_from_structure_lookup(
 def census_from_mask_and_zarr_dir(
         mask_pixel_lookup,
         zarr_dir,
-        desanitizer=None):
+        desanitizer=None,
+        n_processors=4):
     """
     Loop through the subdirectories of the
     ome-zarr-ified data, performing the structure
@@ -92,10 +98,51 @@ def census_from_mask_and_zarr_dir(
         msg = f"\n{zarr_dir.resolve().absolute()} is not dir"
         raise RuntimeError(msg)
 
+    sub_dir_list = [n for n in zarr_dir.iterdir() if n.is_dir()]
+    for s in sub_dir_list:
+        assert s.is_dir()
+    sub_dir_list.sort()
+
+    sub_lists = []
+    for ii in range(n_processors):
+        sub_lists.append([])
+    for ii in range(len(sub_dir_list)):
+        sub_lists[ii%n_processors].append(sub_dir_list[ii])
+
+    mgr = multiprocessing.Manager()
+    result = mgr.dict()
+    lock = mgr.Lock()
+
+    process_list = []
+    for ii in range(n_processors):
+        p = multiprocessing.Process(
+                target=_census_from_mask_and_zarr_dir_worker,
+                kwargs={'sub_dir_list': sub_lists[ii],
+                        'mask_pixel_lookup': mask_pixel_lookup,
+                        'desanitizer': desanitizer,
+                        'output_dict': result,
+                        'lock': lock})
+        p.start()
+        process_list.append(p)
+
+    for p in process_list:
+        p.join()
+
+    return dict(result)
+
+
+def _census_from_mask_and_zarr_dir_worker(
+        sub_dir_list,
+        mask_pixel_lookup,
+        desanitizer,
+        output_dict,
+        lock):
+
+    t0 = time.time()
+    n_tot = len(sub_dir_list)
+    ct = 0
     result = dict()
-    sub_dir_list = [n for n in zarr_dir.iterdir() if n.is_dir]
     for sub_dir in sub_dir_list:
-        print(f"working on {sub_dir}")
         if desanitizer is not None:
             human_name = desanitizer[sub_dir.name]
         else:
@@ -113,9 +160,21 @@ def census_from_mask_and_zarr_dir(
 
         result[human_name] = {'census': this_census,
                               'zarr_path': str(sub_dir.resolve().absolute())}
-        break
 
-    return result
+        ct += 1
+        if ct%10 == 0:
+            pid = os.getpid()
+            duration = time.time()-t0
+            per = duration/ct
+            pred = per*n_tot
+            remain = pred-duration
+            with lock:
+                print(f"{pid} -- {ct} in {duration:.2e} "
+                      f"-- {remain:.2e} of {pred:.2e} remain")
+
+    with lock:
+        for k in result:
+            output_dict[k] = result[k]
 
 
 def census_from_mask_lookup_and_arr(
@@ -346,7 +405,8 @@ def main():
         structure_mask_lookup=mask_pixel_lookup,
         mfish_dir=mfish_dir,
         celltypes_dir=celltypes_dir,
-        celltypes_desanitizer=desanitizer)
+        celltypes_desanitizer=desanitizer,
+        n_processors=args.n_processors)
 
     with open('test_census.json', 'w') as out_file:
         out_file.write(json.dumps(census, indent=2))
