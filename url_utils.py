@@ -4,7 +4,11 @@ def get_final_url(
         image_layer_list,
         template_bucket='mouse1-template-prototype',
         segmentation_bucket='mouse1-segmentation-prototype',
-        starting_position=None):
+        starting_position=None,
+        layout="4panel",
+        x_in_m=1.0e-5,
+        y_in_m=1.0e-5,
+        z_in_m=1.0e-4):
     """
     Image layers with template and segmentation layer
     """
@@ -26,14 +30,14 @@ def get_final_url(
     layer_list = image_layer_list + [template_layer, segmentation_layer]
 
     layers = dict()
-    layers["dimensions"] = {"x": [1.0e-5, "m"],
-                            "y": [1.0e-5, "m"],
-                            "z": [0.0001, "m"]}
+    layers["dimensions"] = {"x": [x_in_m, "m"],
+                            "y": [y_in_m, "m"],
+                            "z": [z_in_m, "m"]}
     layers["crossSectionScale"] = 2.6
     layers["projectionScale"] = 2048
     layers["layers"] = layer_list
     layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
-    layers["layout"] = "4panel"
+    layers["layout"] = layout
 
     if starting_position is not None:
         layers["position"] = [float(x) for x in starting_position]
