@@ -4,41 +4,13 @@ import numbers
 
 from url_utils import (
     url_to_json,
-    get_final_url,
-    get_image_layer)
+    get_final_url)
 
+from create_mfish_url import (
+    get_gene_layers)
+    
 
-def get_gene_layers(
-        mfish_bucket,
-        gene_list,
-        color_list,
-        range_max_list):
-
-    with open("data/mouse1_gene_list.json", "rb") as in_file:
-        legal_genes = set(json.load(in_file))
-
-    if len(gene_list) != len(color_list):
-        raise RuntimeError(
-             f"{len(gene_list)} genes but "
-             f"{len(color_list)} colors")
-
-    layers = []
-    for gene, color, range_max in zip(gene_list,
-                                      color_list,
-                                      range_max_list):
-        if gene not in legal_genes:
-            raise RuntimeError(
-                f"{gene} is not a legal gene")
-        layers.append(get_image_layer(
-                          bucket_name=mfish_bucket,
-                          dataset_name=gene,
-                          public_name=gene,
-                          color=color,
-                          range_max=range_max))
-    return layers
-
-
-def create_mfish_url(
+def create_mfish_grid_url(
        mfish_bucket,
        genes,
        colors,
@@ -48,7 +20,14 @@ def create_mfish_url(
 
     if len(colors) != len(genes) or len(range_max) != len(genes):
         raise RuntimeError(
-            "len mismatch")
+            "\nlen mismatch\n"
+            f"{len(genes)} genes\n"
+            f"{len(colors)} colors\n"
+            f"{len(range_max)} range_max\n")
+
+    if len(genes) > 4:
+        raise RuntimeError(
+            f"you gave {len(genes)}; can only support 4")
 
     gene_layers = get_gene_layers(
                     mfish_bucket=mfish_bucket,
@@ -56,10 +35,33 @@ def create_mfish_url(
                     color_list=colors,
                     range_max_list=range_max)
 
+    window_list = []
+    for gene in gene_layers:
+        this_window = dict()
+        this_window["type"] = "viewer"
+        this_window["layers"] = [gene["name"],
+                                 "CCF template",
+                                 "CCF segmentation"]
+        this_window["layout"] = "xy"
+        window_list.append(this_window)
+
+    first_row = dict()
+    first_row["type"] = "row"
+    first_row["children"] = window_list[:2]
+
+    second_row = dict()
+    second_row["type"] = "row"
+    second_row["children"] = window_list[2:]
+
+    layout = dict()
+    layout["type"] = "column"
+    layout["children"] = [first_row, second_row]
+
     url = get_final_url(
             image_layer_list=gene_layers,
             template_bucket=template_bucket,
-            segmentation_bucket=segmentation_bucket)
+            segmentation_bucket=segmentation_bucket,
+            layout=layout)
 
     return url
 
@@ -108,7 +110,7 @@ def main():
     else:
         range_max = args.range_max
 
-    url = create_mfish_url(
+    url = create_mfish_grid_url(
             mfish_bucket=args.mfish_bucket,
             genes=genes,
             colors=colors,
@@ -116,7 +118,7 @@ def main():
             segmentation_bucket=args.segmentation_bucket)
 
     params = url.split('#!')
-    print(url_to_json(params[1]))
+    #print(url_to_json(params[1]))
     print('')
 
     print(url)
