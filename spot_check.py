@@ -3,6 +3,7 @@ import zarr
 import SimpleITK
 import json
 import numpy as np
+import argparse
 
 def check_census(
     zarr_path,
@@ -28,20 +29,32 @@ def check_census(
     return data_arr[voxel[0], voxel[1], voxel[2]]
 
 def main():
-    with open('test_census.json', 'rb') as in_file:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--seed', type=int, default=112358)
+    parser.add_argument('--census_path', type=str, default=None)
+    parser.add_argument('--n', type=int, default=4)
+    args = parser.parse_args()
+
+    rng = np.random.default_rng(args.seed)
+
+    with open(args.census_path, 'rb') as in_file:
         census_data = json.load(in_file)
 
-    rng = np.random.default_rng(22130)
     census = census_data['census']
     zarr_paths = census_data['zarr_paths']
     mask_paths = census_data['mask_paths']
-    for struct_name in census:
+
+    struct_list = list(census.keys())
+    struct_list.sort()
+    rng.shuffle(struct_list)
+
+    for struct_name in struct_list[:args.n]:
         this_census = census[struct_name]
         gene_names = list(this_census['genes'].keys())
         gene_names.sort()
         rng.shuffle(gene_names)
         print('genes')
-        for gene in gene_names[:5]:
+        for gene in gene_names[:args.n]:
             actual = this_census['genes'][gene]
             max_v = check_census(zarr_path=zarr_paths[gene],
                                  mask_path=mask_paths[struct_name],
@@ -53,7 +66,7 @@ def main():
             k_list = list(this_census['celltypes'][child].keys())
             k_list.sort()
             rng.shuffle(k_list)
-            for k in k_list[:5]:
+            for k in k_list[:args.n]:
                 actual = this_census['celltypes'][child][k]
                 zarr_path = zarr_paths[f"{child}/{k}"]
                 mask_path = mask_paths[struct_name]
@@ -63,24 +76,6 @@ def main():
                          census=actual)
                 print(f"{actual} -- {max_v}")
 
-    exit()
-    for parent in (census_data['genes'],
-                   census_data['celltypes']['classes'],
-                   census_data['celltypes']['subclasses'],
-                   census_data['celltypes']['clusters']):
-        k = list(parent.keys())[0]
-        first_test = parent[k]
-        zarr_path = first_test['zarr_path']
-        struct_list = list(first_test['census'].keys())
-        struct_list.sort()
-        rng.shuffle(struct_list)
-        for struct_id in struct_list[:10]:
-            actual = first_test['census'][struct_id]
-            struct_path = mask_lookup[struct_id]
-            max_v = check_census(zarr_path=zarr_path,
-                                 mask_path=struct_path,
-                                 census=actual)
-            print(f"{actual} -- {max_v:.2e}")
 
 if __name__ == "__main__":
     main()
