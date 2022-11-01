@@ -5,12 +5,14 @@ import PIL
 import pathlib
 import numpy as np
 import json
+import skimage.transform
 
 
 def make_info_file(
         resolution_xyz,
         volume_size_xyz,
-        layer_dir):
+        layer_dir,
+        downscale_list = (1, 2, 4, 8)):
     """
     Shamelessly copied from
 
@@ -30,27 +32,52 @@ def make_info_file(
                          saved
     """
 
+
+    actual_downscale = []
+    for v in downscale_list:
+        if volume_size_xyz[0] % v == 0 and volume_size_xyz[1] % v == 0:
+            actual_downscale.append(v)
+
+
+    base_resolution = [10000, 10000, 100000]
+
     info = dict()
     info["data_type"] = "uint8"
     info["num_channels"] = 3
     info["type"] = "image"
 
-    main_scale = dict()
-    main_scale["key"] = "10000_10000_100000"
-    main_scale["encoding"] = "raw"
-    main_scale["resolution"] = [10000, 10000, 100000]
-    main_scale["size"] = volume_size_xyz
-    main_scale["chunk_sizes"] = [[512, 512, 1]]
+    scale_list = []
+    for downscale in actual_downscale:
+        this_resolution = [base_resolution[0]*downscale,
+                           base_resolution[1]*downscale,
+                           base_resolution[2]]
+        this_size = [volume_size_xyz[0]//downscale,
+                     volume_size_xyz[1]//downscale,
+                     volume_size_xyz[2]]
+        this_scale = dict()
+        this_scale["key"] = f"{this_resolution[0]}_"
+        this_scale["key"] += f"{this_resolution[1]}_"
+        this_scale["key"] += f"{this_resolution[2]}"
+        this_scale["encoding"] = "raw"
+        this_scale["resolution"] = this_resolution
+        this_scale["size"] = this_size
+        this_scale["chunk_sizes"] = [[512, 512, 1]]
+        scale_list.append(this_scale)
 
-    info["scales"] = [main_scale]
+    info["scales"] = scale_list
     with open(f"{layer_dir}/info", "w") as out_file:
         out_file.write(json.dumps(info, indent=2))
 
+    return info
 
 def read_image_to_cloud(image_path_list,
                         layer_dir,
                         key,
-                        chunk_size):
+                        chunk_size,
+                        shape):
+
+    np_shape = (shape[1], shape[0], 3)
+
     this_dir = layer_dir / key
     if not this_dir.exists():
         this_dir.mkdir()
@@ -65,6 +92,17 @@ def read_image_to_cloud(image_path_list,
     for zz, image_path in enumerate(image_path_list):
         with PIL.Image.open(image_path, 'r') as img:
             data = np.array(img)
+
+            if not np.allclose(data.shape, np_shape):
+                print(f"resizing {data.shape} -> {np_shape}")
+                data = skimage.transform.resize(
+                            data,
+                            np_shape,
+                            preserve_range=True,
+                            anti_aliasing=True)
+
+                data = np.round(data).astype(np.uint8)
+
             for x0 in range(0, data.shape[1], dx):
                 x1 = min(data.shape[1], x0+dx)
                 for y0 in range(0, data.shape[0], dy):
@@ -76,19 +114,26 @@ def read_image_to_cloud(image_path_list,
 
 
 def process_image(image_path_list, image_dir):
+
+    if not isinstance(image_path_list, list):
+        image_path_list = [image_path_list]
+
     with PIL.Image.open(image_path_list[0], 'r') as img:
         img_size = img.size
     img_shape = [img.size[0], img.size[1], len(image_path_list)]
-    img_cloud = make_info_file(
+
+    info_data = make_info_file(
         resolution_xyz=(10000, 10000, 100000),
         volume_size_xyz=img_shape,
         layer_dir=image_dir)
 
-    img_cloud = read_image_to_cloud(
-        image_path_list=image_path_list,
-        layer_dir=image_dir,
-        key="10000_10000_100000",
-        chunk_size=[512, 512, 1])
+    for scale in info_data["scales"]:
+        img_cloud = read_image_to_cloud(
+            image_path_list=image_path_list,
+            layer_dir=image_dir,
+            key=scale["key"],
+            chunk_size=scale["chunk_sizes"][0],
+            shape=scale["size"])
 
 def main():
 
@@ -112,7 +157,7 @@ def main():
     for p in image_path_list:
         print(p)
 
-    process_image(image_path_list=image_path_list,
+    process_image(image_path_list=image_path_list[0],
                   image_dir=output_dir)
 
 
