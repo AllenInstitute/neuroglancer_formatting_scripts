@@ -109,3 +109,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    #sfd need to get colors right
+    #   Note: the shader code for the Seung lab branch was not the same
+    #   as the shader code for google; look at some examples using
+    #   sfd-eastern-bucket (...)
