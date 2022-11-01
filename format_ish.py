@@ -88,16 +88,14 @@ def read_and_pad_image(
     return result
 
 
-def read_image_to_cloud(image_path_list,
-                        layer_dir,
-                        key,
-                        chunk_size,
-                        base_shape,
-                        downscale_shape):
+def write_image_to_cloud(
+        layer_dir,
+        key,
+        chunk_size,
+        downscale_shape,
+        data,
+        zz_idx):
 
-    np_base_shape = (base_shape[1],
-                     base_shape[0],
-                     3)
 
     np_scaled_shape = (downscale_shape[1],
                        downscale_shape[0],
@@ -111,32 +109,25 @@ def read_image_to_cloud(image_path_list,
     dx = chunk_size[0]
     dy = chunk_size[1]
 
-    if not isinstance(image_path_list, list):
-        image_path_list = [image_path_list]
+    if not np.allclose(data.shape, np_scaled_shape):
+        print(f"resizing {data.shape} -> {np_scaled_shape}")
+        data = skimage.transform.resize(
+                    data,
+                    np_scaled_shape,
+                    preserve_range=True,
+                    anti_aliasing=True)
 
-    for zz, image_path in enumerate(image_path_list):
-        data = read_and_pad_image(
-                    image_path=image_path,
-                    np_target_shape=np_base_shape)
+        data = np.round(data).astype(np.uint8)
 
-        if not np.allclose(data.shape, np_scaled_shape):
-            print(f"resizing {data.shape} -> {np_scaled_shape}")
-            data = skimage.transform.resize(
-                        data,
-                        np_scaled_shape,
-                        preserve_range=True,
-                        anti_aliasing=True)
+    for x0 in range(0, data.shape[1], dx):
+        x1 = min(data.shape[1], x0+dx)
+        for y0 in range(0, data.shape[0], dy):
+            y1 = min(data.shape[0], y0+dy)
+            this_file = this_dir / f"{x0}-{x1}_{y0}-{y1}_{zz_idx}-{zz_idx+1}"
+            with open(this_file, "wb") as out_file:
+                this_data = data[y0:y1, x0:x1, :].transpose(1, 0, 2).tobytes("F")
+                out_file.write(this_data)
 
-            data = np.round(data).astype(np.uint8)
-
-        for x0 in range(0, data.shape[1], dx):
-            x1 = min(data.shape[1], x0+dx)
-            for y0 in range(0, data.shape[0], dy):
-                y1 = min(data.shape[0], y0+dy)
-                this_file = this_dir / f"{x0}-{x1}_{y0}-{y1}_{zz}-{zz+1}"
-                with open(this_file, "wb") as out_file:
-                    this_data = data[y0:y1, x0:x1, :].transpose(1, 0, 2).tobytes("F")
-                    out_file.write(this_data)
 
 def get_volume_shape(image_path_list):
     dx_vals = []
@@ -155,20 +146,28 @@ def process_image(image_path_list, image_dir):
         image_path_list = [image_path_list]
 
     volume_shape = get_volume_shape(image_path_list)
+    np_base_shape = (volume_shape[1],
+                     volume_shape[0],
+                     3)
 
     info_data = make_info_file(
         resolution_xyz=(10000, 10000, 100000),
         volume_size_xyz=volume_shape,
         layer_dir=image_dir)
 
-    for scale in info_data["scales"]:
-        img_cloud = read_image_to_cloud(
-            image_path_list=image_path_list,
-            layer_dir=image_dir,
-            key=scale["key"],
-            chunk_size=scale["chunk_sizes"][0],
-            base_shape=volume_shape,
-            downscale_shape=scale["size"])
+    for zz_idx, image_path in enumerate(image_path_list):
+        raw_data = read_and_pad_image(
+                    image_path=image_path,
+                    np_target_shape=np_base_shape)
+
+        for scale in info_data["scales"]:
+            img_cloud = write_image_to_cloud(
+                layer_dir=image_dir,
+                key=scale["key"],
+                chunk_size=scale["chunk_sizes"][0],
+                downscale_shape=scale["size"],
+                data=raw_data,
+                zz_idx=zz_idx)
 
 def main():
 
