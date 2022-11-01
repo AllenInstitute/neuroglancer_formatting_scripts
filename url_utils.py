@@ -64,7 +64,7 @@ def get_template_layer(
     return result
 
 
-def get_image_layer(
+def get_heatmap_image_layer(
         bucket_name,
         dataset_name,
         public_name,
@@ -77,14 +77,15 @@ def get_image_layer(
     result["source"] = f"zarr://s3://{bucket_name}/{dataset_name}"
     result["name"] = f"{public_name} ({color})"
     result["blend"] = "default"
-    result["shader"] = get_rgb_shader_code(rgb_color,
+    result["shader"] = get_rgb_heat_map_shader_code(
+                                       rgb_color,
                                        transparent=False,
                                        range_max=range_max)
     result["opacity"] = 1.0
     result["visible"] = True
     return result
 
-def get_rgb_shader_code(
+def get_rgb_heat_map_shader_code(
         color,
         transparent=True,
         range_max=20.0,

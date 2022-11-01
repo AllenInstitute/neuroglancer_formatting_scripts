@@ -1,10 +1,11 @@
 import argparse
 import json
+import numbers
 
 from url_utils import (
     url_to_json,
     get_final_url,
-    get_image_layer)
+    get_heatmap_image_layer)
 
 
 def get_gene_layers(
@@ -28,7 +29,7 @@ def get_gene_layers(
         if gene not in legal_genes:
             raise RuntimeError(
                 f"{gene} is not a legal gene")
-        layers.append(get_image_layer(
+        layers.append(get_heatmap_image_layer(
                           bucket_name=mfish_bucket,
                           dataset_name=gene,
                           public_name=gene,
@@ -100,7 +101,7 @@ def main():
     else:
         colors = args.colors
 
-    if isinstance(args.range_max, int):
+    if isinstance(args.range_max, numbers.Number):
         range_max = [args.range_max]*len(colors)
     else:
         range_max = args.range_max

@@ -2,7 +2,7 @@ import argparse
 import json
 
 from url_utils import (
-    get_image_layer,
+    get_heatmap_image_layer,
     json_to_url,
     get_final_url)
 
@@ -21,7 +21,7 @@ def create_celltypes_url(
     if desanitizer is not None:
         public_name = desanitizer[public_name]
 
-    image_layers = get_image_layer(
+    image_layers = get_heatmap_image_layer(
                        bucket_name=bucket,
                        dataset_name=celltype,
                        public_name=public_name,
