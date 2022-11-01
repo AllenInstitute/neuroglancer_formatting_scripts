@@ -5,7 +5,6 @@ import PIL
 import pathlib
 import numpy as np
 import json
-from precomputed_utils import clean_dir
 
 
 def make_info_file(
