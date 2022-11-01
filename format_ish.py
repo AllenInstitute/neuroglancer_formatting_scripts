@@ -47,7 +47,7 @@ def make_info_file(
         out_file.write(json.dumps(info, indent=2))
 
 
-def read_image_to_cloud(image_path,
+def read_image_to_cloud(image_path_list,
                         layer_dir,
                         key,
                         chunk_size):
@@ -59,29 +59,33 @@ def read_image_to_cloud(image_path,
     dx = chunk_size[0]
     dy = chunk_size[1]
 
-    with PIL.Image.open(image_path, 'r') as img:
-        data = np.array(img)
-        for x0 in range(0, data.shape[1], dx):
-            x1 = min(data.shape[1], x0+dx)
-            for y0 in range(0, data.shape[0], dy):
-                y1 = min(data.shape[0], y0+dy)
-                this_file = this_dir / f"{x0}-{x1}_{y0}-{y1}_{0}-1"
-                with open(this_file, "wb") as out_file:
-                    this_data = data[y0:y1, x0:x1, :].transpose(1, 0, 2).tobytes("F")
-                    out_file.write(this_data)
+    if not isinstance(image_path_list, list):
+        image_path_list = [image_path_list]
+
+    for zz, image_path in enumerate(image_path_list):
+        with PIL.Image.open(image_path, 'r') as img:
+            data = np.array(img)
+            for x0 in range(0, data.shape[1], dx):
+                x1 = min(data.shape[1], x0+dx)
+                for y0 in range(0, data.shape[0], dy):
+                    y1 = min(data.shape[0], y0+dy)
+                    this_file = this_dir / f"{x0}-{x1}_{y0}-{y1}_{zz}-{zz+1}"
+                    with open(this_file, "wb") as out_file:
+                        this_data = data[y0:y1, x0:x1, :].transpose(1, 0, 2).tobytes("F")
+                        out_file.write(this_data)
 
 
-def process_image(image_path, image_dir):
-    with PIL.Image.open(image_path, 'r') as img:
+def process_image(image_path_list, image_dir):
+    with PIL.Image.open(image_path_list[0], 'r') as img:
         img_size = img.size
-    img_shape = [img.size[0], img.size[1], 1]
+    img_shape = [img.size[0], img.size[1], len(image_path_list)]
     img_cloud = make_info_file(
         resolution_xyz=(10000, 10000, 100000),
         volume_size_xyz=img_shape,
         layer_dir=image_dir)
 
     img_cloud = read_image_to_cloud(
-        image_path=image_path,
+        image_path_list=image_path_list,
         layer_dir=image_dir,
         key="10000_10000_100000",
         chunk_size=[512, 512, 1])
@@ -89,7 +93,7 @@ def process_image(image_path, image_dir):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ish_path', type=str, default=None)
+    #parser.add_argument('--ish_path', type=str, default=None)
     parser.add_argument('--output_dir', type=str, default=None)
     parser.add_argument('--clobber', default=False, action='store_true')
     args = parser.parse_args()
@@ -102,7 +106,13 @@ def main():
             shutil.rmtree(output_dir)
     output_dir.mkdir()
 
-    process_image(image_path=args.ish_path,
+    image_dir = pathlib.Path('/Users/scott.daniel/KnowledgeBase/ish_example/data')
+    image_path_list = [n for n in image_dir.rglob('10004*')]
+    image_path_list.sort()
+    for p in image_path_list:
+        print(p)
+
+    process_image(image_path_list=image_path_list,
                   image_dir=output_dir)
 
 

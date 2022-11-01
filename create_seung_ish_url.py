@@ -35,11 +35,14 @@ def main():
     parser.add_argument("--bucket_name",
                         type=str,
                         default="sfd-eastern-bucket")
+    parser.add_argument("--image_name",
+                        type=str,
+                        default="100047769_64")
     args = parser.parse_args()
 
     print(get_url(
             bucket_name=args.bucket_name,
-            img_name="100047769_64"))
+            img_name=args.image_name))
 
 if __name__ == "__main__":
     main()
