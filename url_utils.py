@@ -93,8 +93,15 @@ def get_ish_image_layer(
     layer = dict()
     layer["type"] = "image"
     layer["blend"] = "default"
-    bucket_url = f"https://{bucket_name}.s3.amazonaws.com"
-    layer["source"] = f"precomputed://{bucket_url}/{img_name}"
+    if bucket_name.startswith('http'):
+        bucket_url = bucket_name
+    else:
+        bucket_url = f"https://{bucket_name}.s3.amazonaws.com"
+
+    layer["source"] = f"precomputed://{bucket_url}"
+    if len(img_name) > 0:
+        layer["source"] += f"/{img_name}"
+
     layer["shader"] = get_rgb_shader_code()
     layer["name"] = img_name
     return layer
