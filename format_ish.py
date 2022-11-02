@@ -19,6 +19,7 @@ def make_info_file(
         resolution_xyz,
         volume_size_xyz,
         layer_dir,
+        image_config_list,
         downscale_list = (1, 2, 4, 8)):
     """
     Shamelessly copied from
@@ -46,12 +47,19 @@ def make_info_file(
             actual_downscale.append(v)
 
 
-    base_resolution = [10000, 10000, 100000]
+    base_resolution = resolution_xyz
 
     info = dict()
     info["data_type"] = "uint8"
     info["num_channels"] = 3
     info["type"] = "image"
+
+    z_to_image_lookup = dict()
+    for ii in range(len(image_config_list)):
+        config = image_config_list[ii]
+        z_to_image_lookup[ii] = config
+
+    info["z_to_LIMS_metadata"] = z_to_image_lookup
 
     scale_list = []
     for downscale in actual_downscale:
@@ -235,12 +243,28 @@ def process_image(
         image_config_list = [image_config_list]
 
     #volume_shape = get_volume_shape(image_path_list)
+
+    baseline_resolution = None
+    for image_config in image_config_list:
+        if baseline_resolution is None:
+            baseline_resolution = image_config['resolution']
+        else:
+            if not np.allclose(baseline_resolution,
+                               image_config['resolution']):
+                raise RuntimeError(
+                    "\nInconsistent resolutions\n"
+                    f"{baseline_resolution} != {image_config['resolution']}")
+
     volume_shape = get_volume_shape_from_config(image_config_list)
 
+    baseline_xyz = int(np.round(baseline_resolution*1000).astype(int))
+    resolution_xyz = (baseline_xyz, baseline_xyz, baseline_xyz)
+
     info_data = make_info_file(
-        resolution_xyz=(10000, 10000, 100000),
+        resolution_xyz=resolution_xyz,
         volume_size_xyz=volume_shape,
-        layer_dir=image_dir)
+        layer_dir=image_dir,
+        image_config_list=image_config_list)
 
     process_list = []
     sub_lists = []
