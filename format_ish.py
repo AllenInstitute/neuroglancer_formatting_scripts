@@ -5,6 +5,7 @@ import PIL
 import pathlib
 import numpy as np
 import json
+import multiprocessing
 import skimage.transform
 
 try:
@@ -96,6 +97,7 @@ def read_and_pad_image(
 
 def read_and_pad_image_config(
         image_config,
+        image_path,
         np_target_shape):
     """
     np_target_shape is the shape of the np.array
@@ -107,11 +109,8 @@ def read_and_pad_image_config(
     r1 = r0 + image_config['height']
     c1 = c0 + image_config['width']
 
-    aff_path = pathlib.Path(image_config['storage_directory'])
-    aff_path = aff_path / image_config['zoom']
-
     result = np.zeros(np_target_shape, dtype=np.uint8)
-    aff = affpyramid.AffPyramid(aff_path)
+    aff = affpyramid.AffPyramid(image_path)
     aff_data = aff.get_tier(aff.num_tiers-1)
     aff_data = aff_data[r0:r1, c0:c1]
     assert aff_data.dtype == np.uint8
@@ -181,27 +180,40 @@ def get_volume_shape_from_config(image_config_list):
     return (width, height, len(image_config_list))
 
 
-def process_image(image_config_list, image_dir):
+def _process_image(
+        image_config_lookup,
+        image_dir,
+        volume_shape,
+        info_data):
+    """
+    image_config_lookup maps zz_idx to image config
+    """
 
-    if not isinstance(image_config_list, list):
-        image_config_list = [image_config_list]
-
-    #volume_shape = get_volume_shape(image_path_list)
-    volume_shape = get_volume_shape_from_config(image_config_list)
+    if len(image_config_lookup) == 0:
+        return
 
     np_base_shape = (volume_shape[1],
                      volume_shape[0],
                      3)
 
-    info_data = make_info_file(
-        resolution_xyz=(10000, 10000, 100000),
-        volume_size_xyz=volume_shape,
-        layer_dir=image_dir)
 
-    for zz_idx, image_config in enumerate(image_config_list):
-        raw_data = read_and_pad_image_config(
-                    image_config=image_config,
-                    np_target_shape=np_base_shape)
+    raw_data_path = None
+    raw_data = None
+
+    for zz_idx in image_config_lookup:
+
+        image_config = image_config_lookup[zz_idx]
+
+        image_path = pathlib.Path(image_config['storage_directory'])
+        image_path = image_path / image_config['zoom']
+        image_path = str(image_path.resolve().absolute())
+
+        if raw_data_path is None or img_path != raw_data_path:
+            raw_data = read_and_pad_image_config(
+                        image_config=image_config,
+                        image_path=image_path,
+                        np_target_shape=np_base_shape)
+            raw_data_path = image_path
 
         for scale in info_data["scales"]:
             img_cloud = write_image_to_cloud(
@@ -212,12 +224,54 @@ def process_image(image_config_list, image_dir):
                 data=raw_data,
                 zz_idx=zz_idx)
 
+
+def process_image(
+        image_config_list,
+        image_dir,
+        n_processors):
+
+
+    if not isinstance(image_config_list, list):
+        image_config_list = [image_config_list]
+
+    #volume_shape = get_volume_shape(image_path_list)
+    volume_shape = get_volume_shape_from_config(image_config_list)
+
+    info_data = make_info_file(
+        resolution_xyz=(10000, 10000, 100000),
+        volume_size_xyz=volume_shape,
+        layer_dir=image_dir)
+
+    process_list = []
+    sub_lists = []
+    for ii in range(n_processors):
+        sub_lists.append(dict())
+    for ii in range(len(image_config_list)):
+        jj = ii % n_processors
+        sub_lists[jj][ii] = image_config_list[ii]
+
+    for ii in range(n_processors):
+        p = multiprocessing.Process(
+                target=_process_image,
+                kwargs={
+                    'image_config_lookup': sub_lists[ii],
+                    'image_dir': image_dir,
+                    'volume_shape': volume_shape,
+                    'info_data': info_data})
+        p.start()
+        process_list.append(p)
+
+    for p in process_list:
+        p.join()
+
+
 def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=str, default=None)
     parser.add_argument('--output_dir', type=str, default=None)
     parser.add_argument('--clobber', default=False, action='store_true')
+    parser.add_argument('--n_processors', type=int, default=4)
     args = parser.parse_args()
 
     output_dir = pathlib.Path(args.output_dir)
@@ -232,7 +286,8 @@ def main():
         image_config_list = json.load(in_file)
 
     process_image(image_config_list=image_config_list,
-                  image_dir=output_dir)
+                  image_dir=output_dir,
+                  n_processors=args.n_processors)
 
 
 if __name__ == "__main__":
