@@ -7,6 +7,12 @@ import numpy as np
 import json
 import skimage.transform
 
+try:
+    import affpyramid
+    has_aff = True
+except ModuleNotFoundError:
+    has_aff = False
+
 
 def make_info_file(
         resolution_xyz,
@@ -88,6 +94,35 @@ def read_and_pad_image(
     return result
 
 
+def read_and_pad_image_config(
+        image_config,
+        np_target_shape):
+    """
+    np_target_shape is the shape of the np.array
+    we want to return; will be the transpose of the
+    img.size
+    """
+    r0 = image_config['y']
+    c0 = image_config['x']
+    r1 = r0 + image_config['height']
+    c1 = c0 + image_config['width']
+
+    aff_path = pathlib.Path(image_config['storage_directory'])
+    aff_path = aff_path / image_config['zoom']
+
+    result = np.zeros(np_target_shape, dtype=np.uint8)
+    aff = affpyramid.AffPyramid(aff_path)
+    aff_data = aff.get_tier(aff.num_tiers-1)
+    aff_data = aff_data[r0:r1, c0:c1]
+    assert aff_data.dtype == np.uint8
+
+    result[:aff_data.shape[0],
+           :aff_data.shape[1],
+           :] = aff_data
+
+    return result
+
+
 def write_image_to_cloud(
         layer_dir,
         key,
@@ -140,12 +175,20 @@ def get_volume_shape(image_path_list):
     return (max(dx_vals), max(dy_vals), len(image_path_list))
 
 
-def process_image(image_path_list, image_dir):
+def get_volume_shape_from_config(image_config_list):
+    width = max([el['width'] for el in image_config_list])
+    height = max([el['height'] for el in image_config_list])
+    return (width, height, len(image_config_list))
 
-    if not isinstance(image_path_list, list):
-        image_path_list = [image_path_list]
 
-    volume_shape = get_volume_shape(image_path_list)
+def process_image(image_config_list, image_dir):
+
+    if not isinstance(image_config_list, list):
+        image_config_list = [image_config_list]
+
+    #volume_shape = get_volume_shape(image_path_list)
+    volume_shape = get_volume_shape_from_config(image_config_list)
+
     np_base_shape = (volume_shape[1],
                      volume_shape[0],
                      3)
@@ -155,9 +198,9 @@ def process_image(image_path_list, image_dir):
         volume_size_xyz=volume_shape,
         layer_dir=image_dir)
 
-    for zz_idx, image_path in enumerate(image_path_list):
-        raw_data = read_and_pad_image(
-                    image_path=image_path,
+    for zz_idx, image_config in enumerate(image_config_list):
+        raw_data = read_and_pad_image_config(
+                    image_config=image_config,
                     np_target_shape=np_base_shape)
 
         for scale in info_data["scales"]:
@@ -172,7 +215,7 @@ def process_image(image_path_list, image_dir):
 def main():
 
     parser = argparse.ArgumentParser()
-    #parser.add_argument('--ish_path', type=str, default=None)
+    parser.add_argument('--config_path', type=str, default=None)
     parser.add_argument('--output_dir', type=str, default=None)
     parser.add_argument('--clobber', default=False, action='store_true')
     args = parser.parse_args()
@@ -185,13 +228,10 @@ def main():
             shutil.rmtree(output_dir)
     output_dir.mkdir()
 
-    image_dir = pathlib.Path('/Users/scott.daniel/KnowledgeBase/ish_example/data')
-    image_path_list = [n for n in image_dir.rglob('10004*')]
-    image_path_list.sort()
-    for p in image_path_list:
-        print(p)
+    with open(args.config_path, 'rb') as in_file:
+        image_config_list = json.load(in_file)
 
-    process_image(image_path_list=image_path_list,
+    process_image(image_config_list=image_config_list,
                   image_dir=output_dir)
 
 
