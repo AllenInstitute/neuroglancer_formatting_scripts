@@ -45,7 +45,7 @@ def find_valid_celltypes(
     """
     Determine which cell types have actually been loaded into S3
     """
-    if not pass_all and data_dir is not None:
+    if not pass_all and data_dir is None:
         s3_client = boto3.client(
                         's3',
                         config=Config(signature_version=UNSIGNED))

@@ -64,7 +64,7 @@ def get_template_layer(
     return result
 
 
-def get_image_layer(
+def get_heatmap_image_layer(
         bucket_name,
         dataset_name,
         public_name,
@@ -77,14 +77,49 @@ def get_image_layer(
     result["source"] = f"zarr://s3://{bucket_name}/{dataset_name}"
     result["name"] = f"{public_name} ({color})"
     result["blend"] = "default"
-    result["shader"] = get_rgb_shader_code(rgb_color,
+    result["shader"] = get_rgb_heat_map_shader_code(
+                                       rgb_color,
                                        transparent=False,
                                        range_max=range_max)
     result["opacity"] = 1.0
     result["visible"] = True
     return result
 
-def get_rgb_shader_code(
+
+def get_ish_image_layer(
+        bucket_name,
+        img_name):
+
+    layer = dict()
+    layer["type"] = "image"
+    layer["blend"] = "default"
+    if bucket_name.startswith('http'):
+        bucket_url = bucket_name
+    else:
+        bucket_url = f"https://{bucket_name}.s3.amazonaws.com"
+
+    layer["source"] = f"precomputed://{bucket_url}"
+    if len(img_name) > 0:
+        layer["source"] += f"/{img_name}"
+
+    layer["shader"] = get_rgb_shader_code()
+    layer["name"] = img_name
+    return layer
+
+
+def get_rgb_shader_code():
+    """
+    Return shader code for a 3-channel RGB image
+    """
+
+    code = "void main(){\n"
+    code += "float r = toNormalized(getDataValue(0));\n"
+    code += "float g = toNormalized(getDataValue(1));\n"
+    code += "float b = toNormalized(getDataValue(2));\n"
+    code += "emitRGB(vec3(r, g, b));\n}\n"
+    return code
+
+def get_rgb_heat_map_shader_code(
         color,
         transparent=True,
         range_max=20.0,
