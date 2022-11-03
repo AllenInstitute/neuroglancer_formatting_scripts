@@ -216,7 +216,7 @@ def _process_image(
         image_path = image_path / image_config['zoom']
         image_path = str(image_path.resolve().absolute())
 
-        if raw_data_path is None or img_path != raw_data_path:
+        if raw_data_path is None or image_path != raw_data_path:
             raw_data = read_and_pad_image_config(
                         image_config=image_config,
                         image_path=image_path,
