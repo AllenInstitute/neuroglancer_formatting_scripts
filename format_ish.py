@@ -289,6 +289,62 @@ def process_image(
         p.join()
 
 
+def process_all_images(
+        image_config_list,
+        image_dir,
+        n_processors,
+        clobber=False):
+    """
+    Group configs by image_series_id; create sub-directories
+    for each of those. Load images into those directories.
+    """
+
+    # find all  of the unique image_series_id values
+    valid_ids = set()
+    for image_config in image_config_list:
+        valid_ids.add(image_config["image_series_id"])
+
+
+    # create a destination directory for each images_series_id
+    for image_series_id in valid_ids:
+        this_dir = image_dir / f"{image_series_id}"
+        if this_dir.exists():
+            if not clobber:
+                raise RuntimeError(f"{this_dir.resolve().absolute()} exists")
+            else:
+                shutil.rmtree(this_dir)
+        this_dir.mkdir()
+
+    # create a dict mapping image_series_id to a list of
+    # image configs sorted by image_series_id
+    config_lookup = dict()
+    for image_series_id in valid_ids:
+        this_idx = []
+        this_config = []
+        for image_config in image_config_list:
+            if not image_config["image_series_id"] == image_series_id:
+                continue
+            this_config.append(image_config)
+            this_idx.append(image_config["specimen_tissue_index"])
+        this_idx = np.array(this_idx)
+        sorted_dex = np.argsort(this_idx)
+        final_list = []
+        for ii in sorted_dex:
+            final_list.append(this_config[ii])
+        config_lookup[image_series_id] = final_list
+
+    # actually process each image_series_id
+    id_list = list(config_lookup.keys())
+    id_list.sort()
+    for image_series_id in id_list:
+        this_dir = image_dir / f"{image_series_id}"
+        print(f"loading {this_dir.resolve().absolute()}")
+        process_image(
+            image_config_lsit=config_lookup[image_series_id],
+            image_dir=this_dir,
+            n_processors=n_processors)
+
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -309,9 +365,11 @@ def main():
     with open(args.config_path, 'rb') as in_file:
         image_config_list = json.load(in_file)
 
-    process_image(image_config_list=image_config_list,
-                  image_dir=output_dir,
-                  n_processors=args.n_processors)
+    process_all_images(
+            image_config_list=image_config_list,
+            image_dir=output_dir,
+            n_processors=args.n_processors,
+            clobber=args.clobber)
 
 
 if __name__ == "__main__":
