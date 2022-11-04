@@ -20,7 +20,8 @@ def make_info_file(
         volume_size_xyz,
         layer_dir,
         image_config_list,
-        downscale_list = (1, 2, 4, 8)):
+        downscale_list = (1, 2, 4, 8),
+        metadata=None):
     """
     Shamelessly copied from
 
@@ -60,6 +61,7 @@ def make_info_file(
         z_to_image_lookup[ii] = config
 
     info["z_to_LIMS_metadata"] = z_to_image_lookup
+    info["metadata"] = metadata
 
     scale_list = []
     for downscale in actual_downscale:
@@ -236,7 +238,8 @@ def _process_image(
 def process_image(
         image_config_list,
         image_dir,
-        n_processors):
+        n_processors,
+        metadata=None):
 
 
     if not isinstance(image_config_list, list):
@@ -264,7 +267,8 @@ def process_image(
         resolution_xyz=resolution_xyz,
         volume_size_xyz=volume_shape,
         layer_dir=image_dir,
-        image_config_list=image_config_list)
+        image_config_list=image_config_list,
+        metadata=metadata)
 
     process_list = []
     sub_lists = []
@@ -293,7 +297,8 @@ def process_all_images(
         image_config_list,
         image_dir,
         n_processors,
-        clobber=False):
+        clobber=False,
+        metadata=None):
     """
     Group configs by image_series_id; create sub-directories
     for each of those. Load images into those directories.
@@ -337,12 +342,19 @@ def process_all_images(
     id_list = list(config_lookup.keys())
     id_list.sort()
     for image_series_id in id_list:
+        if metadata is None:
+            this_metadata = None
+        else:
+            this_metadata = metadata[str(image_series_id)]
+
+
         this_dir = image_dir / f"{image_series_id}"
         print(f"loading {this_dir.resolve().absolute()}")
         process_image(
             image_config_lsit=config_lookup[image_series_id],
             image_dir=this_dir,
-            n_processors=n_processors)
+            n_processors=n_processors,
+            metadata=metadata)
 
 
 def main():
@@ -363,13 +375,17 @@ def main():
     output_dir.mkdir()
 
     with open(args.config_path, 'rb') as in_file:
-        image_config_list = json.load(in_file)
+        global_config = json.load(in_file)
+
+    image_config_list = global_config['configs']
+    metadata = global_config['metadata']
 
     process_all_images(
             image_config_list=image_config_list,
             image_dir=output_dir,
             n_processors=args.n_processors,
-            clobber=args.clobber)
+            clobber=args.clobber,
+            metadata=metadata)
 
 
 if __name__ == "__main__":

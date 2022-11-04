@@ -35,9 +35,6 @@ def simple_id_from_csv(file_path):
 
 def get_image_series_metadata(image_series_id, passed_only=True):
 
-    specimen_metadata = _get_specimen_metadata(image_series_id)
-
-
     url ="http://api.brain-map.org/api/v2/data/query.json?"
     url += "criteria=model::SectionImage,rma::criteria,"
     url += f"[data_set_id$eq{image_series_id}]"
@@ -58,7 +55,6 @@ def get_image_series_metadata(image_series_id, passed_only=True):
             this[k] = element[k]
         this["sub_image_id"] = element["id"]
         this["image_series_id"] = element["data_set_id"]
-        this["metadata"] = specimen_metadata
         image_series_metadata.append(this)
     return image_series_metadata
 
@@ -72,7 +68,7 @@ def get_all_image_series_metadata(
     return result
 
 
-def _get_specimen_metadata(image_series_id):
+def get_specimen_metadata(image_series_id):
     """
     add metadata to one specific instance of
     image metadata
@@ -86,9 +82,12 @@ def _get_specimen_metadata(image_series_id):
     raw_response = urllib.request.urlopen(url).readlines()
     assert len(raw_response) == 1
     metadata = json.loads(raw_response[0])["msg"]
-    assert len(metadata) > 0
+    assert len(metadata) == 1
+    metadata = metadata[0]
+    ii = metadata.pop('id')
+    assert ii == image_series_id
+    metadata['image_series_id'] = image_series_id
     return metadata
-
 
 
 def main():
@@ -112,15 +111,19 @@ def main():
                 f"\n{output_path.resolve().absolute()}\n"
                 f"already exists")
 
-    image_series_id_list = simple_id_from_csv(id_file_path)
-    image_series_metadata = get_all_image_series_metadata(
-                   image_series_id_list)
+    final_config = dict()
 
-    print(image_series_metadata)
-    print(len(image_series_metadata))
+    image_series_id_list = simple_id_from_csv(id_file_path)
+    final_config['configs'] = get_all_image_series_metadata(
+                                  image_series_id_list)
+
+    metadata = dict()
+    for image_series_id in image_series_id_list:
+        metadata[image_series_id] = get_specimen_metadata(image_series_id)
+    final_config['metadata'] = metadata
 
     with open(output_path, "w") as out_file:
-        out_file.write(json.dumps(image_series_metadata,
+        out_file.write(json.dumps(final_config,
                                   indent=2))
 
 
