@@ -55,6 +55,7 @@ def get_image_series_metadata(image_series_id, passed_only=True):
             this[k] = element[k]
         this["sub_image_id"] = element["id"]
         this["image_series_id"] = element["data_set_id"]
+        this["specimen_tissue_index"] = element["section_number"]
         image_series_metadata.append(this)
     return image_series_metadata
 

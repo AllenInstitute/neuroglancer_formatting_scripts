@@ -351,7 +351,7 @@ def process_all_images(
         this_dir = image_dir / f"{image_series_id}"
         print(f"loading {this_dir.resolve().absolute()}")
         process_image(
-            image_config_lsit=config_lookup[image_series_id],
+            image_config_list=config_lookup[image_series_id],
             image_dir=this_dir,
             n_processors=n_processors,
             metadata=metadata)
