@@ -3,12 +3,13 @@ import argparse
 import time
 import numpy as np
 import multiprocessing
-from multiprocessing_utils import _winnow_process_list
+from neuroglancer_interface.utils.multiprocessing_utils import (
+    _winnow_process_list)
 
-from celltypes_utils import (
+from neuroglancer_interface.utils.celltypes_utils import (
     get_class_lookup)
 
-from data_utils import (
+from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr,
     write_summed_nii_files_to_group)
 
