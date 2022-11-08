@@ -37,8 +37,8 @@ def get_gene_layers(
         color_list,
         range_max_list):
 
-    with open("data/mouse1_gene_list.json", "rb") as in_file:
-        legal_genes = set(json.load(in_file))
+    #with open("data/mouse1_gene_list.json", "rb") as in_file:
+    #    legal_genes = set(json.load(in_file))
 
     if len(gene_list) != len(color_list):
         raise RuntimeError(
@@ -49,9 +49,9 @@ def get_gene_layers(
     for gene, color, range_max in zip(gene_list,
                                       color_list,
                                       range_max_list):
-        if gene not in legal_genes:
-            raise RuntimeError(
-                f"{gene} is not a legal gene")
+        #if gene not in legal_genes:
+        #    raise RuntimeError(
+        #        f"{gene} is not a legal gene")
         layers.append(get_heatmap_image_layer(
                           bucket_name=mfish_bucket,
                           dataset_name=gene,
