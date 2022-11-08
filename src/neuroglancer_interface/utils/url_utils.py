@@ -1,4 +1,6 @@
 import json
+import urllib.parse
+
 
 def get_final_url(
         image_layer_list,
@@ -236,12 +238,5 @@ def url_to_json(url):
     return result
 
 def json_to_url(json_data):
-    char_to_pct = get_char_to_pct()
-    result = ""
-    for c in json_data:
-        if c in char_to_pct:
-            result += char_to_pct[c]
-        else:
-            result += c
-    return result
+    return urllib.parse.quote(json_data)
 
