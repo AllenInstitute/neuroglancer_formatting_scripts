@@ -238,5 +238,6 @@ def url_to_json(url):
     return result
 
 def json_to_url(json_data):
+    return json_data
     return urllib.parse.quote(json_data)
 
