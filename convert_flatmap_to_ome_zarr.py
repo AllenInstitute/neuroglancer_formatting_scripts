@@ -20,10 +20,13 @@ def main():
         "/allen/aibs/ccf/Flatmaps/maps/")
     assert input_dir.is_dir()
 
+    import SimpleITK
     data_to_group = dict()
     avg_path = input_dir /"average_template_10_RightDV_flatmap.nrrd"
     assert avg_path.is_file()
     data_to_group[avg_path] = "avg_template"
+    img = SimpleITK.ReadImage(avg_path)
+    print(f"avg {img.GetSize()}")
 
     layer_dir = input_dir / "projections/flatmaps/layers"
     assert layer_dir.is_dir()
@@ -33,12 +36,15 @@ def main():
         params = pth.name.split('_')
         group_name = f"{params[0]}_{params[4]}"
         data_to_group[pth] = group_name
+        img = SimpleITK.ReadImage(pth)
+        print(f"{group_name} -- {img.GetSize()}")
 
     file_path_list = []
     group_name_list = []
     for pth in data_to_group:
         file_path_list.append(pth)
         group_name_list.append(data_to_group[pth])
+    exit()
 
     write_nii_file_list_to_ome_zarr(
         file_path_list=file_path_list,
