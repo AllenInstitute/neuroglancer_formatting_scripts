@@ -193,51 +193,9 @@ def get_color_lookup():
             "magenta": (252/255, 3/255, 252/255)}
 
 
-def get_pct_to_char():
-    result = {
-        "%20": " ",
-        "%5C": "\\",
-        "%22": '"',
-        "%2C": ",",
-        "%7B": "{",
-        "%7D": "}",
-        "%5B": "[",
-        "%5D": "]",
-        "%28": "(",
-        "%29": ")",
-        "%2A": "*",
-        "%3B": ";",
-        "%3E": ">",
-        "%3C": "<",
-        "%27": "'"
-        }
-
-    return result
-
-def get_char_to_pct():
-    pct_to_char = get_pct_to_char()
-    result = dict()
-    for k in pct_to_char:
-        result[pct_to_char[k]] = k
-    return result
-
-
 def url_to_json(url):
-    result = ""
-    ii = 0
-    pct_to_char = get_pct_to_char()
-    while ii < len(url):
-        if url[ii] != '%':
-            result += url[ii]
-            ii += 1
-        else:
-            pct = url[ii:ii+3]
-            result += pct_to_char[pct]
-            ii += 3
-
-    return result
+    return urllib.parse.unquote(url)
 
 def json_to_url(json_data):
-    return json_data
     return urllib.parse.quote(json_data)
 
