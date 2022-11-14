@@ -1,6 +1,7 @@
 import pathlib
 import argparse
-from data_utils import write_nii_file_list_to_ome_zarr
+from neuroglancer_interface.utils.data_utils import (
+    write_nii_file_list_to_ome_zarr)
 
 
 def gene_from_fname(fname):

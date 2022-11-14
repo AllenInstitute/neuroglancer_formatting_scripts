@@ -12,7 +12,8 @@ from ome_zarr.io import parse_url
 from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
 from ome_zarr.writer import write_image
-from multiprocessing_utils import _winnow_process_list
+from neuroglancer_interface.utils.multiprocessing_utils import (
+    _winnow_process_list)
 
 # importing zarr causes multiprocessing to emit a warning about
 # leaked semaphore objects. *Probably* this is fine. It's just
