@@ -323,6 +323,9 @@ def write_array_to_group(
         level of zoom
     """
 
+    # neuroglancer does not support 64 bit floats
+    arr = arr.astype(np.float32)
+
     shape = arr.shape
 
     coord_transform = [[
