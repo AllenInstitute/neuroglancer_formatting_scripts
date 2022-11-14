@@ -225,9 +225,14 @@ def get_scales_from_img(img):
     Takes in a SimpleITK image;
     returns (x_scale, y_scale, z_scale)
     """
-    x_scale = float(img.GetMetaData('pixdim[1]'))
-    y_scale = float(img.GetMetaData('pixdim[2]'))
-    z_scale = float(img.GetMetaData('pixdim[3]'))
+    if 'pixdim[1]' in img.GetMetaDataKeys():
+        x_scale = float(img.GetMetaData('pixdim[1]'))
+        y_scale = float(img.GetMetaData('pixdim[2]'))
+        z_scale = float(img.GetMetaData('pixdim[3]'))
+    else:
+        x_scale = 0.01
+        y_scale = 0.01
+        z_scale = 0.01
     return (x_scale, y_scale, z_scale)
 
 
