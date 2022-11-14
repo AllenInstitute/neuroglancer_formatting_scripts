@@ -41,8 +41,8 @@ def main():
         group_name_list.append(data_to_group[pth])
 
     write_nii_file_list_to_ome_zarr(
-        file_path_list=fname_list,
-        group_name_list=gene_list,
+        file_path_list=file_path_list,
+        group_name_list=group_name_list,
         output_dir=output_dir,
         downscale=args.downscale,
         clobber=args.clobber)
