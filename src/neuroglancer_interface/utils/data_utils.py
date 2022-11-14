@@ -15,11 +15,6 @@ from ome_zarr.writer import write_image
 from neuroglancer_interface.utils.multiprocessing_utils import (
     _winnow_process_list)
 
-# importing zarr causes multiprocessing to emit a warning about
-# leaked semaphore objects. *Probably* this is fine. It's just
-# scary. The zarr developers are working on this
-#
-# https://github.com/zarr-developers/numcodecs/issues/230
 
 blosc.use_threads = False
 
@@ -33,17 +28,48 @@ def write_nii_file_list_to_ome_zarr(
         clobber=False,
         prefix=None):
     """
-    file_path_list -- list of paths to files to be written
+    Convert a list of nifti files into OME-zarr format
 
-    group_name_list -- list of names of groups for files
+    Parameters
+    -----------
+    file_path_list: List[pathlib.Path]
+        list of paths to files to be written
 
-    output_dir -- dir for parent ome-zarr group
+    group_name_list: List[str]
+        list of the names of the OME-zarr groups to be written
+        (same order as file_path_list)
 
-    clobber -- if False, do not overwrite
+    output_dir: pathlib.Path
+        The directory where the parent OME-zarr group will be
+        written
 
-    prefix -- optional sub-group in which all data is written
+    downscale: int
+        Factor by which to downscale images as you are writing
+        them (i.e. when you zoom out one level, by how much
+        are you downsampling the pixels)
 
-    Return the root group
+    n_processors: int
+        Number of independent processes to use.
+
+    clobber: bool
+        If False, do not overwrite an existing group (throw
+        an exception instead)
+
+    prefix: str
+        optional sub-group in which all data is written
+        (i.e. option to write groups to output_dir/prefix/)
+
+    Returns
+    -------
+    the root group
+
+    Notes
+    -----
+    Importing zarr causes multiprocessing to emit a warning about
+    leaked semaphore objects. *Probably* this is fine. It's just
+    scary. The zarr developers are working on this
+
+    https://github.com/zarr-developers/numcodecs/issues/230
     """
     t0 = time.time()
     if not isinstance(file_path_list, list):
@@ -110,6 +136,26 @@ def _write_nii_file_list_worker(
         group_name_list,
         root_group,
         downscale):
+    """
+    Worker function to actually convert a subset of nifti
+    files to OME-zarr
+
+    Parameters
+    ----------
+    file_path_list: List[pathlib.Path]
+        List of paths to nifti files to convert
+
+    group_name_list: List[str]
+        List of the names of the OME-zarr groups to
+        write the nifti files to
+
+    root_group:
+        The parent group object as created by ome_zarr
+
+    downscale: int
+        The factor by which to downscale the images at each
+        level of zoom.
+    """
 
     for f_path, grp_name in zip(file_path_list,
                                 group_name_list):
@@ -126,14 +172,24 @@ def write_nii_to_group(
         nii_file_path,
         downscale):
     """
-    root_group is the ome_zarr group that the new group will
-    be a child of.
+    Write a single nifti file to an ome_zarr group
 
-    group_name is the name of the group being created for this data
+    Parameters
+    ----------
+    root_group:
+        the ome_zarr group that the new group will
+        be a child of (an object created using the ome_zarr
+        library)
 
-    nii_file_path is the path to the nii file being written
+    group_name: str
+        is the name of the group being created for this data
 
-    downscale is an int controlling downscaling
+    nii_file_path: Pathlib.path
+        is the path to the nii file being written
+
+    downscale: int
+        How much to downscale the image by at each level
+        of zoom.
     """
 
     this_group = root_group.create_group(f"{group_name}")
@@ -181,7 +237,11 @@ def write_summed_nii_files_to_group(
         downscale = 2):
     """
     Sum the arrays in all of the files in file_path list
-    into a single array and write that to the specified group
+    into a single array and write that to the specified
+    OME-zarr group
+
+    downscale sets the amount by which to downscale the
+    image at each level of zoom
     """
 
     main_array = None
@@ -235,6 +295,28 @@ def write_array_to_group(
         y_scale: float,
         z_scale: float,
         downscale: int = 1):
+    """
+    Write a numpy array to an ome-zarr group
+
+    Parameters
+    ----------
+    group:
+        The ome_zarr group object to which the data will
+        be written
+
+    x_scale: float
+        The physical scale of one x pixel in millimeters
+
+    y_scale: float
+        The physical scale of one y pixel in millimeters
+
+    z_scale: float
+        The physical scale of one z pixel in millimeters
+
+    downscale: int
+        The amount by which to downscale the image at each
+        level of zoom
+    """
 
     shape = arr.shape
 
@@ -291,7 +373,29 @@ def write_array_to_group(
 
 def _create_empty_pyramid(base, downscale=2):
     """
-    Returns space for downsampled images
+    Create a lookup table of empty arrays for an
+    image/volume pyramid
+
+    Parameters
+    ----------
+    base: np.ndarray
+        The array that will be converted into an image/volume
+        pyramid
+
+    downscale: int
+        The factor by which to downscale base at each level of
+        zoom
+
+    Returns
+    -------
+    results: dict
+        A dict mapping an image shape (nx, ny) to
+        an empty array of size (nx, ny, nz)
+
+        NOTE: we are not downsampling nz in this setup
+
+    list_of_nx_ny:
+        List of valid keys of results
     """
     result = []
     nx = base.shape[0]
