@@ -14,7 +14,10 @@ def create_mfish_url(
        colors,
        range_max,
        segmentation_bucket='mouse1-segmenation-prototype',
-       template_bucket='mouse1-template-prototype/template'):
+       template_bucket='mouse1-template-prototype/template',
+       x_mm=0.01,
+       y_mm=0.01,
+       z_mm=0.1):
 
     if len(colors) != len(genes) or len(range_max) != len(genes):
         raise RuntimeError(
@@ -37,7 +40,10 @@ def create_mfish_url(
     url = get_final_url(
             image_layer_list=gene_layers,
             template_layer=template_layer,
-            segmentation_layer=segmentation_layer)
+            segmentation_layer=segmentation_layer,
+            x_mm=x_mm,
+            y_mm=y_mm,
+            z_mm=z_mm)
 
     return url
 

@@ -8,7 +8,10 @@ def get_final_url(
         segmentation_layer=None,
         template_bucket='mouse1-template-prototype',
         segmentation_bucket='mouse1-segmentation-prototype',
-        starting_position=None):
+        starting_position=None,
+        x_mm=0.01,
+        y_mm=0.01,
+        z_mm=0.1):
     """
     Image layers with template and segmentation layer
     """
@@ -25,9 +28,9 @@ def get_final_url(
         layer_list.append(segmentation_layer)
 
     layers = dict()
-    layers["dimensions"] = {"x": [1.0e-5, "m"],
-                            "y": [1.0e-5, "m"],
-                            "z": [0.0001, "m"]}
+    layers["dimensions"] = {"x": [float(x_mm*0.001), "m"],
+                            "y": [float(y_mm*0.001), "m"],
+                            "z": [float(z_mm*0.001), "m"]}
     layers["crossSectionScale"] = 2.6
     layers["projectionScale"] = 2048
     layers["layers"] = layer_list

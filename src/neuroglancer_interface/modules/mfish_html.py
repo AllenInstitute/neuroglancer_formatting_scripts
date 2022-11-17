@@ -17,7 +17,10 @@ def write_mfish_html(
         segmentation_bucket="mouse1-atlas-prototype",
         template_bucket="mouse1-template-prototype/template",
         range_max=10.0,
-        html_title="Mouse1 MFISH transcript count maps"):
+        html_title="Mouse1 MFISH transcript count maps",
+        x_mm=0.01,
+        y_mm=0.01,
+        z_mm=0.1):
 
     with open(gene_list_path, 'rb') as in_file:
         gene_list = json.load(in_file)
@@ -31,7 +34,10 @@ def write_mfish_html(
                         colors=['green', ],
                         range_max=[range_max, ],
                         segmentation_bucket=segmentation_bucket,
-                        template_bucket=template_bucket)
+                        template_bucket=template_bucket,
+                        x_mm=x_mm,
+                        y_mm=y_mm,
+                        z_mm=z_mm)
         gene_to_link[gene_name] = gene_url
         these_cols = {'names': ['gene_name'],
                       'values': [gene_name]}

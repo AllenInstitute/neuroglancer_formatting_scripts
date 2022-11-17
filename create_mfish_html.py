@@ -25,6 +25,9 @@ def main():
                         default='mouse1-template-prototype/template')
     parser.add_argument('--page_title', type=str,
                         default="Mouse1 MFISH transcript count maps")
+    parser.add_argument('--x_mm', type=float, default=0.01)
+    parser.add_argument('--y_mm', type=float, default=0.01)
+    parser.add_argument('--z_mm', type=float, default=0.1)
     args = parser.parse_args()
 
     write_mfish_html(
@@ -33,7 +36,10 @@ def main():
         mfish_bucket=args.mfish_bucket,
         segmentation_bucket=args.segmentation_bucket,
         template_bucket=args.template_bucket,
-        html_title=args.page_title)
+        html_title=args.page_title,
+        x_mm=args.x_mm,
+        y_mm=args.y_mm,
+        z_mm=args.z_mm)
 
 
 if __name__ == "__main__":
