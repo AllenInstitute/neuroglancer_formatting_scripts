@@ -29,7 +29,6 @@ def create_celltypes_url(
 
     template_layer = get_template_layer(
             template_bucket=template_bucket,
-            template_name="template",
             range_max=700)
 
     segmentation_layer = get_segmentation_layer(

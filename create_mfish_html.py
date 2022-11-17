@@ -28,8 +28,9 @@ def main():
     args = parser.parse_args()
 
     write_mfish_html(
-        output_path = pathlib.Path(args.output_path),
-        gene_list_path = pathlib.Path(args.gene_list_path),
+        output_path=pathlib.Path(args.output_path),
+        gene_list_path=pathlib.Path(args.gene_list_path),
+        mfish_bucket=args.mfish_bucket,
         segmentation_bucket=args.segmentation_bucket,
         template_bucket=args.template_bucket,
         html_title=args.page_title)

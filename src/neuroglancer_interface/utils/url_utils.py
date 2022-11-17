@@ -18,7 +18,7 @@ def get_final_url(
 
     url = get_base_url()
 
-    layer_list = image_layer_list + [template_layer, segmentation_layer]
+    layer_list = image_layer_list
     if template_layer is not None:
         layer_list.append(template_layer)
     if segmentation_layer is not None:
