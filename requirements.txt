@@ -4,3 +4,4 @@ cloud-volume
 ome-zarr
 dominate
 task-queue
+igneous
