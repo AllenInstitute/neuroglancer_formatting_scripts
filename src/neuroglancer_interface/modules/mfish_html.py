@@ -15,7 +15,9 @@ def write_mfish_html(
         gene_list_path=pathlib.Path("data/mouse1_gene_list.json"),
         mfish_bucket="mouse1-mfish-prototype",
         segmentation_bucket="mouse1-atlas-prototype",
-        range_max=10.0):
+        template_bucket="mouse1-template-prototype/template",
+        range_max=10.0,
+        html_title="Mouse1 MFISH transcript count maps"):
 
     with open(gene_list_path, 'rb') as in_file:
         gene_list = json.load(in_file)
@@ -28,13 +30,14 @@ def write_mfish_html(
                         genes=[gene_name,],
                         colors=['green', ],
                         range_max=[range_max, ],
-                        segmentation_bucket=segmentation_bucket)
+                        segmentation_bucket=segmentation_bucket,
+                        template_bucket=template_bucket)
         gene_to_link[gene_name] = gene_url
         these_cols = {'names': ['gene_name'],
                       'values': [gene_name]}
         gene_to_cols[gene_name] = these_cols
 
-    title = "Mouse1 MFISH transcript count maps"
+    title = html_title
     div_name = "mfish_maps"
 
     write_basic_table(
