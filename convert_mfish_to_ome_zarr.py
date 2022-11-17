@@ -5,8 +5,15 @@ from neuroglancer_interface.utils.data_utils import (
 
 
 def gene_from_fname(fname):
-    gene = fname.name.split('_')[1]
-    return gene
+    params = fname.name.split('_')
+    chosen = None
+    for p in params:
+        try:
+            int(p)
+        except ValueError:
+            chosen = p
+            break
+    return chosen
 
 def main():
     default_input = '/allen/programs/celltypes/workgroups/rnaseqanalysis/'
@@ -39,7 +46,6 @@ def main():
         if gene in genes_loaded:
             msg = f"{gene} appears twice\n"
             msg += f"{fname}\n"
-            msg += f"{gene_to_path[gene]}"
             raise RuntimeError(msg)
         gene_list.append(gene)
 
