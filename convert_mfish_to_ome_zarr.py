@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--input_dir', type=str, default=default_input)
     parser.add_argument('--clobber', default=False, action='store_true')
     parser.add_argument('--downscale', type=int, default=2)
+    parser.add_argument('--n_processors', type=int, default=4)
     args = parser.parse_args()
 
     assert args.output_dir is not None
@@ -54,7 +55,8 @@ def main():
         group_name_list=gene_list,
         output_dir=output_dir,
         downscale=args.downscale,
-        clobber=args.clobber)
+        clobber=args.clobber,
+        n_processors=args.n_processors)
 
 
 if __name__ == "__main__":
