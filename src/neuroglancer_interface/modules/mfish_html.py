@@ -46,10 +46,16 @@ def write_mfish_html(
     title = html_title
     div_name = "mfish_maps"
 
+    metadata_lines = []
+    metadata_lines.append(f"MFISH src: {mfish_bucket}")
+    metadata_lines.append(f"template src: {template_bucket}")
+    metadata_lines.append(f"segmentation src: {segmentation_bucket}")
+
     write_basic_table(
         output_path=output_path,
         title=title,
         key_to_link=gene_to_link,
         div_name=div_name,
         key_to_other_cols=gene_to_cols,
-        search_by=['gene_name'])
+        search_by=['gene_name'],
+        metadata_lines=metadata_lines)

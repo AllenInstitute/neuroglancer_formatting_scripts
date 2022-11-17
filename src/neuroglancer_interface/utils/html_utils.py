@@ -11,7 +11,8 @@ def write_basic_table(
         key_order=None,
         div_name=None,
         search_by=None,
-        key_to_other_cols=None):
+        key_to_other_cols=None,
+        metadata_lines=None):
     """
     div_name is the name of the main div in the html
 
@@ -22,6 +23,8 @@ def write_basic_table(
     key_to_other_cols maps same key as key_to_link to
     a dict with keys 'names', 'values' which point to
     ordered lists of data to be displayed (optional)
+
+    metadata_lines is a list of lines to be written after the title
     """
 
     if search_by is None:
@@ -35,6 +38,10 @@ def write_basic_table(
 
     doc = dominate.document(title=title)
     doc += dominate.tags.h1(title)
+    if metadata_lines is not None:
+        for line in metadata_lines:
+            doc += dominate.tags.p(line)
+
     doc.head += dominate.tags.link(
                     href="reconstruction_table.css",
                     rel="stylesheet",
