@@ -3,3 +3,4 @@ SimpleITK
 cloud-volume
 ome-zarr
 dominate
+taskqueue
