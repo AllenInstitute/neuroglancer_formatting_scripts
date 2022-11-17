@@ -51,7 +51,8 @@ def get_base_url():
 def get_template_layer(
         template_bucket,
         template_name='template',
-        range_max=700):
+        range_max=700,
+        public_name="CCF template"):
 
     result = dict()
     result["type"] = "image"
@@ -62,7 +63,7 @@ def get_template_layer(
                            range_max=range_max)
     result["opacity"] = 0.4
     result["visible"] = True
-    result["name"] = "CCF template"
+    result["name"] = public_name
     return result
 
 

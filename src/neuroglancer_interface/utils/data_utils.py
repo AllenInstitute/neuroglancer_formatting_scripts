@@ -170,7 +170,8 @@ def write_nii_to_group(
         root_group,
         group_name,
         nii_file_path,
-        downscale):
+        downscale,
+        transpose=True):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -195,7 +196,9 @@ def write_nii_to_group(
     this_group = root_group.create_group(f"{group_name}")
     img = SimpleITK.ReadImage(nii_file_path)
 
-    arr = get_array_from_img(img)
+    arr = get_array_from_img(
+                img,
+                transpose=transpose)
 
     (x_scale,
      y_scale,
@@ -211,13 +214,15 @@ def write_nii_to_group(
 
     print(f"wrote {nii_file_path} to {group_name}")
 
-def get_array_from_img(img):
+def get_array_from_img(img, transpose=True):
     """
     Takes a SimpleITK img;
     Returns numpy arry with axes transposed as we want them
+
     """
     arr = SimpleITK.GetArrayFromImage(img)
-    arr = arr.transpose(2, 1, 0)
+    if transpose:
+        arr = arr.transpose(2, 1, 0)
     return arr
 
 def get_scales_from_img(img):
@@ -225,16 +230,22 @@ def get_scales_from_img(img):
     Takes in a SimpleITK image;
     returns (x_scale, y_scale, z_scale)
     """
-    x_scale = float(img.GetMetaData('pixdim[1]'))
-    y_scale = float(img.GetMetaData('pixdim[2]'))
-    z_scale = float(img.GetMetaData('pixdim[3]'))
+    if 'pixdim[1]' in img.GetMetaDataKeys():
+        x_scale = float(img.GetMetaData('pixdim[1]'))
+        y_scale = float(img.GetMetaData('pixdim[2]'))
+        z_scale = float(img.GetMetaData('pixdim[3]'))
+    else:
+        x_scale = 0.01
+        y_scale = 0.01
+        z_scale = 0.01
     return (x_scale, y_scale, z_scale)
 
 
 def write_summed_nii_files_to_group(
         file_path_list,
         group,
-        downscale = 2):
+        downscale = 2,
+        transpose=True):
     """
     Sum the arrays in all of the files in file_path list
     into a single array and write that to the specified
@@ -248,7 +259,9 @@ def write_summed_nii_files_to_group(
     for file_path in file_path_list:
         img = SimpleITK.ReadImage(file_path)
 
-        this_array = get_array_from_img(img)
+        this_array = get_array_from_img(
+                        img,
+                        transpose=transpose)
 
         (this_x_scale,
          this_y_scale,
@@ -317,6 +330,9 @@ def write_array_to_group(
         The amount by which to downscale the image at each
         level of zoom
     """
+
+    # neuroglancer does not support 64 bit floats
+    arr = arr.astype(np.float32)
 
     shape = arr.shape
 
