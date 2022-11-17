@@ -9,7 +9,7 @@ import numpy as np
 from precomputed_utils import clean_dir
 from cloudvolume import CloudVolume
 from taskqueue import LocalTaskQueue
-import igneous.task_creation as igneous_task_creation
+#import igneous.task_creation as igneous_task_creation
 
 
 def get_labels(annotation_path):
