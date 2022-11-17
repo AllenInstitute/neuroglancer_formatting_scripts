@@ -57,8 +57,6 @@ def main():
             segmentation_bucket=args.segmentation_bucket)
 
     params = url.split('#!')
-    print(url_to_json(params[1]))
-    print('')
 
     print(url)
 

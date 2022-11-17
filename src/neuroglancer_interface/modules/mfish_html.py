@@ -15,11 +15,7 @@ def write_mfish_html(
         gene_list_path=pathlib.Path("data/mouse1_gene_list.json"),
         mfish_bucket="mouse1-mfish-prototype",
         segmentation_bucket="mouse1-atlas-prototype",
-        quantile_path="data/mouse1_gene_quantiles.json",
         range_max=10.0):
-
-    with open(quantile_path, 'rb') as in_file:
-        quantile_lookup = json.load(in_file)
 
     with open(gene_list_path, 'rb') as in_file:
         gene_list = json.load(in_file)
