@@ -421,7 +421,7 @@ def _create_empty_pyramid(base, downscale=2):
     while nx > base.shape[2] or ny > base.shape[2]:
         nx = nx//downscale
         ny = ny//downscale
-        data = np.zeros((nx, ny, base.shape[0]), dtype=float)
+        data = np.zeros((nx, ny, base.shape[2]), dtype=float)
         key = (nx, ny)
         results[key] = data
         list_of_nx_ny.append(key)
