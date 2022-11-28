@@ -516,3 +516,61 @@ class XYScaler(Scaler):
                          for key in list_of_nx_ny]
 
 
+def get_celltype_lookups(
+        csv_path):
+    """
+    Read a lookup mapping the integer index from a cell type
+    name to its human readable form
+    """
+    idx_lookup = dict()
+    idx_lookup["cluster_id"] = None
+    idx_lookup["cluster_label"] = None
+    idx_lookup["Level1_id"] = None
+    idx_lookup["Level1_label"] = None
+    idx_lookup["Level2_id"] = None
+    idx_lookup["Level2_label"] = None
+
+    with open(csv_path, "r") as in_file:
+        header = in_file.readline()
+        header = header.strip().split('","')
+        for idx, val in enumerate(header):
+            if val in idx_lookup:
+                if idx_lookup[val] is not None:
+                    raise RuntimeError(
+                        f"{val} occurs twice in header")
+                idx_lookup[val] = idx
+
+        for k in idx_lookup:
+            if idx_lookup[k] is None:
+                raise RuntimeError(
+                    f"could not find column for {k}")
+
+        level1 = dict()
+        level2 = dict()
+        cluster = dict()
+        for line in in_file:
+            print(line)
+            line = line.strip().split('","')
+            for id_idx, label_idx, dest in [(idx_lookup["Level1_id"],
+                                             idx_lookup["Level1_label"],
+                                             level1),
+                                            (idx_lookup["Level2_id"],
+                                             idx_lookup["Level2_label"],
+                                             level2),
+                                            (idx_lookup["cluster_id"],
+                                             idx_lookup["cluster_label"],
+                                             cluster)]:
+                id_val = int(line[id_idx])
+                label_val = line[label_idx]
+                if id_val in dest:
+                    if dest[id_val] != label_val:
+                        raise RuntimeError(
+                            f"Multiple values for {id_val}\n"
+                            f"{label_val}\n{dest[id_val]}\n"
+                            f"{line}")
+                    else:
+                        dest[id_val] = label_val
+
+    return {"cluster": cluster,
+            "Level1": level1,
+            "Level2": level2}
