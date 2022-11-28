@@ -35,6 +35,32 @@ def read_config(config_path):
     return config_data
 
 
+def read_manifest(manifest_path):
+    """
+    Get a lookup table from filename to
+    celltype name from the manifest.csv files written
+    by Lydia's script
+    """
+    label_idx = None
+    path_idx = None
+    with open(manifest_path, "r") as in_file:
+        header = in_file.readline().strip().split(',')
+        for idx, val in enumerate(header):
+            if val == 'label':
+                label_idx = idx
+            elif val == 'file_name':
+                path_idx = idx
+        assert label_idx is not None
+        assert path_idx is not None
+        result = dict()
+        for line in in_file:
+            line = strip().split(',')
+            pth = line[path_idx]
+            label = line[label_idx]
+            result[pth] = label
+    return result
+
+
 def write_sub_group(
         root_group=None,
         input_dir=None,
@@ -50,9 +76,14 @@ def write_sub_group(
     fpath_list = [n for n in input_dir.rglob('*.nii.gz')
                   if n.is_file()]
 
-    cluster_name_list = [
-            pth.name.replace('.nii.gz', '')
-            for pth in fpath_list]
+    manifest_path = input_dir / 'manifest.csv'
+    if not manifest_path.is_file():
+        raise RuntimeError(
+            f"could not find\n{manifest_path.resolve().absolute()}")
+
+    name_lookup = read_manifest(manifest_path)
+    cluster_name_list = [name_lookup[n.name]
+                         for n in fpath_list]
 
     print(f"writing {prefix}")
     root_group = write_nii_file_list_to_ome_zarr(
