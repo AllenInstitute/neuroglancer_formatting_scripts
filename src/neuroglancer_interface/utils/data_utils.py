@@ -19,6 +19,31 @@ from neuroglancer_interface.utils.multiprocessing_utils import (
 blosc.use_threads = False
 
 
+def create_root_group(
+        ouptut_dir,
+        clobber=False):
+
+    if not isinstance(output_dir, pathlib.Path):
+        output_dir = pathlib.Path(output_dir)
+
+    if output_dir.exists():
+        if not clobber:
+            raise RuntimeError(f"{output_dir} exists")
+        else:
+            print(f"cleaning out {output_dir}")
+            shutil.rmtree(output_dir)
+            print("done cleaning")
+
+    assert not output_dir.exists()
+    output_dir.mkdir()
+    assert output_dir.is_dir()
+
+    store = parse_url(output_dir, mode="w").store
+    root_group = zarr.group(store=store)
+
+    return root_group
+
+
 def write_nii_file_list_to_ome_zarr(
         file_path_list,
         group_name_list,
@@ -26,7 +51,8 @@ def write_nii_file_list_to_ome_zarr(
         downscale=2,
         n_processors=4,
         clobber=False,
-        prefix=None):
+        prefix=None,
+        root_group=None):
     """
     Convert a list of nifti files into OME-zarr format
 
@@ -59,6 +85,10 @@ def write_nii_file_list_to_ome_zarr(
         optional sub-group in which all data is written
         (i.e. option to write groups to output_dir/prefix/)
 
+    root_group:
+        Optional root group into which to write ome-zarr
+        group. If None, will be created.
+
     Returns
     -------
     the root group
@@ -81,20 +111,11 @@ def write_nii_file_list_to_ome_zarr(
         msg = f"\ngave {len(file_path_list)} file paths but\n"
         msg += f"{len(group_name_list)} group names"
 
-    if not isinstance(output_dir, pathlib.Path):
-        output_dir = pathlib.Path(output_dir)
+    if root_group is None:
+        root_group = create_root_group(
+                        output_dir=output_dir,
+                        clobber=clobber)
 
-    if output_dir.exists():
-        if not clobber:
-            raise RuntimeError(f"{output_dir} exists")
-        else:
-            shutil.rmtree(output_dir)
-    assert not output_dir.exists()
-    output_dir.mkdir()
-    assert output_dir.is_dir()
-
-    store = parse_url(output_dir, mode="w").store
-    root_group = zarr.group(store=store)
     if prefix is not None:
         parent_group = root_group.create_group(prefix)
     else:
