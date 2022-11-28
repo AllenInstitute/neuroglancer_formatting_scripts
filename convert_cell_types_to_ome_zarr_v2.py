@@ -54,7 +54,7 @@ def read_manifest(manifest_path):
         assert path_idx is not None
         result = dict()
         for line in in_file:
-            line = strip().split(',')
+            line = line.strip().split(',')
             pth = line[path_idx]
             label = line[label_idx]
             result[pth] = label
@@ -90,6 +90,7 @@ def write_sub_group(
             file_path_list=fpath_list,
             group_name_list=cluster_name_list,
             output_dir=None,
+            root_group=root_group,
             n_processors=n_processors,
             clobber=False,
             prefix=prefix,
