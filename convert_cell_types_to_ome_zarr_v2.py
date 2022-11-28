@@ -27,7 +27,7 @@ def read_config(config_path):
         config_data["n_processors"] = 4
 
     if not isinstance(config_data["clobber"], bool):
-        msg += f"clobber is {type(config_data['clobber']}; "
+        msg += f"clobber is {type(config_data['clobber'])}; "
         msg += "must be boolean\n"
 
     if len(msg) > 0:
@@ -90,7 +90,6 @@ def write_sub_group(
             file_path_list=fpath_list,
             group_name_list=cluster_name_list,
             output_dir=None,
-            downscale=downscale,
             n_processors=n_processors,
             clobber=False,
             prefix=prefix,
