@@ -21,7 +21,7 @@ blosc.use_threads = False
 
 
 def create_root_group(
-        ouptut_dir,
+        output_dir,
         clobber=False):
 
     if not isinstance(output_dir, pathlib.Path):
