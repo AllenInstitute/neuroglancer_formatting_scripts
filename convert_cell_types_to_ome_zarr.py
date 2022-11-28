@@ -114,7 +114,10 @@ def main():
     default_anno += 'workgroups/rnaseqanalysis/mFISH'
     default_anno += '/michaelkunst/MERSCOPES/mouse/cluster_anno.csv'
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+                "Convert cell types to ome-zarr in the case where "
+                "there are only .nii.gz files for clusters and these "
+                "need to be summed to produce classes and subclasses")
     parser.add_argument('--output_dir', type=str, default=None)
     parser.add_argument('--input_dir', type=str, default=default_input)
     parser.add_argument('--annotation_path', type=str, default=default_anno)
