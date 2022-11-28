@@ -517,11 +517,14 @@ class XYScaler(Scaler):
                          for key in list_of_nx_ny]
 
 
-def get_celltype_lookups(
+def get_celltype_lookups_from_rda_df(
         csv_path):
     """
     Read a lookup mapping the integer index from a cell type
     name to its human readable form
+
+    useful only if reading directly from the dataframe produced
+    from Zizhen's .rda file. That is currently out of scope
     """
     df = pd.read_csv(csv_path)
     cluster = dict()
