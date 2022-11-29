@@ -8,6 +8,9 @@ from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr,
     create_root_group)
 
+from neuroglancer_interface.utils.celltypes_utils import (
+    sanitize_cluster_name_list)
+
 
 def read_config(config_path):
 
@@ -61,6 +64,7 @@ def read_manifest(manifest_path):
     return result
 
 
+
 def write_sub_group(
         root_group=None,
         input_dir=None,
@@ -84,6 +88,9 @@ def write_sub_group(
     name_lookup = read_manifest(manifest_path)
     cluster_name_list = [name_lookup[n.name].replace(" ", "_")
                          for n in fpath_list]
+
+    (cluster_name_list,
+     desanitizer) = sanitize_cluster_name_list(cluster_name_list)
 
     for cluster_name in cluster_name_list:
         if '/' in cluster_name or '\\' in cluster_name:

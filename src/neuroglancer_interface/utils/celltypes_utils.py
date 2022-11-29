@@ -5,6 +5,23 @@ def sanitize_cluster_name(name):
         name = name.replace(bad_char, '_')
     return name
 
+
+def sanitize_cluster_name_list(
+        raw_cluster_name_list):
+    sanitized_name_set = set()
+    sanitized_name_list = []
+    desanitizer = dict()
+    for name in raw_cluster_name_list:
+        sanitized_name = sanitize_cluster_name(name)
+        if name in sanitized_name_set:
+            raise RuntimeError(
+                    f"{sanitized_name} occurs more than once")
+        sanitized_name_set.add(sanitized_name)
+        sanitized_name_list.append(sanitized_name)
+        desanitizer[sanitized_name] = name
+    return sanitized_name_list, desanitizer
+
+
 def get_class_lookup(
         anno_path):
     """
