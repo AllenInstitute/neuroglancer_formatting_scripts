@@ -1,3 +1,4 @@
+import json
 import pathlib
 import argparse
 from neuroglancer_interface.utils.data_utils import (
@@ -21,18 +22,17 @@ def main():
     default_input += 'alignment/mouse1_warpedToCCF_20220906'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output_dir', type=str, default=None)
-    parser.add_argument('--input_dir', type=str, default=default_input)
-    parser.add_argument('--clobber', default=False, action='store_true')
-    parser.add_argument('--downscale', type=int, default=2)
-    parser.add_argument('--n_processors', type=int, default=4)
+    parser.add_argument('--config_path', type=str, default=None)
     args = parser.parse_args()
 
-    assert args.output_dir is not None
-    assert args.input_dir is not None
+    with open(args.config_path, "rb") as in_file:
+        config_data = json.load(in_file)
+        input_dir = pathlib.Path(config_data["input_dir"])
+        output_dir = pathlib.Path(config_data["output_dir"])
+        clobber = config_data["clobber"]
+        downscale = config_data["downscale"]
+        n_processors = config_data["n_processors"]
 
-    output_dir = pathlib.Path(args.output_dir)
-    input_dir = pathlib.Path(args.input_dir)
 
     assert input_dir.is_dir()
 
@@ -54,9 +54,9 @@ def main():
         file_path_list=fname_list,
         group_name_list=gene_list,
         output_dir=output_dir,
-        downscale=args.downscale,
-        clobber=args.clobber,
-        n_processors=args.n_processors)
+        downscale=downscale,
+        clobber=clobber,
+        n_processors=n_processors)
 
 
 if __name__ == "__main__":
