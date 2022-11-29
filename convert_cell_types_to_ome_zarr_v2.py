@@ -82,7 +82,7 @@ def write_sub_group(
             f"could not find\n{manifest_path.resolve().absolute()}")
 
     name_lookup = read_manifest(manifest_path)
-    cluster_name_list = [name_lookup[n.name]
+    cluster_name_list = [name_lookup[n.name].replace(" ", "_")
                          for n in fpath_list]
 
     print(f"writing {prefix}")
