@@ -1,0 +1,14 @@
+{
+"output_dir": "/allen/aibs/technology/danielsf/mouse_3b/cell_types",
+"n_processors": 6,
+"clobber": true,
+"downscale": 2,
+"input_configs": [
+    {"output_prefix": "cluster",
+     "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/cluster_label"},
+    {"output_prefix": "Level_1",
+     "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/Level1_id_label"},
+    {"output_prefix": "Level_2",
+     "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/Level2_id_label"}
+]
+}
