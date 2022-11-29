@@ -26,8 +26,6 @@ def read_config(config_path):
         config_data["clobber"] = False
     if "downscale" not in config_data:
         config_data["downscale"] = 2
-    if "n_processors" not in config_data:
-        config_data["n_processors"] = 4
 
     if not isinstance(config_data["clobber"], bool):
         msg += f"clobber is {type(config_data['clobber'])}; "
@@ -82,6 +80,7 @@ def main():
                 "Convert cell types to ome-zarr in the case where "
                 "each hierarchy level has its own directory")
     parser.add_argument('--config_path', type=str, default=None)
+    parser.add_argument('--n_processors', type=int, default=4)
     args = parser.parse_args()
 
     config_data = read_config(args.config_path)
@@ -99,7 +98,7 @@ def main():
             root_group=root_group,
             input_dir=input_dir,
             prefix=prefix,
-            n_processors=config_data["n_processors"],
+            n_processors=args.n_processors,
             downscale=config_data["downscale"])
 
 

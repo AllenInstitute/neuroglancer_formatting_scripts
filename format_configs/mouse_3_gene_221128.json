@@ -2,6 +2,5 @@
 "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/gene",
 "output_dir": "/allen/aibs/technology/danielsf/mouse_3b/mfish_heatmaps",
 "clobber": false,
-"downscale": 2,
-"n_processors": 6
+"downscale": 2
 }

@@ -1,6 +1,5 @@
 {
 "output_dir": "/allen/aibs/technology/danielsf/mouse_3b/cell_types",
-"n_processors": 6,
 "clobber": true,
 "downscale": 2,
 "input_configs": [

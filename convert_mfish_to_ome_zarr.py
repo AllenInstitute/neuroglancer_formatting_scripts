@@ -23,6 +23,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=str, default=None)
+    parser.add_argument('--n_processors', type=int, default=4)
     args = parser.parse_args()
 
     with open(args.config_path, "rb") as in_file:
@@ -31,8 +32,6 @@ def main():
         output_dir = pathlib.Path(config_data["output_dir"])
         clobber = config_data["clobber"]
         downscale = config_data["downscale"]
-        n_processors = config_data["n_processors"]
-
 
     assert input_dir.is_dir()
 
@@ -56,7 +55,7 @@ def main():
         output_dir=output_dir,
         downscale=downscale,
         clobber=clobber,
-        n_processors=n_processors)
+        n_processors=args.n_processors)
 
 
 if __name__ == "__main__":
