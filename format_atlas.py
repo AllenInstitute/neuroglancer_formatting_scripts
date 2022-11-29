@@ -234,8 +234,7 @@ def main():
         segmentation_path=segmentation_path,
         layer_dir=output_dir)
 
-    #print(json.dumps(info, indent=2))
-
+    print("Success!")
 
 if __name__ == "__main__":
     main()
