@@ -221,7 +221,10 @@ def write_nii_to_group(
         of zoom.
     """
 
-    this_group = root_group.create_group(f"{group_name}")
+    if group_name is not None:
+        this_group = root_group.create_group(f"{group_name}")
+    else:
+        this_group = root_group
     img = SimpleITK.ReadImage(nii_file_path)
 
     arr = get_array_from_img(
