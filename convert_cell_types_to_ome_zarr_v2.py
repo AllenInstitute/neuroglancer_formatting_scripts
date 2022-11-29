@@ -85,6 +85,10 @@ def write_sub_group(
     cluster_name_list = [name_lookup[n.name].replace(" ", "_")
                          for n in fpath_list]
 
+    for cluster_name in cluster_name_list:
+        if '/' in cluster_name or '\\' in cluster_name:
+            raise RuntimeError(f"unsantized cluster name {cluster_name}")
+
     print(f"writing {prefix}")
     root_group = write_nii_file_list_to_ome_zarr(
             file_path_list=fpath_list,
