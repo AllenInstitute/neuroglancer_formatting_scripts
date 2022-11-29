@@ -9,7 +9,7 @@ from neuroglancer_interface.utils.data_utils import (
     create_root_group)
 
 from neuroglancer_interface.utils.celltypes_utils import (
-    sanitize_cluster_name_list)
+    read_manifest)
 
 
 def read_config(config_path):
@@ -38,33 +38,6 @@ def read_config(config_path):
     return config_data
 
 
-def read_manifest(manifest_path):
-    """
-    Get a lookup table from filename to
-    celltype name from the manifest.csv files written
-    by Lydia's script
-    """
-    label_idx = None
-    path_idx = None
-    with open(manifest_path, "r") as in_file:
-        header = in_file.readline().strip().split(',')
-        for idx, val in enumerate(header):
-            if val == 'label':
-                label_idx = idx
-            elif val == 'file_name':
-                path_idx = idx
-        assert label_idx is not None
-        assert path_idx is not None
-        result = dict()
-        for line in in_file:
-            line = line.strip().split(',')
-            pth = line[path_idx]
-            label = line[label_idx]
-            result[pth] = label
-    return result
-
-
-
 def write_sub_group(
         root_group=None,
         input_dir=None,
@@ -86,15 +59,8 @@ def write_sub_group(
             f"could not find\n{manifest_path.resolve().absolute()}")
 
     name_lookup = read_manifest(manifest_path)
-    cluster_name_list = [name_lookup[n.name].replace(" ", "_")
+    cluster_name_list = [name_lookup[n.name]["machine_readable"]
                          for n in fpath_list]
-
-    (cluster_name_list,
-     desanitizer) = sanitize_cluster_name_list(cluster_name_list)
-
-    for cluster_name in cluster_name_list:
-        if '/' in cluster_name or '\\' in cluster_name:
-            raise RuntimeError(f"unsantized cluster name {cluster_name}")
 
     print(f"writing {prefix}")
     root_group = write_nii_file_list_to_ome_zarr(

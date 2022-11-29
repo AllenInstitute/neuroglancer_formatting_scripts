@@ -1,5 +1,47 @@
 import pathlib
 
+
+
+def read_manifest(manifest_path):
+    """
+    Get a lookup table from filename to
+    celltype name and machine readable group
+    name from the manifest.csv files written
+    by Lydia's script
+    """
+    label_idx = None
+    path_idx = None
+    with open(manifest_path, "r") as in_file:
+        header = in_file.readline().strip().split(',')
+        for idx, val in enumerate(header):
+            if val == 'label':
+                label_idx = idx
+            elif val == 'file_name':
+                path_idx = idx
+        assert label_idx is not None
+        assert path_idx is not None
+        file_path_list = []
+        human_readable_list = []
+        for line in in_file:
+            line = line.strip().split(',')
+            pth = line[path_idx]
+            human_readable = line[label_idx]
+            file_path_list.append(pth)
+            human_readable_list.append(human_readable)
+
+    (sanitized_list,
+     _ ) = sanitize_cluster_name_list(human_readable_list)
+
+    result = dict()
+    for file_path, human_readable, sanitized in zip(file_path_list,
+                                                    human_readable_list,
+                                                    sanitized_list):
+        result[file_path] = {"human_readable": human_readable,
+                             "machine_readable": sanitized}
+
+    return result
+
+
 def sanitize_cluster_name(name):
     for bad_char in (' ', '/'):
         name = name.replace(bad_char, '_')
