@@ -127,21 +127,27 @@ def write_nii_file_list_to_ome_zarr(
     n_per_process = max(np.floor(len(file_path_list)/n_workers).astype(int),
                         1)
 
+    file_lists = []
+    group_lists = []
+    for ii in range(n_workers):
+        file_lists.append([])
+        group_lists.append([])
+
+    for ii in range(len(file_path_list)):
+        jj = ii % n_workers
+        file_lists[jj].append(file_path_list[ii])
+        group_lists[jj].append(group_name_list[ii])
+
     process_list = []
-    for i0 in range(0, len(file_path_list), n_per_process):
-        i1 = min(i0+n_per_process, len(file_path_list))
-        file_sub = file_path_list[i0:i1]
-        group_sub = group_name_list[i0:i1]
+    for ii in range(n_workers):
         p = multiprocessing.Process(
                 target=_write_nii_file_list_worker,
-                kwargs={'file_path_list': file_sub,
-                        'group_name_list': group_sub,
+                kwargs={'file_path_list': file_lists[ii],
+                        'group_name_list': group_lists[ii],
                         'root_group': parent_group,
                         'downscale': downscale})
         p.start()
         process_list.append(p)
-        while len(process_list) >= n_workers:
-            process_list = _winnow_process_list(process_list)
 
     for p in process_list:
         p.join()
