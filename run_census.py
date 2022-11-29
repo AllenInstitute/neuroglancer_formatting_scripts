@@ -1,5 +1,6 @@
 import os
-from celltypes_utils import get_class_lookup
+from neuroglancer_interface.utils.celltypes_utils import (
+    get_class_lookup)
 import pathlib
 import zarr
 import numpy as np
