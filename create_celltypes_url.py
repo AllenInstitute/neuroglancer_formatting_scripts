@@ -25,13 +25,23 @@ def main():
                         type=str,
                         default=None)
 
+    parser.add_argument('--segmentation_bucket',
+                        type=str,
+                        default=None)
+
+    parser.add_argument('--template_bucket',
+                        type=str,
+                        default=None)
+
     args = parser.parse_args()
 
     url = create_celltypes_url(
                bucket=args.celltype_bucket,
                celltype=args.celltype,
                range_max=args.range_max,
-               color=args.color)
+               color=args.color,
+               template_bucket=args.template_bucket,
+               segmentation_bucket=args.segmentation_bucket)
 
     print(url)
 
