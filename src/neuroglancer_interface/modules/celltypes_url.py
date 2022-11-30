@@ -14,7 +14,7 @@ def create_celltypes_url(
         template_bucket='mouse1-template-prototype/template',
         segmentation_bucket='mouse1-atlas-prototype',
         starting_position=None,
-        pubic_name=None):
+        public_name=None):
 
     if public_name is None:
         public_name = celltype.split('/')[-1]

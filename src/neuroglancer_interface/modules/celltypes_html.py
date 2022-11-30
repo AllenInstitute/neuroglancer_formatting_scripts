@@ -2,7 +2,8 @@ from neuroglancer_interface.modules.celltypes_url import (
     create_celltypes_url)
 
 from neuroglancer_interface.utils.celltypes_utils import (
-    get_class_lookup)
+    get_class_lookup,
+    read_manifest)
 
 from neuroglancer_interface.utils.html_utils import (
     write_basic_table)
@@ -50,7 +51,7 @@ def write_celltypes_html(
                             celltype=data_path.name)
             starting_position=[550, 550, max_plane]
 
-        s3_celltype = f"{celltype['hierarchy']/celltype['machine_readable']}"
+        s3_celltype = f"{celltype['hierarchy']}/{celltype['machine_readable']}"
         this_url = create_celltypes_url(
                         bucket=cell_types_bucket,
                         celltype=s3_celltype,
@@ -119,7 +120,8 @@ def read_all_manifests(data_dir):
             raise RuntimeError(
                 f"cannot find {manifest_path.resolve().absolute()}")
         this_manifest = read_manifest(manifest_path)
-        for element in this_manifest:
+        for manifest_key in this_manifest:
+            element = this_manifest[manifest_key]
             unq_key = f"{this_hierarchy}/{element['machine_readable']}"
             if unq_key in found_machine:
                 raise RuntimeError(
@@ -127,7 +129,7 @@ def read_all_manifests(data_dir):
             found_machine.add(unq_key)
 
             cell_type_path = child_dir / element["machine_readable"]
-            if not celltype_path.is_dir():
+            if not cell_type_path.is_dir():
                 raise RuntimeError(
                     "Cannot find cell type "
                     f"{cell_type_path.resolve().absolute()}")
