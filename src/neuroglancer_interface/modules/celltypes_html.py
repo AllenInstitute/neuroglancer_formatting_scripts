@@ -89,6 +89,11 @@ def write_celltypes_html(
     sorted_dex = np.argsort(numerical_list)
     key_order = key_order[sorted_dex]
 
+    metadata_lines = []
+    metadata_lines.append(f"cell types src: {cell_types_bucket}")
+    metadata_lines.append(f"template src: {template_bucket}")
+    metadata_lines.append(f"segmentation src: {segmentation_bucket}")
+
     write_basic_table(
         output_path=output_path,
         title=title,
@@ -97,7 +102,8 @@ def write_celltypes_html(
         div_name=div_name,
         key_to_other_cols=celltype_to_cols,
         search_by=['celltype_name',
-                   'hierarchy'])
+                   'hierarchy'],
+        metadata_lines=metadata_lines)
 
 def read_all_manifests(data_dir):
     """

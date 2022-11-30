@@ -17,6 +17,7 @@ def main():
     parser.add_argument('--template_bucket', type=str, default=None)
     parser.add_argument('--segmentation_bucket', type=str, default=None)
     parser.add_argument('--output_path', type=str, default=None)
+    parser.add_argument('--table_title', type=str, default=None)
     args = parser.parse_args()
 
     data_dir = None
@@ -29,7 +30,8 @@ def main():
         cell_types_bucket=args.cell_types_bucket,
         template_bucket=args.template_bucket,
         segmentation_bucket=args.segmentation_bucket,
-        data_dir=data_dir)
+        data_dir=data_dir,
+        title=args.table_title)
     print("wrote html")
     print(args.output_path)
 
