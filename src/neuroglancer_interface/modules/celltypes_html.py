@@ -26,7 +26,10 @@ def write_celltypes_html(
         range_max=0.1,
         color='green',
         data_dir=None,
-        title="Mouse1 cell type count maps"):
+        title="Mouse1 cell type count maps",
+        x_mm=0.01,
+        y_mm=0.01,
+        z_mm=0.1):
     """
     data_dir has children that are levels within the partonomy.
     Scan those children to assess the available cell types
@@ -60,7 +63,10 @@ def write_celltypes_html(
                         template_bucket=template_bucket,
                         segmentation_bucket=segmentation_bucket,
                         public_name=celltype['human_readable'],
-                        starting_position=starting_position)
+                        starting_position=starting_position,
+                        x_mm=x_mm,
+                        y_mm=y_mm,
+                        z_mm=z_mm)
 
         hierarchy = celltype['hierarchy']
         celltype_name = celltype['human_readable']

@@ -18,6 +18,10 @@ def main():
     parser.add_argument('--segmentation_bucket', type=str, default=None)
     parser.add_argument('--output_path', type=str, default=None)
     parser.add_argument('--table_title', type=str, default=None)
+    parser.add_argument('--x_mm', type=float, default=0.01)
+    parser.add_argument('--y_mm', type=float, default=0.01)
+    parser.add_argument('--z_mm', type=float, default=0.1)
+ 
     args = parser.parse_args()
 
     data_dir = None
@@ -31,7 +35,10 @@ def main():
         template_bucket=args.template_bucket,
         segmentation_bucket=args.segmentation_bucket,
         data_dir=data_dir,
-        title=args.table_title)
+        title=args.table_title,
+        x_mm=args.x_mm,
+        y_mm=args.y_mm,
+        z_mm=args.z_mm)
     print("wrote html")
     print(args.output_path)
 

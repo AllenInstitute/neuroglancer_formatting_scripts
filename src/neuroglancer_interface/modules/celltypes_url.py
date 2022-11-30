@@ -14,7 +14,10 @@ def create_celltypes_url(
         template_bucket='mouse1-template-prototype/template',
         segmentation_bucket='mouse1-atlas-prototype',
         starting_position=None,
-        public_name=None):
+        public_name=None,
+        x_mm=0.01,
+        y_mm=0.01,
+        z_mm=0.1):
 
     if public_name is None:
         public_name = celltype.split('/')[-1]
@@ -38,6 +41,9 @@ def create_celltypes_url(
             image_layer_list=image_layers,
             template_layer=template_layer,
             segmentation_layer=segmentation_layer,
-            starting_position=starting_position)
+            starting_position=starting_position,
+            x_mm=x_mm,
+            y_mm=y_mm,
+            z_mm=z_mm)
 
     return url
