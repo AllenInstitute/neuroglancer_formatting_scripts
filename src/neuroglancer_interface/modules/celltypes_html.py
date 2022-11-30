@@ -42,7 +42,7 @@ def write_celltypes_html(
     key_order = list()
     numerical_list = list()
 
-    for celltype in full_manifest[:10]:
+    for celltype in full_manifest:
 
         data_path = celltype['data_path']
 
