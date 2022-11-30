@@ -21,6 +21,7 @@ def main():
     parser.add_argument('--x_mm', type=float, default=0.01)
     parser.add_argument('--y_mm', type=float, default=0.01)
     parser.add_argument('--z_mm', type=float, default=0.1)
+    parser.add_argument('--n_processors', type=int, default=6)
  
     args = parser.parse_args()
 
@@ -38,7 +39,8 @@ def main():
         title=args.table_title,
         x_mm=args.x_mm,
         y_mm=args.y_mm,
-        z_mm=args.z_mm)
+        z_mm=args.z_mm,
+        n_processors=args.n_processors)
     print("wrote html")
     print(args.output_path)
 
