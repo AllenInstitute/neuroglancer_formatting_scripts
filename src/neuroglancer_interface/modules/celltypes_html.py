@@ -19,93 +19,124 @@ import dominate.tags
 def write_celltypes_html(
         output_path=None,
         annotation_path=None,
-        bucket="mouse1-celltypes-prototype",
+        cell_types_bucket="mouse1-celltypes-prototype",
         segmentation_bucket="mouse1-atlas-prototype",
         template_bucket="mouse1-template-prototype",
         range_max=0.1,
         color='green',
-        pass_all=False,
-        data_dir=None):
+        data_dir=None,
+        title="Mouse1 cell type count maps"):
+    """
+    data_dir has children that are levels within the partonomy.
+    Scan those children to assess the available cell types
+    """
 
-    (subclass_to_clusters,
-     class_to_clusters,
-     cluster_set,
-     desanitizer) = get_class_lookup(annotation_path)
-
-    subclass_list = list(subclass_to_clusters.keys())
-    class_list = list(class_to_clusters.keys())
-    cluster_list = list(cluster_set)
-    for l in (subclass_list, class_list, cluster_list):
-        l.sort()
-
-    valid_celltypes = find_valid_celltypes(
-                            bucket=bucket,
-                            class_list=class_list,
-                            subclass_list=subclass_list,
-                            cluster_list=cluster_list,
-                            pass_all=pass_all,
-                            data_dir=data_dir)
-
-    sort_by = []
-    for celltype in valid_celltypes:
-        this_type = celltype.split('/')[-1]
-        actual_type = desanitizer[this_type]
-        idx = idx_from_cluster_name(actual_type)
-        sort_by.append(idx)
-    sort_by = np.array(sort_by)
-    valid_celltypes = np.array(valid_celltypes)
-    sorted_dex = np.argsort(sort_by)
-    valid_celltypes = valid_celltypes[sorted_dex]
+    full_manifest = read_all_manifests(data_dir)
 
     celltype_to_link = dict()
     celltype_to_cols = dict()
+    key_order = list()
+    numerical_list = list()
 
-    for celltype in valid_celltypes:
+    for celltype in full_manifest[:10]:
+
+        data_path = celltype['data_path']
 
         starting_position = None
-        if data_dir is not None:
+        if data_path is not None:
             (max_plane,
              total_cts) = get_ct_data(
-                            data_dir=data_dir,
-                            celltype=celltype)
+                            data_dir=data_path.parent,
+                            celltype=data_path.name)
             starting_position=[550, 550, max_plane]
 
+        s3_celltype = f"{celltype['hierarchy']/celltype['machine_readable']}"
         this_url = create_celltypes_url(
-                        bucket=bucket,
-                        celltype=celltype,
+                        bucket=cell_types_bucket,
+                        celltype=s3_celltype,
                         range_max=range_max,
                         color=color,
                         template_bucket=template_bucket,
                         segmentation_bucket=segmentation_bucket,
-                        desanitizer=desanitizer,
+                        public_name=celltype['human_readable'],
                         starting_position=starting_position)
 
-        hierarchy = celltype.split('/')[0]
-        dirty = desanitizer[celltype.split('/')[-1]]
+        hierarchy = celltype['hierarchy']
+        celltype_name = celltype['human_readable']
+        celltype_key = celltype['unique']
+        key_order.append(celltype_key)
+        numerical_list.append(
+            f"{celltype['machine_readable'].split('_')[0]_{celltype['hierarchy']}")
 
-        celltype_to_link[celltype] = this_url
+        celltype_to_link[celltype_key] = this_url
         these_cols = {'names': ['celltype_name', 'hierarchy'],
-                      'values': [dirty, hierarchy]}
+                      'values': [celltype_name, hierarchy]}
 
         if data_dir is not None:
-            these_cols['names'].append('counts')
+            these_cols['names'].append('counts (arbitrary)')
             these_cols['values'].append(f"{total_cts:.3e}")
 
-        celltype_to_cols[celltype] = these_cols
+        celltype_to_cols[celltype_key] = these_cols
 
-    title = "Mouse1 cell type count maps"
+    title = title
     div_name = "celltype_maps"
     cls_name = "celltype_name"
+
+    key_order = np.array(key_order)
+    numerical_list = np.array(numerical_list)
+    sorted_dex = np.argsort(numerical_list)
+    key_order = key_order[sorted_dex]
 
     write_basic_table(
         output_path=output_path,
         title=title,
         key_to_link=celltype_to_link,
-        key_order=valid_celltypes,
+        key_order=key_order,
         div_name=div_name,
         key_to_other_cols=celltype_to_cols,
         search_by=['celltype_name',
                    'hierarchy'])
+
+def read_all_manifests(data_dir):
+    """
+    Return:
+        valid_cell_types -- list of dicts like
+        {'hierarcy': 'Level_1',
+         'data_path': path_to_zarr,
+         'human_readable': human_readable_name,
+         'machine_readable': machine_readable_name,
+         'unique': a_unique_key}
+    """
+
+    sub_dirs = [n for n in data_dir.iterdir() if n.is_dir()]
+    found_machine = set()
+    valid_cell_types = []
+    for child_dir in sub_dirs:
+        this_hierarchy = child_dir.name
+        manifest_path = child_dir / 'manifest.csv'
+        if not manifest_path.is_file():
+            raise RuntimeError(
+                f"cannot find {manifest_path.resolve().absolute()}")
+        this_manifest = read_manifest(manifest_path)
+        for element in this_manifest:
+            unq_key = f"{this_hierarchy}/{element['machine_readable']}}
+            if unq_key in found_machine:
+                raise RuntimeError(
+                    f"{unq_key} occurs more than once")
+            found_machine.add(unq_key)
+
+            cell_type_path = child_dir / element["machine_readable"]
+            if not celltype_path.is_dir():
+                raise RuntimeError(
+                    "Cannot find cell type "
+                    f"{cell_type_path.resolve().absolute()}")
+            this_element = {'hierarchy': this_hierarchy,
+                            'human_readable': element['human_readable'],
+                            'machine_readable': element['machine_readable'],
+                            'data_path': cell_type_path,
+                            'unique': unq_key}
+            valid_cell_types.append(this_element)
+    return valid_cell_types
 
 
 def idx_from_cluster_name(cluster_name):
@@ -146,7 +177,7 @@ def find_valid_celltypes(
                 full_dir = data_dir / type_key
                 if full_dir.is_dir():
                     valid_celltypes.append(type_key)
-            else: 
+            else:
                 test_key = f"{type_key}/.zattrs"
                 response = s3_client.list_objects_v2(
                         Bucket=bucket,
@@ -160,18 +191,13 @@ def get_ct_data(
         data_dir,
         celltype):
 
-    print(data_dir)
-    print(celltype)
-    print((data_dir / celltype).is_dir())
+    if not (data_dir / celltype).is_dir()):
+        raise RuntimeError(
+            f"ct data cannot parse {data_dir} {celltype}")
     arr = np.array(zarr.open(data_dir / celltype, 'r')['0'])
     plane_sums = np.sum(arr, axis=(0,1))
     max_z = np.argmax(plane_sums)
     all_ct = np.sum(plane_sums)
-
-    # units are counts per 10x10x25 slice
-    # these voxels are each 10x10x100
-    # so multiply each voxel's count value by 4
-    all_ct *= 4.0
 
     print(f"read ct data for {celltype}")
     return (max_z, all_ct)

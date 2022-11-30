@@ -14,11 +14,10 @@ def create_celltypes_url(
         template_bucket='mouse1-template-prototype/template',
         segmentation_bucket='mouse1-atlas-prototype',
         starting_position=None,
-        desanitizer=None):
+        pubic_name=None):
 
-    public_name = celltype.split('/')[-1]
-    if desanitizer is not None:
-        public_name = desanitizer[public_name]
+    if public_name is None:
+        public_name = celltype.split('/')[-1]
 
     image_layers = get_heatmap_image_layer(
                        bucket_name=bucket,
