@@ -11,6 +11,7 @@ from botocore import UNSIGNED
 from botocore.client import Config
 import boto3
 
+import time
 import multiprocessing
 import zarr
 import numpy as np
@@ -53,14 +54,10 @@ def write_celltypes_html(
 
         data_path = celltype['data_path']
 
-        starting_position = None
-        if data_path is not None:
-            (max_plane,
-             total_cts) = get_ct_data(
-                            data_dir=data_path.parent,
-                            celltype=data_path.name)
         starting_position=starting_position_lookup[
-                            celltype['unique']]
+                            celltype['unique']]['starting_position']
+        total_cts = starting_position_lookup[
+                            celltype['unique']]['total_cts']
 
         s3_celltype = f"{celltype['hierarchy']}/{celltype['machine_readable']}"
         this_url = create_celltypes_url(
@@ -173,6 +170,7 @@ def get_starting_positions(
 
     mgr = multiprocessing.Manager()
     output_dict = mgr.dict()
+    output_lock = mgr.Lock()
     sub_manifests = []
     for ii in range(n_processors):
         sub_manifests.append([])
@@ -184,7 +182,8 @@ def get_starting_positions(
         p = multiprocessing.Process(
                 target=_get_starting_position_worker,
                 kwargs={'full_manifest': sub_manifests[ii],
-                        'output_dir': output_dir})
+                        'output_dict': output_dict,
+                        'output_lock': output_lock})
         p.start()
         process_list.append(p)
 
@@ -195,22 +194,24 @@ def get_starting_positions(
 
 def _get_starting_position_worker(
         full_manifest,
-        output_dir):
+        output_dict,
+        output_lock):
 
-   t0 = time.time()
-   ntot = len(full_manifest)
-   ct = 0
-   this_lookup = dict()
-   for celltype in full_manifest:
+    t0 = time.time()
+    ntot = len(full_manifest)
+    ct = 0
+    this_lookup = dict()
+    for celltype in full_manifest:
         data_path = celltype['data_path']
         starting_position = None
-        if data_path is not None:
-            (max_plane,
-             total_cts) = get_ct_data(
-                            data_dir=data_path.parent,
-                            celltype=data_path.name)
-            starting_position=[550, 550, max_plane]
-        this_lookup[celltype['unique']] = starting_position
+        (max_plane,
+         total_cts) = get_ct_data(
+                        data_dir=data_path.parent,
+                        celltype=data_path.name)
+        starting_position=[550, 550, max_plane]
+        this_lookup[celltype['unique']] = {
+                'starting_position': starting_position,
+                'total_cts': total_cts}
         ct += 1
         if ct % 50 == 0:
             duration = time.time()-t0
@@ -220,8 +221,9 @@ def _get_starting_position_worker(
             print(f"got {ct} of {ntot}; "
                   f"predict {remain:.2e} seconds of {pred:.2e} left")
 
-    for k in this_lookup:
-        output_dir[k] = this_lookup[k]
+    with output_lock:
+        for k in this_lookup:
+            output_dict[k] = this_lookup[k]
 
 
 def get_ct_data(
@@ -236,5 +238,4 @@ def get_ct_data(
     max_z = np.argmax(plane_sums)
     all_ct = np.sum(plane_sums)
 
-    print(f"read ct data for {celltype}")
     return (max_z, all_ct)
