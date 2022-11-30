@@ -66,7 +66,8 @@ def write_celltypes_html(
         celltype_key = celltype['unique']
         key_order.append(celltype_key)
         numerical_list.append(
-            f"{celltype['machine_readable'].split('_')[0]_{celltype['hierarchy']}")
+            f"{celltype['machine_readable'].split('_')[0]}"
+            f"_{celltype['hierarchy']}")
 
         celltype_to_link[celltype_key] = this_url
         these_cols = {'names': ['celltype_name', 'hierarchy'],
@@ -119,7 +120,7 @@ def read_all_manifests(data_dir):
                 f"cannot find {manifest_path.resolve().absolute()}")
         this_manifest = read_manifest(manifest_path)
         for element in this_manifest:
-            unq_key = f"{this_hierarchy}/{element['machine_readable']}}
+            unq_key = f"{this_hierarchy}/{element['machine_readable']}"
             if unq_key in found_machine:
                 raise RuntimeError(
                     f"{unq_key} occurs more than once")
@@ -191,7 +192,7 @@ def get_ct_data(
         data_dir,
         celltype):
 
-    if not (data_dir / celltype).is_dir()):
+    if not (data_dir / celltype).is_dir():
         raise RuntimeError(
             f"ct data cannot parse {data_dir} {celltype}")
     arr = np.array(zarr.open(data_dir / celltype, 'r')['0'])
