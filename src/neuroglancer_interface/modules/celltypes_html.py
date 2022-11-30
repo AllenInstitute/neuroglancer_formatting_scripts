@@ -2,8 +2,7 @@ from neuroglancer_interface.modules.celltypes_url import (
     create_celltypes_url)
 
 from neuroglancer_interface.utils.celltypes_utils import (
-    get_class_lookup,
-    read_manifest)
+    read_all_manifests)
 
 from neuroglancer_interface.utils.html_utils import (
     write_basic_table)
@@ -109,48 +108,6 @@ def write_celltypes_html(
         search_by=['celltype_name',
                    'hierarchy'],
         metadata_lines=metadata_lines)
-
-def read_all_manifests(data_dir):
-    """
-    Return:
-        valid_cell_types -- list of dicts like
-        {'hierarcy': 'Level_1',
-         'data_path': path_to_zarr,
-         'human_readable': human_readable_name,
-         'machine_readable': machine_readable_name,
-         'unique': a_unique_key}
-    """
-
-    sub_dirs = [n for n in data_dir.iterdir() if n.is_dir()]
-    found_machine = set()
-    valid_cell_types = []
-    for child_dir in sub_dirs:
-        this_hierarchy = child_dir.name
-        manifest_path = child_dir / 'manifest.csv'
-        if not manifest_path.is_file():
-            raise RuntimeError(
-                f"cannot find {manifest_path.resolve().absolute()}")
-        this_manifest = read_manifest(manifest_path)
-        for manifest_key in this_manifest:
-            element = this_manifest[manifest_key]
-            unq_key = f"{this_hierarchy}/{element['machine_readable']}"
-            if unq_key in found_machine:
-                raise RuntimeError(
-                    f"{unq_key} occurs more than once")
-            found_machine.add(unq_key)
-
-            cell_type_path = child_dir / element["machine_readable"]
-            if not cell_type_path.is_dir():
-                raise RuntimeError(
-                    "Cannot find cell type "
-                    f"{cell_type_path.resolve().absolute()}")
-            this_element = {'hierarchy': this_hierarchy,
-                            'human_readable': element['human_readable'],
-                            'machine_readable': element['machine_readable'],
-                            'data_path': cell_type_path,
-                            'unique': unq_key}
-            valid_cell_types.append(this_element)
-    return valid_cell_types
 
 
 def idx_from_cluster_name(cluster_name):

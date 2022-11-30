@@ -1,6 +1,4 @@
 import os
-from neuroglancer_interface.utils.celltypes_utils import (
-    get_class_lookup)
 import pathlib
 import zarr
 import numpy as np
@@ -9,6 +7,9 @@ import json
 import SimpleITK
 import multiprocessing
 import time
+
+from neuroglancer_interface.utils.celltypes_utils import (
+    read_all_manifests)
 
 
 def census_from_structure_lookup(
@@ -47,11 +48,12 @@ def census_from_structure_lookup(
                         n_processors=n_processors)
 
     celltype_census = dict()
-    for child in ('classes', 'subclasses', 'clusters'):
-        this_dir = celltypes_dir / child
-        celltype_census[child] = census_from_mask_and_zarr_dir(
+    celltype_children = [n for n in celltypes_dir.iterdir()
+                         if n.is_dir()]
+    for child in celltype_children:
+        celltype_census[child.name] = census_from_mask_and_zarr_dir(
                             mask_pixel_lookup=structure_mask_lookup,
-                            zarr_dir=this_dir,
+                            zarr_dir=child,
                             desanitizer=celltypes_desanitizer,
                             n_processors=n_processors)
 
@@ -381,6 +383,18 @@ def reformat_census(census, structure_name_lookup):
     return result, metadata
 
 
+def get_desanitizer(celltypes_dir):
+    cell_type_list = read_all_manifests(celltypes_dir)
+    desanitizer = dict()
+    for cell_type in cell_type_list:
+        m = cell_type['machine_readable']
+        h = cell_type['human_readable']
+        if m in desanitizer:
+            raise RuntimeError(f"{m} occurs more than once")
+        desanitizer[m] = h
+    return desanitizer
+
+
 def main():
 
     default_anno = '/allen/programs/celltypes/'
@@ -411,6 +425,8 @@ def main():
             msg = f"{d.resolve().absolute()} is not dir"
             raise RuntimeError(msg)
 
+    desanitizer = get_desanitizer(celltypes_dir)
+
     if not isinstance(args.structure_lookup, list):
         structure_lookup_list = [args.structure_lookup]
     else:
@@ -423,12 +439,6 @@ def main():
     mask_pixel_lookup = get_mask_lookup(mask_dir,
                             n_processors=args.n_processors)
     print(f"got mask pixel lookup -- {len(mask_pixel_lookup)}")
-
-    (subclass_to_clusters,
-     class_to_clusters,
-     valid_clusters,
-     desanitizer) = get_class_lookup(args.annotation_path)
-    print("got class lookup")
 
     census = census_from_structure_lookup(
         structure_mask_lookup=mask_pixel_lookup,
