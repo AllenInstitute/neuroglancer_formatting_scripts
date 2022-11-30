@@ -72,9 +72,8 @@ def write_celltypes_html(
         celltype_name = celltype['human_readable']
         celltype_key = celltype['unique']
         key_order.append(celltype_key)
-        numerical_list.append(
-            f"{celltype['machine_readable'].split('_')[0]}"
-            f"_{celltype['hierarchy']}")
+        num_idx = int(celltype['machine_readable'].split('_')[0])
+        numerical_list.append(num_idx)
 
         celltype_to_link[celltype_key] = this_url
         these_cols = {'names': ['celltype_name', 'hierarchy'],
