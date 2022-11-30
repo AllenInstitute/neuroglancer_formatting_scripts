@@ -11,6 +11,7 @@ from botocore import UNSIGNED
 from botocore.client import Config
 import boto3
 
+import multiprocessing
 import zarr
 import numpy as np
 import dominate
@@ -28,13 +29,20 @@ def write_celltypes_html(
         title="Mouse1 cell type count maps",
         x_mm=0.01,
         y_mm=0.01,
-        z_mm=0.1):
+        z_mm=0.1,
+        n_processors=6):
     """
     data_dir has children that are levels within the partonomy.
     Scan those children to assess the available cell types
     """
 
     full_manifest = read_all_manifests(data_dir)
+
+    print("getting starting position lookup")
+    starting_position_lookup = get_starting_positions(
+            full_manifest=full_manifest,
+            n_processors=n_processors)
+    print("got starting position lookup")
 
     celltype_to_link = dict()
     celltype_to_cols = dict()
@@ -51,7 +59,8 @@ def write_celltypes_html(
              total_cts) = get_ct_data(
                             data_dir=data_path.parent,
                             celltype=data_path.name)
-            starting_position=[550, 550, max_plane]
+        starting_position=starting_position_lookup[
+                            celltype['unique']]
 
         s3_celltype = f"{celltype['hierarchy']}/{celltype['machine_readable']}"
         this_url = create_celltypes_url(
@@ -156,6 +165,63 @@ def find_valid_celltypes(
                 if response['KeyCount'] > 0:
                     valid_celltypes.append(type_key)
     return valid_celltypes
+
+
+def get_starting_positions(
+        full_manifest,
+        n_processors):
+
+    mgr = multiprocessing.Manager()
+    output_dict = mgr.dict()
+    sub_manifests = []
+    for ii in range(n_processors):
+        sub_manifests.append([])
+    for ii in range(len(full_manifest)):
+        jj = ii % n_processors
+        sub_manifests[jj].append(full_manifest[ii])
+    process_list = []
+    for ii in range(n_processors):
+        p = multiprocessing.Process(
+                target=_get_starting_position_worker,
+                kwargs={'full_manifest': sub_manifests[ii],
+                        'output_dir': output_dir})
+        p.start()
+        process_list.append(p)
+
+    for p in process_list:
+        p.join()
+
+    return dict(output_dict)
+
+def _get_starting_position_worker(
+        full_manifest,
+        output_dir):
+
+   t0 = time.time()
+   ntot = len(full_manifest)
+   ct = 0
+   this_lookup = dict()
+   for celltype in full_manifest:
+        data_path = celltype['data_path']
+        starting_position = None
+        if data_path is not None:
+            (max_plane,
+             total_cts) = get_ct_data(
+                            data_dir=data_path.parent,
+                            celltype=data_path.name)
+            starting_position=[550, 550, max_plane]
+        this_lookup[celltype['unique']] = starting_position
+        ct += 1
+        if ct % 50 == 0:
+            duration = time.time()-t0
+            per = duration/ct
+            pred = per*ntot
+            remain = pred-duration
+            print(f"got {ct} of {ntot}; "
+                  f"predict {remain:.2e} seconds of {pred:.2e} left")
+
+    for k in this_lookup:
+        output_dir[k] = this_lookup[k]
 
 
 def get_ct_data(
