@@ -1,6 +1,20 @@
 import pathlib
 
 
+
+def get_desanitizer(celltypes_dir):
+    cell_type_list = read_all_manifests(celltypes_dir)
+    desanitizer = dict()
+    for cell_type in cell_type_list:
+        m = cell_type['machine_readable']
+        h = cell_type['human_readable']
+        if m in desanitizer:
+            if h != desanitizer[m]:
+                raise RuntimeError(f"{m} occurs more than once")
+        desanitizer[m] = h
+    return desanitizer
+
+
 def read_all_manifests(data_dir):
     """
     Return:

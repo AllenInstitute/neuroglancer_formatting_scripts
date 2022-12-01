@@ -9,7 +9,7 @@ import multiprocessing
 import time
 
 from neuroglancer_interface.utils.celltypes_utils import (
-    read_all_manifests)
+    get_desanitizer)
 
 from neuroglancer_interface.utils.census_utils import (
     census_from_mask_lookup_and_arr,
@@ -185,19 +185,6 @@ def _census_from_mask_and_zarr_dir_worker(
         for k in result:
             output_dict[k] = result[k]
 
-
-
-def get_desanitizer(celltypes_dir):
-    cell_type_list = read_all_manifests(celltypes_dir)
-    desanitizer = dict()
-    for cell_type in cell_type_list:
-        m = cell_type['machine_readable']
-        h = cell_type['human_readable']
-        if m in desanitizer:
-            if h != desanitizer[m]:
-                raise RuntimeError(f"{m} occurs more than once")
-        desanitizer[m] = h
-    return desanitizer
 
 
 def main():
