@@ -3,18 +3,6 @@ from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr)
 
 
-def gene_from_fname(fname):
-    params = fname.name.split('_')
-    chosen = None
-    for p in params:
-        try:
-            int(p)
-        except ValueError:
-            chosen = p
-            break
-    return chosen
-
-
 def convert_mfish_to_ome_zarr(
         input_dir: str,
         output_dir: str,
@@ -64,3 +52,15 @@ def convert_mfish_to_ome_zarr(
         downscale=downscale,
         clobber=clobber,
         n_processors=args.n_processors)
+
+
+def gene_from_fname(fname):
+    params = fname.name.split('_')
+    chosen = None
+    for p in params:
+        try:
+            int(p)
+        except ValueError:
+            chosen = p
+            break
+    return chosen

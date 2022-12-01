@@ -1,4 +1,5 @@
 {
+  "downscale": 2,
   "mfish": {
     "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/gene"
   },
