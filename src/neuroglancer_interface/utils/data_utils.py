@@ -202,7 +202,7 @@ def _write_nii_file_list_worker(
             group_name=grp_name,
             nii_file_path=f_path,
             downscale=downscale,
-            metadata_collector=None)
+            metadata_collector=metadata_collector)
 
 
 def write_nii_to_group(
@@ -247,7 +247,7 @@ def write_nii_to_group(
     if metadata_collector is not None:
         metadata_collector.collect_metadata(
             data_array=arr,
-            metadata_key=str(nii_file_path.resolve().absolute())
+            metadata_key=str(nii_file_path.resolve().absolute()))
 
     (x_scale,
      y_scale,

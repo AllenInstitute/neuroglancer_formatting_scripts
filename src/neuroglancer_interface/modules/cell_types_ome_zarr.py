@@ -1,4 +1,5 @@
 import pathlib
+import json
 import time
 import numpy as np
 import shutil
@@ -95,7 +96,7 @@ def write_sub_group(
     new_manifest_path = output_dir / 'manifest.csv'
     if new_manifest_path.exists():
         raise RuntimeError(f"{new_manifest_path} already exists")
-    shutil.cp(manifest_path, new_manifest_path)
+    shutil.copy(manifest_path, new_manifest_path)
 
     metadata = dict(metadata_collector.metadata)
     metadata_path = output_dir / 'metadata.json'
