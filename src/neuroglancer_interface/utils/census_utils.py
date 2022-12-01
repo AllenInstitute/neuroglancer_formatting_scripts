@@ -2,7 +2,9 @@ import numpy as np
 import json
 import SimpleITK
 import pathlib
-
+import multiprocessing
+from neuroglancer_interface.utils.data_utils import (
+    get_array_from_img)
 
 def census_from_mask_lookup_and_arr(
         mask_lookup,
@@ -65,7 +67,9 @@ def get_structure_name_lookup(
 
         for k in this_lookup:
             if k in result and this_lookup[k] != result[k]:
-                raise RuntimeError(f"two results for {k}")
+                raise RuntimeError(f"two results for {k}\n"
+                                   f"{this_lookup[k]}\n"
+                                   f"{result[k]}")
             result[k] = this_lookup[k]
     return result
 
@@ -158,7 +162,7 @@ def _get_mask_lookup_worker(file_path_list, output_dict, lock):
     result = dict()
     for file_path in file_path_list:
         id_val = int(file_path.name.split('_')[0])
-        mask = SimpleITK.GetArrayFromImage(
+        mask = get_array_from_img(
                     SimpleITK.ReadImage(file_path))
         mask_pixels = np.where(mask==1)
         result[id_val] = {'mask': mask_pixels,
@@ -183,6 +187,8 @@ def get_mask_lookup(mask_dir, n_processors):
     -------
     dict
     """
+    if not isinstance(mask_dir, pathlib.Path):
+        mask_dir = pathlib.Path(mask_dir)
     file_path_list = [n for n in mask_dir.rglob('*nii.gz')]
     id_set = set([int(f.name.split('_')[0])
                   for f in file_path_list])

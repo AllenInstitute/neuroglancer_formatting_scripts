@@ -71,12 +71,12 @@ def main():
 
     if "census" in config_data:
         print_status("Reading structure masks for census")
-        this_dir = pathlib.Path(__file__).parent
-        onto_dir = this_dir / "data/ontology_parcellation"
-        structure_name_lookup = get_structure_name_lookup(
-            path_list = [
-                onto_dir/"1_adult_mouse_brain_graph.json",
-                onto_dir/"structure_sets.csv"])
+        #this_dir = pathlib.Path(__file__).parent
+        #onto_dir = this_dir / "data/ontology_parcellation"
+        #structure_name_lookup = get_structure_name_lookup(
+        #    path_list = [
+        #        onto_dir/"1_adult_mouse_brain_graph.json",
+        #        onto_dir/"structure_sets.csv"])
 
         structure_set_masks = get_mask_lookup(
                 mask_dir=config_data["census"]["structure_set_masks"],
@@ -110,8 +110,8 @@ def main():
             downscale=config_data["downscale"],
             clobber=False,
             n_processors=args.n_processors,
-            structure_set_masks=None,
-            structure_masks=None)
+            structure_set_masks=structure_set_masks,
+            structure_masks=structure_masks)
         print_status("Done formatting cell types data")
 
     print_status("Done formatting all data")

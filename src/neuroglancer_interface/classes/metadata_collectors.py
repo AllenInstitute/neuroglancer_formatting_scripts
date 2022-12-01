@@ -10,6 +10,8 @@ class CellTypeMetadataCollector(object):
             structure_set_masks=None,
             structure_masks=None):
         self._metadata = None
+        assert structure_set_masks is not None
+        assert structure_masks is not None
         self.masks = {
             "structure_sets": structure_set_masks,
             "structures": structure_masks}
