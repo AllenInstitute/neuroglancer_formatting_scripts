@@ -1,6 +1,7 @@
 import pathlib
 import time
 import numpy as np
+import shutil
 
 from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr,
@@ -76,5 +77,14 @@ def write_sub_group(
             clobber=False,
             prefix=prefix,
             downscale=downscale)
+
+    print("copying manifest over")
+    new_manifest_path = pathlib.Path(root_group.store.path)
+    if prefix is not None:
+        new_manifest_path = new_manifest_path / prefix
+    new_manifest_path = new_manifest_path / 'manifest.csv'
+    if new_manifest_path.exists():
+        raise RuntimeError(f"{new_manifest_path} already exists")
+    shutil.cp(manifest_path, new_manifest_path)
 
     print(f"done writing {prefix}")
