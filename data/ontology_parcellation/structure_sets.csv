@@ -1,0 +1,51 @@
+id,name,description
+667481446,Isocortex layer 5,List of structures in Isocortex layer 5
+667481450,Isocortex layer 6b,List of structures in Isocortex layer 6b
+688152368,Cerebellum,Summary structures of the cerebellum
+8,NHP - Coarse,List of structures representing a coarse level summary
+7,Developing Human - Transcriptome,List of structures sampled for BrainSpan Transcriptome study
+306997241,GBM - Tumor Features,list of characteristic glioblastoma tumor elements
+12,ABA - Differential Search,List of structures for ABA Differential Search
+184527634,Mouse Connectivity - Target Search,List of valid structures for projection target search
+691663206,Mouse Brain - Has Surface Mesh,Structures whose surfaces are represented by a precomputed mesh
+688152365,Midbrain,Summary structures of the midbrain
+688152367,Medulla,Summary structures of the medulla
+688152361,Striatum,Summary structures of the striatum
+5,Human - Structures,List of structures representing a structural level summary
+147814064,Human - Summary,List of structures used for the HBA gene page
+687527945,Mouse Connectivity - Summary,Structures representing subdivisions of the mouse brain
+688152359,Hippocampal Formation,Summary structures of the hippocampal formation
+514166994,Allen Brain Observatory targeted structure set,List of visual cortex structures targeted for visual coding experiments
+267411678,NHP - ISH Structures,List of NHP structures used for ISH Study
+688152358,Olfactory Areas,Summary structures of the olfactory areas
+9,Developing Human - LCM,List of structures sampled for BrainSpan LCM study
+14,Human - Differential Search,List of HBA structures with descendants sampled for microarray
+167587189,Brain – Summary Structures,Curated list of non-overlapping substructures at a mid-ontology level
+667481445,Isocortex layer 4,List of structures in Isocortex layer 4
+687527670,Brain - Major Divisions,Structures representing the major divisions of the mouse brain
+310861484,GBM - Tumor Features - Direct Annotation,contains only tumor feature leaf nodes
+688152362,Pallidum,Summary structures of the pallidum
+114512892,Mouse Connectivity - BDA/AAV Primary Injection Structures,List of Primary injection structures for BDA/AAV injection structure search
+112905813,Mouse Connectivity - BDA/AAV All Injection Structures,List of primary AND secondary injection structures for BDA/AAV injection structure search
+10,ABA - Fine Structure Search,List of structures for ABA Fine Structure Search
+112905828,Mouse Connectivity - Projection All Injection Structures,List of primary AND secondary injection structures for Projection injection structure search
+157025860,Developing Human - LCM Summary,List of structures used for the Developing Human LCM gene page
+149187960,NHP Microarray Macro Dissection Structures,List of structures sampled for NHP Macro Microarray product
+11,Developing Human - Coarse,List of structures representing a coarse level summary
+667481449,Isocortex layer 6a,List of structures in Isocortex layer 6a
+3,Mouse - Areas,List of structures representing a areal level summary
+6,Human - Samples,List of structures sampled for HBA microarray project
+183237650,Developing Mouse - Coarse,List of structures used for the Developing Mouse expression bar graph and heatmap graphics
+667481440,Isocortex layer 1,List of structures in Isocortex layer 1
+688152364,Hypothalamus,Summary structures of the hypothalamus
+667481441,Isocortex layer 2/3,List of structures in Isocortex layer 2/3
+4,Human - Coarse,List of structures representing a coarse level summary
+396673091,Mouse Cell Types - Structures,All mouse visual areas with layers
+312192291,GBM - RNA-Seq sampled structures,List of structures sampled in the Ivy Glioblastoma RNA-Seq study
+688152360,Cortical Subplate,Summary structures of the cortical subplate
+1,NHP LCM Structures,List of structures sampled for NHP LCM project
+688152363,Thalamus,Summary structures of the thalamus
+2,Mouse - Coarse,List of structures representing a coarse level summary
+688152357,Isocortex,Summary structures of the isocortex
+114512891,Mouse Connectivity - Projection Primary Injection Structures,List of Primary injection structures for Projection injection structure search
+688152366,Pons,Summary structures of the pons
