@@ -13,7 +13,7 @@ from taskqueue import LocalTaskQueue
 
 def format_ccf_annotations(
         annotation_path,
-        segmenation_path,
+        segmentation_path,
         output_dir,
         clobber):
     """
@@ -24,15 +24,15 @@ def format_ccf_annotations(
     output_dir -- probably ends with ccf_annotations....?
     """
     assert annotation_path is not None
-    annotation_path = pathlib.Path(args.annotation_path)
+    annotation_path = pathlib.Path(annotation_path)
     assert annotation_path.is_file()
 
     assert segmentation_path is not None
-    segmentation_path = pathlib.Path(args.segmentation_path)
+    segmentation_path = pathlib.Path(segmentation_path)
     assert segmentation_path.is_file()
 
     assert output_dir is not None
-    output_dir = pathlib.Path(args.output_dir)
+    output_dir = pathlib.Path(output_dir)
     if output_dir.exists():
         if not clobber:
             raise RuntimeError(f"{output_dir} exists")

@@ -41,7 +41,6 @@ def main():
         else:
             print_status(f"Cleaning up {output_dir}")
             shutil.rmtree(output_dir)
-            output_dir.unlink()
             print_status("Done cleaning")
 
     output_dir.mkdir()
@@ -49,9 +48,9 @@ def main():
     if "ccf" in config_data:
         print_status("Formatting CCF annotations")
         format_ccf_annotations(
-            annotation_path=config_data["labels"],
-            segmentation_path=config_data["segmentation"],
-            output_dir=ouptut_dir/"ccf_annotations",
+            annotation_path=config_data["ccf"]["labels"],
+            segmentation_path=config_data["ccf"]["segmentation"],
+            output_dir=output_dir/"ccf_annotations",
             clobber=False)
         print_status("Done formatting CCF annotations")
 
