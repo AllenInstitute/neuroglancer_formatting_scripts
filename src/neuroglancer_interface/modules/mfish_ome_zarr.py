@@ -31,7 +31,7 @@ def convert_mfish_to_ome_zarr(
             f"{input_dir.resolve().absolute()}\n"
             "is not a dir")
 
-    fname_list = [n for n in input_dir.rglob('*nii.gz')]
+    fname_list = [n for n in input_dir.rglob('*nii.gz')][:10]
 
     fname_list.sort()
 
