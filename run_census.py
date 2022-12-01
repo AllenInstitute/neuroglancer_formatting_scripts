@@ -372,7 +372,7 @@ def reformat_census(census, structure_name_lookup):
     for struct_name in census['genes'][gene_name]['census']:
         human_name = structure_name_lookup[struct_name]
         result[human_name]['celltypes'] = dict()
-        for child in ('classes', 'subclasses', 'clusters'):
+        for child in result[human_name].keys():
             result[human_name]['celltypes'][child] = dict()
             for class_name in census['celltypes'][child]:
                 this_census = census['celltypes'][child][class_name]['census'][struct_name]
@@ -390,7 +390,8 @@ def get_desanitizer(celltypes_dir):
         m = cell_type['machine_readable']
         h = cell_type['human_readable']
         if m in desanitizer:
-            raise RuntimeError(f"{m} occurs more than once")
+            if h != desanitizer[m]:
+                raise RuntimeError(f"{m} occurs more than once")
         desanitizer[m] = h
     return desanitizer
 
