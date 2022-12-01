@@ -16,7 +16,8 @@ def convert_cell_types_to_ome_zarr(
         input_list: list,
         downscale: int,
         clobber: bool,
-        n_processors: int):
+        n_processors: int,
+        metadata: dict = None):
     """
     output_dir -- e.g. mouse_5/cell_types
 
@@ -27,6 +28,8 @@ def convert_cell_types_to_ome_zarr(
     downscale -- factor by which to downscale image at each step
 
     clobber -- should probably always be False in bundle
+
+    metadata -- dict where we will record metadata about celltype maps
     """
     root_group = create_root_group(
                     output_dir=output_dir,
@@ -40,7 +43,8 @@ def convert_cell_types_to_ome_zarr(
             input_dir=input_dir,
             prefix=prefix,
             n_processors=n_processors,
-            downscale=downscale)
+            downscale=downscale,
+            metadata=metadata)
 
 
 def write_sub_group(

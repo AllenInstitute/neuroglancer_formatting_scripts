@@ -53,7 +53,8 @@ def write_nii_file_list_to_ome_zarr(
         n_processors=4,
         clobber=False,
         prefix=None,
-        root_group=None):
+        root_group=None,
+        worker_method=_write_nii_file_list_worker):
     """
     Convert a list of nifti files into OME-zarr format
 
@@ -123,7 +124,7 @@ def write_nii_file_list_to_ome_zarr(
         parent_group = root_group
 
     if len(file_path_list) == 1:
-        _write_nii_file_list_worker(
+        worker_method(
             file_path_list=file_path_list,
             group_name_list=group_name_list,
             root_group=parent_group,
@@ -146,7 +147,7 @@ def write_nii_file_list_to_ome_zarr(
         process_list = []
         for ii in range(n_workers):
             p = multiprocessing.Process(
-                    target=_write_nii_file_list_worker,
+                    target=worker_method,
                     kwargs={'file_path_list': file_lists[ii],
                             'group_name_list': group_lists[ii],
                             'root_group': parent_group,
