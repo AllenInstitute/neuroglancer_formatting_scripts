@@ -37,8 +37,7 @@ class CellTypeMetadataCollector(object):
             if self.masks[k] is not None:
                 local_masks[k] = dict()
                 for el in self.masks[k]:
-                    local_masks[k][el] = {'path': self.masks[k][el]['path'],
-                                          'mask': [[int(v[ii]) for ii in range(len(v))] for v in self.masks[k][el]['mask']]}
+                    local_masks[k][el] = {'path': self.masks[k][el]['path']}
 
         metadata['masks'] = local_masks
 
