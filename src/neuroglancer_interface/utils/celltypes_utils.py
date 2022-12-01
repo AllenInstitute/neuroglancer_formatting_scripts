@@ -4,6 +4,13 @@ import pathlib
 
 def get_desanitizer(celltypes_dir):
     cell_type_list = read_all_manifests(celltypes_dir)
+    return desanitizer_from_meta_manifest(cell_type_list)
+
+
+def desanitizer_from_meta_manifest(cell_type_list):
+    """
+    cell_type_list is the result of reading list_of_manifests
+    """
     desanitizer = dict()
     for cell_type in cell_type_list:
         m = cell_type['machine_readable']
@@ -27,6 +34,15 @@ def read_all_manifests(data_dir):
     """
 
     sub_dirs = [n for n in data_dir.iterdir() if n.is_dir()]
+    list_of_manifests = []
+    for d in sub_dirs:
+        m = d / 'manifest.csv'
+        if m.is_file():
+            list_of_manifests.append(m)
+    return read_list_of_manifests(list_of_manifests)
+
+
+def read_list_of_manifests(list_of_manifests):
     found_machine = set()
     valid_cell_types = []
     for child_dir in sub_dirs:

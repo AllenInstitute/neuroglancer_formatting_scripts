@@ -10,7 +10,9 @@ from neuroglancer_interface.utils.data_utils import (
     create_root_group)
 
 from neuroglancer_interface.utils.celltypes_utils import (
-    read_manifest)
+    read_manifest,
+    read_list_of_manifests,
+    desanitizer_from_meta_manifest)
 
 from neuroglancer_interface.classes.metadata_collectors import (
     CellTypeMetadataCollector)
@@ -20,7 +22,9 @@ def convert_cell_types_to_ome_zarr(
         input_list: list,
         downscale: int,
         clobber: bool,
-        n_processors: int):
+        n_processors: int,
+        structure_set_masks=None,
+        structure_masks=None):
     """
     output_dir -- e.g. mouse_5/cell_types
 
@@ -32,11 +36,24 @@ def convert_cell_types_to_ome_zarr(
 
     clobber -- should probably always be False in bundle
     """
+
+    list_of_manifests = []
+    for input_config in input_list:
+        input_dir = pathlib.Path(input_config["input_dir"])
+        manifest_path = input_dir / "manifest.csv"
+        list_of_manifests.append(manifest_path)
+
+    meta_manifest = read_list_of_manifests(list_of_manifests)
+    desanitizer = desanitizer_from_meta_manifest(meta_manifest)
+
     root_group = create_root_group(
                     output_dir=output_dir,
                     clobber=clobber)
 
-    metadata_collector = CellTypeMetadataCollector()
+    metadata_collector = CellTypeMetadataCollector(
+                            structure_set_masks=structure_set_masks,
+                            structure_masks=structure_masks)
+
     mgr = multiprocessing.Manager()
     metadata_collector.metadata = mgr.dict()
 

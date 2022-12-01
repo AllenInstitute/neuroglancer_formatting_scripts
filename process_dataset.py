@@ -18,6 +18,10 @@ from neuroglancer_interface.modules.mfish_ome_zarr import (
 from neuroglancer_interface.modules.cell_types_ome_zarr import (
     convert_cell_types_to_ome_zarr)
 
+from neuroglancer_interface.utils.census_utils import (
+    get_structure_name_lookup,
+    get_mask_lookup)
+
 
 def print_status(msg):
     print(f"===={msg}====")
@@ -65,6 +69,29 @@ def main():
             clobber=False)
         print_status("Done formatting avg template image")
 
+    if "census" in config_data:
+        print_status("Reading structure masks for census")
+        this_dir = pathlib.Path(__file__).parent
+        onto_dir = this_dir / "data/ontology_parcellation"
+        structure_name_lookup = get_structure_name_lookup(
+            path_list = [
+                onto_dir/"1_adult_mouse_brain_graph.json",
+                onto_dir/"structure_sets.csv"])
+
+        structure_set_masks = get_mask_lookup(
+                mask_dir=config_data["census"]["structure_set_masks"],
+                n_processors=args.n_processors)
+
+        structure_masks = get_mask_lookup(
+                mask_dir=config_data["census"]["structure_masks"],
+                n_processors=args.n_processors)
+
+        print_status("Done reading structure masks for census")
+    else:
+        structure_name_lookup = None
+        structure_set_masks = None
+        structure_masks = None
+
     if "mfish" in config_data:
         print_status("Formatting mfish data")
         convert_mfish_to_ome_zarr(
@@ -82,7 +109,9 @@ def main():
             input_list=config_data["cell_types"]["input_list"],
             downscale=config_data["downscale"],
             clobber=False,
-            n_processors=args.n_processors)
+            n_processors=args.n_processors,
+            structure_set_masks=None,
+            structure_masks=None)
         print_status("Done formatting cell types data")
 
     print_status("Done formatting all data")
