@@ -10,11 +10,11 @@ class CellTypeMetadataCollector(object):
             structure_set_masks=None,
             structure_masks=None):
         self._metadata = None
-        assert structure_set_masks is not None
-        assert structure_masks is not None
-        self.masks = {
-            "structure_sets": structure_set_masks,
-            "structures": structure_masks}
+        self.masks = None
+        if structure_set_masks is not None or structure_masks is not None:
+            self.masks = {
+                "structure_sets": structure_set_masks,
+                "structures": structure_masks}
 
     @property
     def metadata(self):
@@ -34,11 +34,18 @@ class CellTypeMetadataCollector(object):
 
         this = {'total_cts': float(total_cts),
                 'max_plane': int(max_plane)}
+
         this_census = dict()
-        for mask_key in self.masks:
-            sub_census = census_from_mask_lookup_and_arr(
-                            mask_lookup=self.masks[mask_key],
-                            data_arr=data_array)
-            this_census[mask_key] = sub_census
-        this['census'] = this_census
+
+        if self.masks is not None:
+            for mask_key in self.masks:
+                if self.masks[mask_key] is not None:
+                    sub_census = census_from_mask_lookup_and_arr(
+                                mask_lookup=self.masks[mask_key],
+                                data_arr=data_array)
+                this_census[mask_key] = sub_census
+
+        if len(this_census) > 0:
+            this['census'] = this_census
+
         self.metadata[metadata_key] = this

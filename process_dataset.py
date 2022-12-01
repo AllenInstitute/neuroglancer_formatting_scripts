@@ -99,7 +99,9 @@ def main():
             output_dir=output_dir/"mfish_heatmaps",
             clobber=False,
             downscale=config_data["downscale"],
-            n_processors=args.n_processors)
+            n_processors=args.n_processors,
+            structure_set_masks=structure_set_masks,
+            structue_masks=structure_masks)
         print_status("Done formatting mfish data")
 
     if "cell_types" in config_data:
