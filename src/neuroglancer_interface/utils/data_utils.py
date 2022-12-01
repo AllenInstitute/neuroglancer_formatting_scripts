@@ -131,6 +131,7 @@ def write_nii_file_list_to_ome_zarr(
 
     else:
         n_workers = max(1, n_processors-1)
+        n_workers = min(n_workers, len(file_path_list))
         file_lists = []
         group_lists = []
         for ii in range(n_workers):
