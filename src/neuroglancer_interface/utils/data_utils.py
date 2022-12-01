@@ -122,35 +122,39 @@ def write_nii_file_list_to_ome_zarr(
     else:
         parent_group = root_group
 
-    n_workers = max(1, n_processors-1)
+    if len(file_path_list) == 1:
+        _write_nii_file_list_worker(
+            file_path_list=file_path_list,
+            group_name_list=group_name_list,
+            root_group=parent_group,
+            downscale=downscale)
 
-    n_per_process = max(np.floor(len(file_path_list)/n_workers).astype(int),
-                        1)
+    else:
+        n_workers = max(1, n_processors-1)
+        file_lists = []
+        group_lists = []
+        for ii in range(n_workers):
+            file_lists.append([])
+            group_lists.append([])
 
-    file_lists = []
-    group_lists = []
-    for ii in range(n_workers):
-        file_lists.append([])
-        group_lists.append([])
+        for ii in range(len(file_path_list)):
+            jj = ii % n_workers
+            file_lists[jj].append(file_path_list[ii])
+            group_lists[jj].append(group_name_list[ii])
 
-    for ii in range(len(file_path_list)):
-        jj = ii % n_workers
-        file_lists[jj].append(file_path_list[ii])
-        group_lists[jj].append(group_name_list[ii])
+        process_list = []
+        for ii in range(n_workers):
+            p = multiprocessing.Process(
+                    target=_write_nii_file_list_worker,
+                    kwargs={'file_path_list': file_lists[ii],
+                            'group_name_list': group_lists[ii],
+                            'root_group': parent_group,
+                            'downscale': downscale})
+            p.start()
+            process_list.append(p)
 
-    process_list = []
-    for ii in range(n_workers):
-        p = multiprocessing.Process(
-                target=_write_nii_file_list_worker,
-                kwargs={'file_path_list': file_lists[ii],
-                        'group_name_list': group_lists[ii],
-                        'root_group': parent_group,
-                        'downscale': downscale})
-        p.start()
-        process_list.append(p)
-
-    for p in process_list:
-        p.join()
+        for p in process_list:
+            p.join()
 
     duration = time.time() - t0
     if prefix is not None:
