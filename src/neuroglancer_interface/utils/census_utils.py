@@ -1,4 +1,5 @@
 import numpy as np
+import json
 
 
 def census_from_mask_lookup_and_arr(
@@ -32,3 +33,107 @@ def census_from_mask_lookup_and_arr(
                        'max_voxel': voxel}
         result[mask_key] = this_result
     return result
+
+
+
+def get_structure_name_lookup(
+        path_list):
+    """
+    Get the dict mapping structure ID to the human readable
+    name
+
+    Parameters
+    ----------
+    path_list: list
+        list of paths to read
+    """
+
+    result = dict()
+    for pth in path_list:
+        pth = pathlib.Path(pth)
+        if not pth.is_file():
+            raise RuntimeError(f"{pth.resolve().absolute()} not a file")
+        elif pth.name.endswith('json'):
+            this_lookup = _get_structure_name_from_json(pth)
+        elif pth.name.endswith('csv'):
+            this_lookup = _get_structure_name_from_csv(pth)
+        else:
+            raise RuntimeError("do not know how to parse "
+                               f"{pth.resolve().absolute()}")
+
+        for k in this_lookup:
+            if k in result and this_lookup[k] != result[k]:
+                raise RuntimeError(f"two results for {k}")
+            result[k] = this_lookup[k]
+    return result
+
+
+
+
+def _get_structure_name_from_csv(filepath):
+    result = dict()
+    with open(filepath, 'r') as in_file:
+        id_idx = None
+        name_idx = None
+        header = in_file.readline()
+        header = header.strip().split(',')
+        for ii in range(len(header)):
+            if header[ii] == 'id':
+                assert id_idx is None
+                id_idx = ii
+            elif header[ii] == 'name':
+                assert name_idx is None
+                name_idx = ii
+        if name_idx is None or id_idx is None:
+            raise RuntimeError(
+                "could not find 'id' and 'name' in \n"
+                f"{header}")
+        for line in in_file:
+            params = line.strip().split(',')
+            id_val = int(params[id_idx])
+            name_val = params[name_idx]
+            assert id_val not in result
+            result[id_val] = name_val
+    return result
+
+
+def _get_structure_name_from_json(filepath):
+    with open(filepath, 'rb') as in_file:
+        json_data = json.load(in_file)
+
+    result = dict()
+    for element in json_data:
+        id_val = int(element['id'])
+        name_val = element['acronym']
+        assert id_val not in result
+        result[id_val] = name_val
+    return result
+
+
+def reformat_census(census, structure_name_lookup):
+
+    metadata = dict()
+    result = dict()
+    for gene_name in census['genes']:
+        zarr_path = census['genes'][gene_name]['zarr_path']
+        metadata[gene_name] = zarr_path
+        for struct_name in census['genes'][gene_name]['census']:
+            human_name = structure_name_lookup[struct_name]
+            if human_name not in result:
+                result[human_name] = dict()
+                result[human_name]['genes'] = dict()
+            this_census = census['genes'][gene_name]['census'][struct_name]
+            result[human_name]['genes'][gene_name] = this_census
+
+    for struct_name in census['genes'][gene_name]['census']:
+        human_name = structure_name_lookup[struct_name]
+        result[human_name]['celltypes'] = dict()
+        for child in result[human_name].keys():
+            result[human_name]['celltypes'][child] = dict()
+            for class_name in census['celltypes'][child]:
+                this_census = census['celltypes'][child][class_name]['census'][struct_name]
+                result[human_name]['celltypes'][child][class_name] = this_census
+                zarr_path = census['celltypes'][child][class_name]['zarr_path']
+                metadata[f"{child}/{class_name}"] = zarr_path
+
+    return result, metadata
