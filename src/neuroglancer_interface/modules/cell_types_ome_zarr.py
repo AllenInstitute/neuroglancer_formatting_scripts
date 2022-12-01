@@ -38,7 +38,7 @@ def convert_cell_types_to_ome_zarr(
             root_group=root_group,
             input_dir=input_dir,
             prefix=prefix,
-            n_processors=args.n_processors,
+            n_processors=n_processors,
             downscale=downscale)
 
 

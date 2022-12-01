@@ -51,7 +51,7 @@ def convert_mfish_to_ome_zarr(
         output_dir=output_dir,
         downscale=downscale,
         clobber=clobber,
-        n_processors=args.n_processors)
+        n_processors=n_processors)
 
 
 def gene_from_fname(fname):
