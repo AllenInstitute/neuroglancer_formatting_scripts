@@ -2,6 +2,7 @@ import pathlib
 import time
 import numpy as np
 import shutil
+import multiprocessing
 
 from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr,
@@ -10,6 +11,8 @@ from neuroglancer_interface.utils.data_utils import (
 from neuroglancer_interface.utils.celltypes_utils import (
     read_manifest)
 
+from neuroglancer_interface.classes.metadata_collectors import (
+    CellTypeMetadataCollector)
 
 def convert_cell_types_to_ome_zarr(
         output_dir: str,
@@ -32,6 +35,10 @@ def convert_cell_types_to_ome_zarr(
                     output_dir=output_dir,
                     clobber=clobber)
 
+    metadata_collector = CellTypeMetadataCollector()
+    mgr = multiprocessing.Manager()
+    metadata_collector.metadata = mgr.dict()
+
     for input_config in input_list:
         input_dir = input_config["input_dir"]
         prefix = input_config["output_prefix"]
@@ -40,7 +47,8 @@ def convert_cell_types_to_ome_zarr(
             input_dir=input_dir,
             prefix=prefix,
             n_processors=n_processors,
-            downscale=downscale)
+            downscale=downscale,
+            metadata_collector=metadata_collector)
 
 
 def write_sub_group(
@@ -48,7 +56,8 @@ def write_sub_group(
         input_dir=None,
         prefix=None,
         n_processors=4,
-        downscale=2):
+        downscale=2,
+        metadata_collector=None):
 
     input_dir = pathlib.Path(input_dir)
     if not input_dir.is_dir():
@@ -76,15 +85,23 @@ def write_sub_group(
             n_processors=n_processors,
             clobber=False,
             prefix=prefix,
-            downscale=downscale)
+            downscale=downscale,
+            metadata_collector=metadata_collector)
 
     print("copying manifest over")
-    new_manifest_path = pathlib.Path(root_group.store.path)
+    output_dir = pathlib.Path(root_group.store.path)
     if prefix is not None:
-        new_manifest_path = new_manifest_path / prefix
-    new_manifest_path = new_manifest_path / 'manifest.csv'
+        output_dir = output_dir / prefix
+    new_manifest_path = output_dir / 'manifest.csv'
     if new_manifest_path.exists():
         raise RuntimeError(f"{new_manifest_path} already exists")
     shutil.cp(manifest_path, new_manifest_path)
+
+    metadata = dict(metadata_collector.metadata)
+    metadata_path = output_dir / 'metadata.json'
+    if metadata_path.exists():
+        raise RuntimeError(f"{metadata_path} already exists")
+    with open(metadata_path, "w") as out_file:
+        out_file.write(json.dumps(metadata, indent=2))
 
     print(f"done writing {prefix}")

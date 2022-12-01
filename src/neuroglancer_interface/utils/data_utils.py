@@ -53,7 +53,8 @@ def write_nii_file_list_to_ome_zarr(
         n_processors=4,
         clobber=False,
         prefix=None,
-        root_group=None):
+        root_group=None,
+        metadata_collector=None):
     """
     Convert a list of nifti files into OME-zarr format
 
@@ -123,11 +124,13 @@ def write_nii_file_list_to_ome_zarr(
         parent_group = root_group
 
     if len(file_path_list) == 1:
+
         _write_nii_file_list_worker(
             file_path_list=file_path_list,
             group_name_list=group_name_list,
             root_group=parent_group,
-            downscale=downscale)
+            downscale=downscale,
+            metadata_collector=metadata_collector)
 
     else:
         n_workers = max(1, n_processors-1)
@@ -150,7 +153,8 @@ def write_nii_file_list_to_ome_zarr(
                     kwargs={'file_path_list': file_lists[ii],
                             'group_name_list': group_lists[ii],
                             'root_group': parent_group,
-                            'downscale': downscale})
+                            'downscale': downscale,
+                            'metadata_collector': metadata_collector})
             p.start()
             process_list.append(p)
 
@@ -168,7 +172,8 @@ def _write_nii_file_list_worker(
         file_path_list,
         group_name_list,
         root_group,
-        downscale):
+        downscale,
+        metadata_collector=None):
     """
     Worker function to actually convert a subset of nifti
     files to OME-zarr
@@ -196,7 +201,8 @@ def _write_nii_file_list_worker(
             root_group=root_group,
             group_name=grp_name,
             nii_file_path=f_path,
-            downscale=downscale)
+            downscale=downscale,
+            metadata_collector=None)
 
 
 def write_nii_to_group(
@@ -204,7 +210,9 @@ def write_nii_to_group(
         group_name,
         nii_file_path,
         downscale,
-        transpose=True):
+        transpose=True,
+        metadata_collector=None,
+        metadata_key=None):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -235,6 +243,11 @@ def write_nii_to_group(
     arr = get_array_from_img(
                 img,
                 transpose=transpose)
+
+    if metadata_collector is not None:
+        metadata_collector.collect_metadata(
+            data_array=arr,
+            metadata_key=str(nii_file_path.resolve().absolute())
 
     (x_scale,
      y_scale,
