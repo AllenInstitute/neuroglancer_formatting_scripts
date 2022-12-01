@@ -1,4 +1,5 @@
 import pathlib
+import multiprocessing
 from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr)
 from neuroglancer_interface.classes.metadata_collectors import (
@@ -31,6 +32,9 @@ def convert_mfish_to_ome_zarr(
             structure_set_masks=structure_set_masks,
             structure_masks=structure_masks)
 
+    mgr = multiprocessing.Manager()
+    metadata_collector.metadata = mgr.dict()
+
     ouput_dir = pathlib.Path(output_dir)
     input_dir = pathlib.Path(input_dir)
     if not input_dir.is_dir():
@@ -53,7 +57,7 @@ def convert_mfish_to_ome_zarr(
             raise RuntimeError(msg)
         gene_list.append(gene)
 
-    write_nii_file_list_to_ome_zarr(
+    root_group = write_nii_file_list_to_ome_zarr(
         file_path_list=fname_list,
         group_name_list=gene_list,
         output_dir=output_dir,
@@ -61,6 +65,11 @@ def convert_mfish_to_ome_zarr(
         clobber=clobber,
         n_processors=n_processors,
         metadata_collector=metadata_collector)
+
+    metadata_path = pathlib.Path(root_group.store.path)
+    metadata_path = metadata_path / 'metadata.json'
+    metadata_collector.write_to_file(
+        output_path=metadata_path)
 
 
 def gene_from_fname(fname):

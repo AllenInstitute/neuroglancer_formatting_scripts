@@ -115,11 +115,8 @@ def write_sub_group(
         raise RuntimeError(f"{new_manifest_path} already exists")
     shutil.copy(manifest_path, new_manifest_path)
 
-    metadata = dict(metadata_collector.metadata)
     metadata_path = output_dir / 'metadata.json'
-    if metadata_path.exists():
-        raise RuntimeError(f"{metadata_path} already exists")
-    with open(metadata_path, "w") as out_file:
-        out_file.write(json.dumps(metadata, indent=2))
+    metadata_collector.write_to_file(
+        output_path=metadata_path)
 
     print(f"done writing {prefix}")

@@ -1,4 +1,6 @@
 import numpy as np
+import pathlib
+import json
 from neuroglancer_interface.utils.census_utils import (
     census_from_mask_lookup_and_arr)
 
@@ -23,6 +25,24 @@ class CellTypeMetadataCollector(object):
     @metadata.setter
     def metadata(self, value):
         self._metadata = value
+
+    def write_to_file(self, output_path):
+        output_path = pathlib.Path(output_path)
+        if output_path.exists():
+            raise RuntimeError(f"{output_path} exists already")
+
+        metadata = dict(self.metadata)
+        local_masks = dict()
+        for k in self.masks:
+            if self.masks[k] is not None:
+                local_masks[k] = dict()
+                for el in self.masks[k]:
+                    local_masks[k][el] = self.masks[k][el]['path']
+
+        metadata['masks'] = local_masks
+
+        with open(output_path, 'w') as out_file:
+            out_file.write(json.dumps(metadata, indent=2))
 
     def collect_metadata(
             self,
