@@ -1,5 +1,7 @@
 import numpy as np
 import json
+import SimpleITK
+import pathlib
 
 
 def census_from_mask_lookup_and_arr(
@@ -137,3 +139,77 @@ def reformat_census(census, structure_name_lookup):
                 metadata[f"{child}/{class_name}"] = zarr_path
 
     return result, metadata
+
+
+def _get_mask_lookup_worker(file_path_list, output_dict, lock):
+    """
+    get a dict mapping integer ID to mask pixels
+
+    Parametrs
+    ---------
+    mask_dir: pathlib.Path
+        directory to scann for all nii.gz files
+
+    Returns
+    -------
+    dict
+    """
+
+    result = dict()
+    for file_path in file_path_list:
+        id_val = int(file_path.name.split('_')[0])
+        mask = SimpleITK.GetArrayFromImage(
+                    SimpleITK.ReadImage(file_path))
+        mask_pixels = np.where(mask==1)
+        result[id_val] = {'mask': mask_pixels,
+                          'path': str(file_path.resolve().absolute())}
+
+    with lock:
+        for id_val in result:
+            output_dict[id_val] = result[id_val]
+
+def get_mask_lookup(mask_dir, n_processors):
+    """
+    get a dict mapping integer ID to mask pixels
+
+    Parametrs
+    ---------
+    mask_dir: pathlib.Path
+        directory to scann for all nii.gz files
+
+    n_processors: int
+
+    Returns
+    -------
+    dict
+    """
+    file_path_list = [n for n in mask_dir.rglob('*nii.gz')]
+    id_set = set([int(f.name.split('_')[0])
+                  for f in file_path_list])
+    assert len(id_set) == len(file_path_list)
+
+    file_path_list.sort()
+
+    mgr = multiprocessing.Manager()
+    result = mgr.dict()
+    lock = mgr.Lock()
+
+    sub_lists = []
+    for ii in range(n_processors):
+        sub_lists.append([])
+    for ii in range(len(file_path_list)):
+        sub_lists[ii%n_processors].append(file_path_list[ii])
+    process_list = []
+    for ii in range(n_processors):
+        p = multiprocessing.Process(
+                target=_get_mask_lookup_worker,
+                args=(sub_lists[ii],
+                      result,
+                      lock))
+        p.start()
+        process_list.append(p)
+
+    for p in process_list:
+        p.join()
+
+    return dict(result)
