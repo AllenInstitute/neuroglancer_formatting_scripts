@@ -26,5 +26,9 @@
   "template": {
     "template": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/mouse3_CCFAtlasGlobWarped.nii.gz"
   },
+  "census": {
+      "structure_masks": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/structure_masks",
+      "structure_set_masks": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/structure_set_masks"
+  },
   "output_dir": "/allen/aibs/technology/danielsf/mouse3_test"
 }
