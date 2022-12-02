@@ -53,7 +53,8 @@ def write_nii_file_list_to_ome_zarr(
         n_processors=4,
         clobber=False,
         prefix=None,
-        root_group=None):
+        root_group=None,
+        metadata_collector=None):
     """
     Convert a list of nifti files into OME-zarr format
 
@@ -122,35 +123,43 @@ def write_nii_file_list_to_ome_zarr(
     else:
         parent_group = root_group
 
-    n_workers = max(1, n_processors-1)
+    if len(file_path_list) == 1:
 
-    n_per_process = max(np.floor(len(file_path_list)/n_workers).astype(int),
-                        1)
+        _write_nii_file_list_worker(
+            file_path_list=file_path_list,
+            group_name_list=group_name_list,
+            root_group=parent_group,
+            downscale=downscale,
+            metadata_collector=metadata_collector)
 
-    file_lists = []
-    group_lists = []
-    for ii in range(n_workers):
-        file_lists.append([])
-        group_lists.append([])
+    else:
+        n_workers = max(1, n_processors-1)
+        n_workers = min(n_workers, len(file_path_list))
+        file_lists = []
+        group_lists = []
+        for ii in range(n_workers):
+            file_lists.append([])
+            group_lists.append([])
 
-    for ii in range(len(file_path_list)):
-        jj = ii % n_workers
-        file_lists[jj].append(file_path_list[ii])
-        group_lists[jj].append(group_name_list[ii])
+        for ii in range(len(file_path_list)):
+            jj = ii % n_workers
+            file_lists[jj].append(file_path_list[ii])
+            group_lists[jj].append(group_name_list[ii])
 
-    process_list = []
-    for ii in range(n_workers):
-        p = multiprocessing.Process(
-                target=_write_nii_file_list_worker,
-                kwargs={'file_path_list': file_lists[ii],
-                        'group_name_list': group_lists[ii],
-                        'root_group': parent_group,
-                        'downscale': downscale})
-        p.start()
-        process_list.append(p)
+        process_list = []
+        for ii in range(n_workers):
+            p = multiprocessing.Process(
+                    target=_write_nii_file_list_worker,
+                    kwargs={'file_path_list': file_lists[ii],
+                            'group_name_list': group_lists[ii],
+                            'root_group': parent_group,
+                            'downscale': downscale,
+                            'metadata_collector': metadata_collector})
+            p.start()
+            process_list.append(p)
 
-    for p in process_list:
-        p.join()
+        for p in process_list:
+            p.join()
 
     duration = time.time() - t0
     if prefix is not None:
@@ -163,7 +172,8 @@ def _write_nii_file_list_worker(
         file_path_list,
         group_name_list,
         root_group,
-        downscale):
+        downscale,
+        metadata_collector=None):
     """
     Worker function to actually convert a subset of nifti
     files to OME-zarr
@@ -191,7 +201,8 @@ def _write_nii_file_list_worker(
             root_group=root_group,
             group_name=grp_name,
             nii_file_path=f_path,
-            downscale=downscale)
+            downscale=downscale,
+            metadata_collector=metadata_collector)
 
 
 def write_nii_to_group(
@@ -199,7 +210,9 @@ def write_nii_to_group(
         group_name,
         nii_file_path,
         downscale,
-        transpose=True):
+        transpose=True,
+        metadata_collector=None,
+        metadata_key=None):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -234,6 +247,19 @@ def write_nii_to_group(
     (x_scale,
      y_scale,
      z_scale) = get_scales_from_img(img)
+
+    if metadata_collector is not None:
+
+        other_metadata = {
+            'x_mm': x_scale,
+            'y_mm': y_scale,
+            'z_mm': z_scale,
+            'path': str(nii_file_path.resolve().absolute())}
+
+        metadata_collector.collect_metadata(
+            data_array=arr,
+            other_metadata=other_metadata,
+            metadata_key=group_name)
 
     write_array_to_group(
         arr=arr,

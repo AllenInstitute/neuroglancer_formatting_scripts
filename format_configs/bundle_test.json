@@ -1,0 +1,37 @@
+{
+  "downscale": 2,
+  "max_counts":{
+      "path": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/stacked_resampled.nii.gz"
+  },
+  "mfish": {
+    "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/gene"
+  },
+  "cell_types": {
+    "input_list": [
+      {
+        "output_prefix": "cluster",
+        "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/cluster_label"
+      },
+      {
+        "output_prefix": "Level_1",
+        "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/Level1_id_label"
+      },
+      {
+        "output_prefix": "Level_2",
+        "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/Level2_id_label"
+      }
+    ]
+  },
+  "ccf": {
+    "labels": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/itksnap_label_description.txt",
+    "segmentation": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/mouse3_CCFFullGlobWarpedNN.nii.gz"
+  },
+  "template": {
+    "template": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/mouse3_CCFAtlasGlobWarped.nii.gz"
+  },
+  "census": {
+      "structure_masks": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/structure_masks",
+      "structure_set_masks": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/structure_set_masks"
+  },
+  "output_dir": "/allen/aibs/technology/danielsf/mouse3_test"
+}

@@ -1,6 +1,27 @@
 import pathlib
 
 
+
+def get_desanitizer(celltypes_dir):
+    cell_type_list = read_all_manifests(celltypes_dir)
+    return desanitizer_from_meta_manifest(cell_type_list)
+
+
+def desanitizer_from_meta_manifest(cell_type_list):
+    """
+    cell_type_list is the result of reading list_of_manifests
+    """
+    desanitizer = dict()
+    for cell_type in cell_type_list:
+        m = cell_type['machine_readable']
+        h = cell_type['human_readable']
+        if m in desanitizer:
+            if h != desanitizer[m]:
+                raise RuntimeError(f"{m} occurs more than once")
+        desanitizer[m] = h
+    return desanitizer
+
+
 def read_all_manifests(data_dir):
     """
     Return:
@@ -13,11 +34,21 @@ def read_all_manifests(data_dir):
     """
 
     sub_dirs = [n for n in data_dir.iterdir() if n.is_dir()]
+    list_of_manifests = []
+    for d in sub_dirs:
+        m = d / 'manifest.csv'
+        if m.is_file():
+            list_of_manifests.append(m)
+    return read_list_of_manifests(list_of_manifests)
+
+
+def read_list_of_manifests(list_of_manifests):
     found_machine = set()
     valid_cell_types = []
-    for child_dir in sub_dirs:
+    #for child_dir in sub_dirs:
+    for manifest_path in list_of_manifests:
+        child_dir = manifest_path.parent
         this_hierarchy = child_dir.name
-        manifest_path = child_dir / 'manifest.csv'
         if not manifest_path.is_file():
             raise RuntimeError(
                 f"cannot find {manifest_path.resolve().absolute()}")
@@ -30,15 +61,9 @@ def read_all_manifests(data_dir):
                     f"{unq_key} occurs more than once")
             found_machine.add(unq_key)
 
-            cell_type_path = child_dir / element["machine_readable"]
-            if not cell_type_path.is_dir():
-                raise RuntimeError(
-                    "Cannot find cell type "
-                    f"{cell_type_path.resolve().absolute()}")
             this_element = {'hierarchy': this_hierarchy,
                             'human_readable': element['human_readable'],
                             'machine_readable': element['machine_readable'],
-                            'data_path': cell_type_path,
                             'unique': unq_key}
             valid_cell_types.append(this_element)
     return valid_cell_types
