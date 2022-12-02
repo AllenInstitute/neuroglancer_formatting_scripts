@@ -59,7 +59,9 @@ def convert_cell_types_to_ome_zarr(
             input_dir=input_dir,
             prefix=prefix,
             n_processors=n_processors,
-            downscale=downscale)
+            downscale=downscale,
+            structure_set_masks=structure_set_masks,
+            structure_masks=structure_masks)
 
 
 def write_sub_group(
@@ -68,7 +70,9 @@ def write_sub_group(
         prefix=None,
         n_processors=4,
         downscale=2,
-        metadata_collector=None):
+        metadata_collector=None,
+        structure_set_masks=None,
+        structure_masks=None):
 
 
     input_dir = pathlib.Path(input_dir)
