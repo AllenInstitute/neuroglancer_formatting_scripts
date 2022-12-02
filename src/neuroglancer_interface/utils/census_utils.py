@@ -139,7 +139,7 @@ def reformat_census(census, structure_name_lookup):
         zarr_path = census['genes'][gene_name]['zarr_path']
         zarr_path_lookup[gene_name] = zarr_path
         for struct_name in census['genes'][gene_name]['census']:
-            human_name = structure_name_lookup[struct_name]
+            human_name = structure_name_lookup[int(struct_name)]
             if human_name not in result:
                 result[human_name] = dict()
                 result[human_name]['genes'] = dict()
@@ -147,7 +147,7 @@ def reformat_census(census, structure_name_lookup):
             result[human_name]['genes'][gene_name] = this_census
 
     for struct_name in census['genes'][gene_name]['census']:
-        human_name = structure_name_lookup[struct_name]
+        human_name = structure_name_lookup[int(struct_name)]
         result[human_name]['celltypes'] = dict()
         for child in census['celltypes'].keys():
             result[human_name]['celltypes'][child] = dict()
@@ -261,7 +261,6 @@ def create_census(
 
     full_census = dict()
     for structure_key in ('structures', 'structure_sets'):
-
         raw_census = _gather_census(
                         mfish_dir=mfish_dir,
                         celltype_sub_dir_list=celltype_sub_dirs,

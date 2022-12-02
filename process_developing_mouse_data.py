@@ -78,9 +78,9 @@ def main():
         this_dir = pathlib.Path(__file__).parent
         onto_dir = this_dir / "data/ontology_parcellation"
 
-        structure_name_lookup["structure_sets"] = get_structure_name_lookup(
-            path_list = [onto_dir / "1_adult_mouse_brain_graph.json"])
         structure_name_lookup["structures"] = get_structure_name_lookup(
+            path_list = [onto_dir / "1_adult_mouse_brain_graph.json"])
+        structure_name_lookup["structure_sets"] = get_structure_name_lookup(
             path_list = [onto_dir / "structure_sets.csv"])
 
         structure_set_masks = get_mask_lookup(
