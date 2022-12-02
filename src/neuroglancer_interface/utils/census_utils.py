@@ -260,6 +260,7 @@ def create_census(
     celltype_desanitizer = desanitizer_from_meta_manifest(meta_manifest)
 
     full_census = dict()
+    zarr_path_baseline = None
     for structure_key in ('structures', 'structure_sets'):
         raw_census = _gather_census(
                         mfish_dir=mfish_dir,
@@ -272,9 +273,15 @@ def create_census(
                         census=raw_census,
                         structure_name_lookup=structure_name_lookup[structure_key])
 
-        full_census[structure_key] = census
+        full_census[structure_key] = census,
+        if zarr_path_baseline is None:
+            zarr_path_baseline = zarr_paths
+        else:
+            assert zarr_paths == zarr_path_baseline
 
-    return full_census
+    final = {'census': full_census,
+             'zarr_paths': zarr_paths}
+    return final
 
 
 def _gather_census(

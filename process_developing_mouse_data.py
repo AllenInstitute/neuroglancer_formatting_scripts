@@ -130,6 +130,17 @@ def main():
         census = create_census(
                     dataset_dir=output_dir,
                     structure_name_lookup=structure_name_lookup)
+        census['structure_masks'] = dict()
+        for k in structure_masks:
+            human_name = structure_name_lookup['structures'][k]
+            assert human_name not in census['structure_masks']
+            census['structure_masks'][human_name] = structure_masks[k]['path']
+        census['structure_set_masks'] = dict()
+        for k in structure_set_masks:
+            human_name = structure_name_lookup['structure_sets'][k]
+            assert human_name not in census['structure_set_masks']
+            census['structure_set_masks'][human_name] = structure_set_masks[k]['path']
+
         with open(census_path, "w") as out_file:
             out_file.write(json.dumps(census, indent=2))
         print_status("Done gathering census")
