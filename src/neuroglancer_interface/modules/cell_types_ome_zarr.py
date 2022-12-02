@@ -80,7 +80,7 @@ def write_sub_group(
                            "is not a dir")
 
     fpath_list = [n for n in input_dir.rglob('*.nii.gz')
-                  if n.is_file()][:10]
+                  if n.is_file()]
 
     manifest_path = input_dir / 'manifest.csv'
     if not manifest_path.is_file():
