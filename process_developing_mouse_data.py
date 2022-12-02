@@ -70,6 +70,17 @@ def main():
             clobber=False)
         print_status("Done formatting avg template image")
 
+    if "max_counts" in config_data:
+        print_status("Formatting max count image")
+        write_nii_file_list_to_ome_zarr(
+            file_path_list=[pathlb.Path(config_data["max_counts"]["path"])],
+            group_name_list=[None],
+            output_dir=output_dir/"max_count_image",
+            downscale=config_data["downscale"],
+            n_processors=1,
+            clobber=False)
+        print_status("Done formatting max count image")
+
     do_census = False
     if "census" in config_data:
         print_status("Reading structure masks for census")
