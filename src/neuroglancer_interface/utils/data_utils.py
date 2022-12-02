@@ -249,15 +249,21 @@ def write_nii_to_group(
      z_scale) = get_scales_from_img(img)
 
     if metadata_collector is not None:
+        group_path = pathlib.Path(this_group.store.path).resolve().absolute()
+        metadata_dir = metadata_collector.metadata_path.parent
+        metadata_dir = metadata_dir.resolve().absolute()
+        this_metadata_key = str(group_path.relative_to(metadata_dir))
+
         other_metadata = {
             'x_mm': x_scale,
             'y_mm': y_scale,
-            'z_mm': z_scale}
+            'z_mm': z_scale,
+            'path': str(nii_file_path.resolve().absolute())}
 
         metadata_collector.collect_metadata(
             data_array=arr,
             other_metadata=other_metadata,
-            metadata_key=str(nii_file_path.resolve().absolute()))
+            metadata_key=this_metadata_key)
 
     write_array_to_group(
         arr=arr,

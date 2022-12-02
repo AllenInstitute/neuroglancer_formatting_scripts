@@ -13,6 +13,7 @@ class CellTypeMetadataCollector(object):
             structure_set_masks=None,
             structure_masks=None):
         self._metadata = None
+        self._lock = None
         self.masks = None
         self.output_path = metadata_output_path
         if structure_set_masks is not None or structure_masks is not None:
@@ -27,6 +28,9 @@ class CellTypeMetadataCollector(object):
     @metadata.setter
     def metadata(self, value):
         self._metadata = value
+
+    def set_lock(self, lock_obj):
+        self._lock = lock_obj
 
     def write_to_file(self):
         output_path = pathlib.Path(self.output_path)
@@ -74,4 +78,8 @@ class CellTypeMetadataCollector(object):
         if len(this_census) > 0:
             this['census'] = this_census
 
-        self.metadata[metadata_key] = this
+        with self._lock:
+            if metadata_key in self.metadata:
+                raise RuntimeError(
+                    f"Trying to write {metadata_key} more than once")
+            self.metadata[metadata_key] = this

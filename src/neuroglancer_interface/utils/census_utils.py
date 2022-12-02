@@ -8,9 +8,6 @@ import pathlib
 from neuroglancer_interface.utils.data_utils import (
     get_array_from_img)
 
-from neuroglancer_interface.utils.mfish_utils import (
-    gene_from_fname)
-
 from neuroglancer_interface.utils.celltypes_utils import (
     read_list_of_manifests,
     desanitizer_from_meta_manifest)
@@ -316,12 +313,11 @@ def _get_raw_gene_census(
     with open(gene_metadata_path, 'rb') as in_file:
         data = json.load(in_file)
 
-    for file_path in data.keys():
+    for gene_name in data.keys():
         if file_path == 'masks':
             continue
-        gene_name = gene_from_fname(pathlib.Path(file_path))
         this = dict()
-        this['zarr_path'] = file_path
+        this['zarr_path'] = data[gene_name]['path']
         this['census'] = data[file_path]['census'][structure_key]
         census[gene_name] = this
     return census
@@ -341,7 +337,7 @@ def _get_raw_celltype_census(
         this = dict()
         this['zarr_path'] = file_path
         human_name = desanitizer[
-            pathlib.Path(file_path).name.replace('.nii.gz','')]
+            pathlib.Path(file_path).name]
         this['census'] = data[file_path]['census'][structure_key]
         census[human_name] = this
     return census

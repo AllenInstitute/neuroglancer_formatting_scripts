@@ -46,6 +46,7 @@ def convert_mfish_to_ome_zarr(
             structure_masks=structure_masks)
 
     mgr = multiprocessing.Manager()
+    metadata_collector.set_lock(mgr.Lock())
     metadata_collector.metadata = mgr.dict()
 
     fname_list = [n for n in input_dir.rglob('*nii.gz')][:10]

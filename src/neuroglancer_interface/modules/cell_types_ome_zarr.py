@@ -100,6 +100,7 @@ def write_sub_group(
                             structure_masks=structure_masks)
 
     mgr = multiprocessing.Manager()
+    metadata_collector.set_lock(mgr.Lock())
     metadata_collector.metadata = mgr.dict()
 
     print(f"writing {prefix}")
