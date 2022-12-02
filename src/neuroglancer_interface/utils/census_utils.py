@@ -201,7 +201,7 @@ def get_mask_lookup(mask_dir, n_processors):
     """
     if not isinstance(mask_dir, pathlib.Path):
         mask_dir = pathlib.Path(mask_dir)
-    file_path_list = [n for n in mask_dir.rglob('*nii.gz')][:10]
+    file_path_list = [n for n in mask_dir.rglob('*nii.gz')]
     id_set = set([int(f.name.split('_')[0])
                   for f in file_path_list])
     assert len(id_set) == len(file_path_list)
