@@ -70,7 +70,6 @@ def write_sub_group(
         prefix=None,
         n_processors=4,
         downscale=2,
-        metadata_collector=None,
         structure_set_masks=None,
         structure_masks=None):
 
