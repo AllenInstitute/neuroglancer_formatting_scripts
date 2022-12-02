@@ -61,13 +61,6 @@ def read_list_of_manifests(list_of_manifests):
                     f"{unq_key} occurs more than once")
             found_machine.add(unq_key)
 
-            cell_type_path = child_dir / manifest_key
-
-            if not cell_type_path.is_file():
-                raise RuntimeError(
-                    "Cannot find cell type "
-                    f"{cell_type_path.resolve().absolute()}")
-
             this_element = {'hierarchy': this_hierarchy,
                             'human_readable': element['human_readable'],
                             'machine_readable': element['machine_readable'],
