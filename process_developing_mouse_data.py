@@ -128,7 +128,7 @@ def main():
             raise RuntimeError(
                 f"{census_path} exists")
         census = create_census(
-                    dataset_dir=census_path,
+                    dataset_dir=output_dir,
                     structure_name_lookup=structure_name_lookup)
         with open(census_path, "w") as out_file:
             out_file.write(json.dumps(census, indent=2))
