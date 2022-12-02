@@ -314,11 +314,11 @@ def _get_raw_gene_census(
         data = json.load(in_file)
 
     for gene_name in data.keys():
-        if file_path == 'masks':
+        if gene_name == 'masks':
             continue
         this = dict()
         this['zarr_path'] = data[gene_name]['path']
-        this['census'] = data[file_path]['census'][structure_key]
+        this['census'] = data[gene_name]['census'][structure_key]
         census[gene_name] = this
     return census
 
@@ -331,13 +331,14 @@ def _get_raw_celltype_census(
     with open(celltype_metadata_path, 'rb') as in_file:
         data = json.load(in_file)
 
-    for file_path in data.keys():
-        if file_path == 'masks':
+    for struct_key in data.keys():
+        if struct_key == 'masks':
             continue
         this = dict()
-        this['zarr_path'] = file_path
+        this['zarr_path'] = data[struct_key]['path']
         human_name = desanitizer[
-            pathlib.Path(file_path).name]
-        this['census'] = data[file_path]['census'][structure_key]
+            pathlib.Path(struct_key).name]
+        this['census'] = data[struct_key]['census'][structure_key]
+        this['zarr_path'] = data[struct_key]['path']
         census[human_name] = this
     return census
