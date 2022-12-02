@@ -49,7 +49,7 @@ def convert_mfish_to_ome_zarr(
     metadata_collector.set_lock(mgr.Lock())
     metadata_collector.metadata = mgr.dict()
 
-    fname_list = [n for n in input_dir.rglob('*nii.gz')][:10]
+    fname_list = [n for n in input_dir.rglob('*nii.gz')]
 
     fname_list.sort()
 
