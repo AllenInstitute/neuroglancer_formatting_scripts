@@ -256,7 +256,7 @@ def create_census(
     manifest_list = [n / 'manifest.csv'
                      for n in celltype_sub_dirs]
 
-    meta_manifest = read_list_of_manifests(list_of_manifests)
+    meta_manifest = read_list_of_manifests(manifest_list)
     celltype_desanitizer = desanitizer_from_meta_manifest(meta_manifest)
 
     full_census = dict()
@@ -311,6 +311,8 @@ def _get_raw_gene_census(
         data = json.load(in_file)
 
     for file_path in data.keys():
+        if file_path == 'masks':
+            continue
         gene_name = gene_from_fname(pathlib.Path(file_path))
         this = dict()
         this['zarr_path'] = file_path
@@ -328,9 +330,12 @@ def _get_raw_celltype_census(
         data = json.load(in_file)
 
     for file_path in data.keys():
+        if file_path == 'masks':
+            continue
         this = dict()
         this['zarr_path'] = file_path
-        human_name = desanitizer[file_path.name.replace('.nii.gz','')]
-        this['census'] = data[fiel_path]['census'][structure_key]
+        human_name = desanitizer[
+            pathlib.Path(file_path).name.replace('.nii.gz','')]
+        this['census'] = data[file_path]['census'][structure_key]
         census[human_name] = this
     return census
