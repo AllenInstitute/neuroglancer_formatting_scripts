@@ -2,7 +2,7 @@
   "downscale": 2,
   "max_counts":{
       "path": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/stacked_resampled.nii.gz"
-  }
+  },
   "mfish": {
     "input_dir": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mfish/mouse_3/registered/gene"
   },
