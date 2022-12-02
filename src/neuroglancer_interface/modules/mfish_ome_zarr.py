@@ -4,6 +4,8 @@ from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr)
 from neuroglancer_interface.classes.metadata_collectors import (
     CellTypeMetadataCollector)
+from neuroglancer_interface.utils.mfish_utils import (
+    gene_from_fname)
 
 
 def convert_mfish_to_ome_zarr(
@@ -70,15 +72,3 @@ def convert_mfish_to_ome_zarr(
     metadata_path = metadata_path / 'metadata.json'
     metadata_collector.write_to_file(
         output_path=metadata_path)
-
-
-def gene_from_fname(fname):
-    params = fname.name.split('_')
-    chosen = None
-    for p in params:
-        try:
-            int(p)
-        except ValueError:
-            chosen = p
-            break
-    return chosen

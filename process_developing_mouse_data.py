@@ -20,7 +20,8 @@ from neuroglancer_interface.modules.cell_types_ome_zarr import (
 
 from neuroglancer_interface.utils.census_utils import (
     get_structure_name_lookup,
-    get_mask_lookup)
+    get_mask_lookup,
+    create_census)
 
 
 def print_status(msg):
@@ -69,14 +70,18 @@ def main():
             clobber=False)
         print_status("Done formatting avg template image")
 
+    do_census = False
     if "census" in config_data:
         print_status("Reading structure masks for census")
-        #this_dir = pathlib.Path(__file__).parent
-        #onto_dir = this_dir / "data/ontology_parcellation"
-        #structure_name_lookup = get_structure_name_lookup(
-        #    path_list = [
-        #        onto_dir/"1_adult_mouse_brain_graph.json",
-        #        onto_dir/"structure_sets.csv"])
+        do_census = True
+        structure_name_lookup = dict()
+        this_dir = pathlib.Path(__file__).parent
+        onto_dir = this_dir / "data/ontology_parcellation"
+
+        structure_name_lookup["structure_sets"] = get_structure_name_lookup(
+            path_list = [onto_dir / "1_adult_mouse_brain_graph.json"])
+        structure_name_lookup["structures"] = get_structure_name_lookup(
+            path_list = [onto_dir / "structure_sets.csv"])
 
         structure_set_masks = get_mask_lookup(
                 mask_dir=config_data["census"]["structure_set_masks"],
@@ -115,6 +120,19 @@ def main():
             structure_set_masks=structure_set_masks,
             structure_masks=structure_masks)
         print_status("Done formatting cell types data")
+
+    if do_census:
+        print_status("Gathering census")
+        census_path = output_dir / "census.json"
+        if census_path.exists():
+            raise RuntimeError(
+                f"{census_path} exists")
+        census = create_census(
+                    dataset_dir=census_path,
+                    structure_name_lookup=structure_name_lookup)
+        with open(census_path, "w") as out_file:
+            out_file.write(json.dumps(census, indent=2))
+        print_status("Done gathering census")
 
     print_status("Done formatting all data")
     print(f"written to\n{config_data['output_dir']}")

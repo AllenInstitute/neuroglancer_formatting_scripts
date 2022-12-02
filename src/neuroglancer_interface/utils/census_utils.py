@@ -3,8 +3,17 @@ import json
 import SimpleITK
 import pathlib
 import multiprocessing
+import pathlib
+
 from neuroglancer_interface.utils.data_utils import (
     get_array_from_img)
+
+from neuroglancer_interface.utils.mfish_utils import (
+    gene_from_fname)
+
+from neuroglancer_interface.utils.celltypes_utils import (
+    read_list_of_manifests,
+    desanitizer_from_meta_manifest)
 
 def census_from_mask_lookup_and_arr(
         mask_lookup,
@@ -124,11 +133,11 @@ def _get_structure_name_from_json(filepath):
 
 def reformat_census(census, structure_name_lookup):
 
-    metadata = dict()
+    zarr_path_lookup = dict()
     result = dict()
     for gene_name in census['genes']:
         zarr_path = census['genes'][gene_name]['zarr_path']
-        metadata[gene_name] = zarr_path
+        zarr_path_lookup[gene_name] = zarr_path
         for struct_name in census['genes'][gene_name]['census']:
             human_name = structure_name_lookup[struct_name]
             if human_name not in result:
@@ -146,9 +155,9 @@ def reformat_census(census, structure_name_lookup):
                 this_census = census['celltypes'][child][class_name]['census'][struct_name]
                 result[human_name]['celltypes'][child][class_name] = this_census
                 zarr_path = census['celltypes'][child][class_name]['zarr_path']
-                metadata[f"{child}/{class_name}"] = zarr_path
+                zarr_path_lookup[f"{child}/{class_name}"] = zarr_path
 
-    return result, metadata
+    return result, zarr_path_lookup
 
 
 def _get_mask_lookup_worker(file_path_list, output_dict, lock):
@@ -225,3 +234,103 @@ def get_mask_lookup(mask_dir, n_processors):
         p.join()
 
     return dict(result)
+
+
+def create_census(
+        dataset_dir,
+        structure_name_lookup):
+    """
+    Go through the metadata files in a processed dataset
+    and gather the census information into one dict.
+    """
+    dataset_dir = pathlib.Path(dataset_dir)
+    mfish_dir = dataset_dir / 'mfish_heatmaps'
+    celltype_dir = dataset_dir / 'cell_types'
+    for d in (mfish_dir, celltype_dir):
+        if not d.is_dir():
+            raise RuntimeError(
+                f"{d} is not a dir")
+
+    celltype_sub_dirs = [n for n in celltype_dir.iterdir()
+                         if n.is_dir()]
+    manifest_list = [n / 'manifest.csv'
+                     for n in celltype_sub_dirs]
+
+    meta_manifest = read_list_of_manifests(list_of_manifests)
+    celltype_desanitizer = desanitizer_from_meta_manifest(meta_manifest)
+
+    full_census = dict()
+    for structure_key in ('structures', 'structure_sets'):
+
+        raw_census = _gather_census(
+                        mfish_dir=mfish_dir,
+                        celltype_sub_dir_list=celltype_sub_dirs,
+                        celltype_desanitizer=celltype_desanitizer,
+                        structure_key=structure_key)
+
+        (census,
+         zarr_paths) = reformat_census(
+                        census=raw_census,
+                        structure_name_lookup=structure_name_lookup[structure_key])
+
+        full_census[structure_key] = census
+
+    return full_census
+
+
+def _gather_census(
+        mfish_dir,
+        celltype_sub_dir_list,
+        celltype_desanitizer,
+        structure_key):
+    """
+    structure_key is either 'structures' or 'structure_sets'
+    """
+    census = dict()
+    census['genes'] = _get_raw_gene_census(
+                        gene_metadata_path=mfish_dir/'metadata.json',
+                        structure_key=structure_key)
+
+    census['celltypes'] = dict()
+    for celltype_sub_dir in celltype_sub_dir_list:
+        this = _get_raw_celltype_census(
+                    celltype_metadata_path = celltype_sub_dir / 'metadata.json',
+                    structure_key=structure_key,
+                    desanitizer=celltype_desanitizer)
+
+        census['celltypes'][celltype_sub_dir.name] = this
+
+    return census
+
+
+def _get_raw_gene_census(
+        gene_metadata_path,
+        structure_key):
+    census = dict()
+    with open(gene_metadata_path, 'rb') as in_file:
+        data = json.load(in_file)
+
+    for file_path in data.keys():
+        gene_name = gene_from_fname(pathlib.Path(file_path))
+        this = dict()
+        this['zarr_path'] = file_path
+        this['census'] = data[file_path]['census'][structure_key]
+        census[gene_name] = this
+    return census
+
+def _get_raw_celltype_census(
+        celltype_metadata_path,
+        structure_key,
+        desanitizer):
+
+    census = dict()
+    with open(celltype_metadata_path, 'rb') as in_file:
+        data = json.load(in_file)
+
+    for file_path in data.keys():
+        this = dict()
+        this['zarr_path'] = file_path
+        human_name = desanitizer[file_path.name.replace('.nii.gz','')]
+        this['census'] = data[fiel_path]['census'][structure_key]
+        census[human_name] = this
+    return census
