@@ -50,12 +50,6 @@ def convert_cell_types_to_ome_zarr(
                     output_dir=output_dir,
                     clobber=clobber)
 
-    metadata_collector = CellTypeMetadataCollector(
-                            structure_set_masks=structure_set_masks,
-                            structure_masks=structure_masks)
-
-    mgr = multiprocessing.Manager()
-    metadata_collector.metadata = mgr.dict()
 
     for input_config in input_list:
         input_dir = input_config["input_dir"]
@@ -65,8 +59,7 @@ def convert_cell_types_to_ome_zarr(
             input_dir=input_dir,
             prefix=prefix,
             n_processors=n_processors,
-            downscale=downscale,
-            metadata_collector=metadata_collector)
+            downscale=downscale)
 
 
 def write_sub_group(
@@ -76,6 +69,7 @@ def write_sub_group(
         n_processors=4,
         downscale=2,
         metadata_collector=None):
+
 
     input_dir = pathlib.Path(input_dir)
     if not input_dir.is_dir():
@@ -93,6 +87,17 @@ def write_sub_group(
     name_lookup = read_manifest(manifest_path)
     cluster_name_list = [name_lookup[n.name]["machine_readable"]
                          for n in fpath_list]
+
+
+    output_dir = pathlib.Path(root_group.store.path)
+    metadata_path = output_dir / f'{prefix}/metadata.json'
+    metadata_collector = CellTypeMetadataCollector(
+                            metadata_output_path=metadata_path,
+                            structure_set_masks=structure_set_masks,
+                            structure_masks=structure_masks)
+
+    mgr = multiprocessing.Manager()
+    metadata_collector.metadata = mgr.dict()
 
     print(f"writing {prefix}")
     root_group = write_nii_file_list_to_ome_zarr(
@@ -115,8 +120,6 @@ def write_sub_group(
         raise RuntimeError(f"{new_manifest_path} already exists")
     shutil.copy(manifest_path, new_manifest_path)
 
-    metadata_path = output_dir / 'metadata.json'
-    metadata_collector.write_to_file(
-        output_path=metadata_path)
+    metadata_collector.write_to_file()
 
     print(f"done writing {prefix}")

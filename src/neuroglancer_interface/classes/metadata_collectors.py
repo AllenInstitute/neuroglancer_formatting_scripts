@@ -9,10 +9,12 @@ class CellTypeMetadataCollector(object):
 
     def __init__(
             self,
+            metadata_output_path=None,
             structure_set_masks=None,
             structure_masks=None):
         self._metadata = None
         self.masks = None
+        self.output_path = metadata_output_path
         if structure_set_masks is not None or structure_masks is not None:
             self.masks = {
                 "structure_sets": structure_set_masks,
@@ -26,8 +28,8 @@ class CellTypeMetadataCollector(object):
     def metadata(self, value):
         self._metadata = value
 
-    def write_to_file(self, output_path):
-        output_path = pathlib.Path(output_path)
+    def write_to_file(self):
+        output_path = pathlib.Path(self.output_path)
         if output_path.exists():
             raise RuntimeError(f"{output_path} exists already")
 

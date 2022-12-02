@@ -30,20 +30,23 @@ def convert_mfish_to_ome_zarr(
     n_processors -- number of independent workers
     """
 
-    metadata_collector = CellTypeMetadataCollector(
-            structure_set_masks=structure_set_masks,
-            structure_masks=structure_masks)
-
-    mgr = multiprocessing.Manager()
-    metadata_collector.metadata = mgr.dict()
-
-    ouput_dir = pathlib.Path(output_dir)
+    output_dir = pathlib.Path(output_dir)
     input_dir = pathlib.Path(input_dir)
     if not input_dir.is_dir():
         raise RuntimeError(
             "In convert_mfish_to_ome_zarr, input_dir\n"
             f"{input_dir.resolve().absolute()}\n"
             "is not a dir")
+
+    metadata_path = output_dir / 'metadata.json'
+
+    metadata_collector = CellTypeMetadataCollector(
+            metadata_output_path=metadata_path,
+            structure_set_masks=structure_set_masks,
+            structure_masks=structure_masks)
+
+    mgr = multiprocessing.Manager()
+    metadata_collector.metadata = mgr.dict()
 
     fname_list = [n for n in input_dir.rglob('*nii.gz')][:10]
 
@@ -68,7 +71,5 @@ def convert_mfish_to_ome_zarr(
         n_processors=n_processors,
         metadata_collector=metadata_collector)
 
-    metadata_path = pathlib.Path(root_group.store.path)
-    metadata_path = metadata_path / 'metadata.json'
-    metadata_collector.write_to_file(
-        output_path=metadata_path)
+
+    metadata_collector.write_to_file()
