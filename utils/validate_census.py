@@ -112,7 +112,7 @@ def validate_census(census_path, rng=None):
                 if n_validated >last_print+ 100:
                     print(f"validated {n_validated}")
                     last_print = n_validated
-
+            print(f"done with {hier} {n_validated}")
         print(f"starting genes {n_validated}")
         for gene_key in eg_census['genes']:
             heatmap_path = zarr_path_lookup[gene_key]
