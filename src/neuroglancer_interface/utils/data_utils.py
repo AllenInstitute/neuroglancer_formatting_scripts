@@ -244,14 +244,20 @@ def write_nii_to_group(
                 img,
                 transpose=transpose)
 
-    if metadata_collector is not None:
-        metadata_collector.collect_metadata(
-            data_array=arr,
-            metadata_key=str(nii_file_path.resolve().absolute()))
-
     (x_scale,
      y_scale,
      z_scale) = get_scales_from_img(img)
+
+    if metadata_collector is not None:
+        other_metadata = {
+            'x_mm': x_scale,
+            'y_mm': y_scale,
+            'z_mm': z_scale}
+
+        metadata_collector.collect_metadata(
+            data_array=arr,
+            other_metadata=other_metadata,
+            metadata_key=str(nii_file_path.resolve().absolute()))
 
     write_array_to_group(
         arr=arr,

@@ -47,13 +47,17 @@ class CellTypeMetadataCollector(object):
     def collect_metadata(
             self,
             data_array,
-            metadata_key):
+            metadata_key,
+            other_metadata=None):
         plane_sums = np.sum(data_array, axis=(0, 1))
         total_cts = plane_sums.sum()
         max_plane = np.argmax(plane_sums)
 
         this = {'total_cts': float(total_cts),
                 'max_plane': int(max_plane)}
+
+        if other_metadata is not None:
+            this.update(other_metadata)
 
         this_census = dict()
 
