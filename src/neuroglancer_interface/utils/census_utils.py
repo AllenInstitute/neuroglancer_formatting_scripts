@@ -273,7 +273,7 @@ def create_census(
                         census=raw_census,
                         structure_name_lookup=structure_name_lookup[structure_key])
 
-        full_census[structure_key] = census,
+        full_census[structure_key] = census
         if zarr_path_baseline is None:
             zarr_path_baseline = zarr_paths
         else:
