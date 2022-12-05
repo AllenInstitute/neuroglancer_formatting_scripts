@@ -419,7 +419,7 @@ def write_array_to_group(
         for nxny in list_of_nx_ny:
             this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
                                      y_scale*arr.shape[1]/nxny[1],
-                                     z_scale],
+                                     z_scale*arr.shape[2]/nxny[2]],
                            'type': 'scale'}]
             coord_transform.append(this_coord)
 

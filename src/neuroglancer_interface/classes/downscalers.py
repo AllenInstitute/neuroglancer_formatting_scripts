@@ -30,7 +30,7 @@ class XYScaler(Scaler):
 
         for iz in range(base.shape[2]):
             for nxny in list_of_nx_ny:
-                img = skimage_resize(base[:, :, iz], nxny)
+                img = skimage_resize(base[:, :, iz], (nxny[0], nxny[1]))
                 results[nxny][:, :, iz] = img
 
         output = [base]
@@ -99,13 +99,14 @@ class XYScaler(Scaler):
         """
         nx = base.shape[0]
         ny = base.shape[1]
+        nz = base.shape[2]
         results = dict()
         list_of_nx_ny = []
         while nx > base.shape[2] or ny > base.shape[2]:
             nx = nx//downscale
             ny = ny//downscale
             data = np.zeros((nx, ny, base.shape[2]), dtype=float)
-            key = (nx, ny)
+            key = (nx, ny, nz)
             results[key] = data
             list_of_nx_ny.append(key)
 
