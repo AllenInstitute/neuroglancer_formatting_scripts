@@ -15,31 +15,25 @@ def main():
     default_genes = str(default_genes.resolve().absolute())
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output_path', type=str, default=default_output)
-    parser.add_argument('--gene_list_path', type=str, default=default_genes)
-    parser.add_argument('--mfish_bucket', type=str,
-                        default='mouse1-mfish-prototype')
-    parser.add_argument('--segmentation_bucket', type=str,
-                        default='mouse1-atlas-prototype')
-    parser.add_argument('--template_bucket', type=str,
-                        default='mouse1-template-prototype/template')
-    parser.add_argument('--page_title', type=str,
-                        default="Mouse1 MFISH transcript count maps")
-    parser.add_argument('--x_mm', type=float, default=0.01)
-    parser.add_argument('--y_mm', type=float, default=0.01)
-    parser.add_argument('--z_mm', type=float, default=0.1)
+    parser.add_argument('--data_dir', type=str, default=None,
+                        help='data dir for full dataset')
+    parser.add_argument('--s3_location', type=str, default=None,
+                        help='bucket_name/parent_dir_for_dataset')
+    parser.add_argument('--table_title', type=str, default=None)
+    parser.add_argument('--output_path', type=str, default=None)
     args = parser.parse_args()
+
+    mfish_bucket = f"{args.s3_location}/mfish_heatmaps"
+    segmentation_bucket = f"{args.s3_location}/ccf_annotations"
+    template_bucket = f"{args.s3_location}/avg_template"
 
     write_mfish_html(
         output_path=pathlib.Path(args.output_path),
-        gene_list_path=pathlib.Path(args.gene_list_path),
         mfish_bucket=args.mfish_bucket,
-        segmentation_bucket=args.segmentation_bucket,
-        template_bucket=args.template_bucket,
-        html_title=args.page_title,
-        x_mm=args.x_mm,
-        y_mm=args.y_mm,
-        z_mm=args.z_mm)
+        segmentation_bucket=segmentation_bucket,
+        template_bucket=template_bucket,
+        html_title=args.table_title,d
+        data_dir=pathilb.Path(args.data_dir))
 
 
 if __name__ == "__main__":

@@ -12,22 +12,25 @@ import pathlib
 
 def write_mfish_html(
         output_path=None,
-        gene_list_path=pathlib.Path("data/mouse1_gene_list.json"),
         mfish_bucket="mouse1-mfish-prototype",
         segmentation_bucket="mouse1-atlas-prototype",
         template_bucket="mouse1-template-prototype/template",
         range_max=10.0,
         html_title="Mouse1 MFISH transcript count maps",
-        x_mm=0.01,
-        y_mm=0.01,
-        z_mm=0.1):
+        data_dir=None):
 
-    with open(gene_list_path, 'rb') as in_file:
-        gene_list = json.load(in_file)
+    metadata_path = data_dir / "metadata.json"
+    with open(metadata_path, "rb") as in_file:
+        full_metadata = json.load(in_file)
+    full_metaadata.pop("masks")
+
+    gene_list = list(full_metadata.keys())
+    gene_list.sort()
 
     gene_to_link = dict()
     gene_to_cols = dict()
     for gene_name in gene_list:
+        starting_position = [550, 550, full_metadata[gene_name]["max_plane"]]
         gene_url = create_mfish_url(
                         mfish_bucket=mfish_bucket,
                         genes=[gene_name,],
@@ -35,12 +38,16 @@ def write_mfish_html(
                         range_max=[range_max, ],
                         segmentation_bucket=segmentation_bucket,
                         template_bucket=template_bucket,
-                        x_mm=x_mm,
-                        y_mm=y_mm,
-                        z_mm=z_mm)
+                        x_mm=full_metadata[gene_name]["x_mm"],
+                        y_mm=full_metadata[gene_name]["y_mm"],
+                        z_mm=full_metadata[gene_name]["z_mm"],
+                        starting_position=starting_position)
+
         gene_to_link[gene_name] = gene_url
+
         these_cols = {'names': ['gene_name'],
                       'values': [gene_name]}
+
         gene_to_cols[gene_name] = these_cols
 
     title = html_title
