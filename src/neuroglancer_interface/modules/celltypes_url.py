@@ -38,7 +38,9 @@ def create_celltypes_url(
             public_name="max gene counts",
             color='red',
             range_max=50.0,
-            visible=False)
+            visible=False,
+            opacity=0.4,
+            is_transparent=True)
 
         image_layers = [image_layers, max_count_layer]
 

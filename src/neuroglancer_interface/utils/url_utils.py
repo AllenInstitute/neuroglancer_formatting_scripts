@@ -72,7 +72,9 @@ def get_heatmap_image_layer(
         public_name,
         color,
         range_max,
-        visible=True):
+        visible=True,
+        opacity=1.0,
+        is_transparent=False):
 
     rgb_color = get_color_lookup()[color]
     result = dict()
@@ -84,9 +86,9 @@ def get_heatmap_image_layer(
     result["blend"] = "default"
     result["shader"] = get_rgb_heat_map_shader_code(
                                        rgb_color,
-                                       transparent=False,
+                                       transparent=is_transparent,
                                        range_max=range_max)
-    result["opacity"] = 1.0
+    result["opacity"] = opacity
     result["visible"] = visible
     return result
 
