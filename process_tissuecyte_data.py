@@ -75,7 +75,7 @@ def main():
         print_status("Done formatting avg template image")
 
     if "tissuecyte" in config_data:
-        print_status("Formatting mfish data")
+        print_status("Formatting tissuecyte data")
         convert_tissuecyte_to_ome_zarr(
             input_dir=config_data["tissuecyte"]["input_dir"],
             output_dir=output_dir/"tissuecyte",
