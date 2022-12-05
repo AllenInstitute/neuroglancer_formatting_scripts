@@ -31,7 +31,7 @@ def convert_tissuecyte_to_ome_zarr(
     metadata_collector.set_lock(mgr.Lock())
     metadata_collector.metadata = mgr.dict()
 
-    sub_dir_list = [n in input_dir.iterdir()
+    sub_dir_list = [n for n in input_dir.iterdir()
                     if n.is_dir()]
 
     fname_list = []

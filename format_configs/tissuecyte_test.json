@@ -9,5 +9,6 @@
   },
   "template": {
     "template": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mouse_ccf_3_1_mm/average_template/average_template_10.nii.gz"
-  }
+  },
+  "output_dir": "/allen/aibs/technology/danielsf/tissuecyte_221205"
 }
