@@ -34,7 +34,7 @@ def write_celltypes_html(
     Scan those children to assess the available cell types
     """
 
-    full_manifest = read_all_manifests(data_dir)
+    full_manifest = read_all_manifests(cell_types_dir)
 
     print("getting starting position lookup")
     starting_position_lookup = get_starting_positions(
@@ -48,10 +48,8 @@ def write_celltypes_html(
 
     for celltype in full_manifest:
 
-        data_path = celltype['data_path']
         s3_celltype = f"{celltype['hierarchy']}/{celltype['machine_readable']}"
-        this_metadata = starting_position_lookup[
-                            celltype[s3_lookup]]
+        this_metadata = starting_position_lookup[s3_celltype]
 
         starting_position = this_metadata['starting_position']
         total_cts = this_metadata['total_cts']
@@ -80,7 +78,7 @@ def write_celltypes_html(
         these_cols = {'names': ['celltype_name', 'hierarchy'],
                       'values': [celltype_name, hierarchy]}
 
-        if data_dir is not None:
+        if cell_types_dir is not None:
             these_cols['names'].append('counts (arbitrary)')
             these_cols['values'].append(f"{total_cts:.3e}")
 
@@ -115,14 +113,18 @@ def write_celltypes_html(
 def get_starting_positions(
         cell_types_dir):
 
-    lookup = ()
+    lookup = dict()
     child_dir_list = [n for n in cell_types_dir.iterdir()
-                      if n.isdir()]
+                      if n.is_dir()]
+
     for child_dir in child_dir_list:
         metadata_path = child_dir / "metadata.json"
         with open(metadata_path, "rb") as in_file:
-            metadata = json.load(metadata_path)
+            metadata = json.load(in_file)
+
         for element in metadata:
+            if element == "masks":
+                continue
             unq_key = f"{child_dir.name}/{element}"
             if unq_key in lookup:
                 raise RuntimeError(
@@ -134,4 +136,4 @@ def get_starting_positions(
                     "y_mm": metadata[element]["y_mm"],
                     "z_mm": metadata[element]["z_mm"]}
             lookup[unq_key] = this
-        return lookup
+    return lookup

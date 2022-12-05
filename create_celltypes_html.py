@@ -34,7 +34,7 @@ def main():
 
     cell_types_bucket = f"{args.s3_location}/cell_types"
     template_bucket = f"{args.s3_location}/avg_template"
-    segmenttion_bucket = f"{args.s3_location}/ccf_annotations"
+    segmentation_bucket = f"{args.s3_location}/ccf_annotations"
 
     write_celltypes_html(
         output_path=args.output_path,
