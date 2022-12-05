@@ -6,6 +6,9 @@ from neuroglancer_interface.classes.metadata_collectors import (
 from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr)
 
+from neuroglancer_interface.classes.downscalers import (
+    XYZScaler)
+
 
 def convert_tissuecyte_to_ome_zarr(
         input_dir=None,
@@ -63,7 +66,8 @@ def convert_tissuecyte_to_ome_zarr(
         downscale=downscale,
         clobber=False,
         n_processors=n_processors,
-        metadata_collector=metadata_collector)
+        metadata_collector=metadata_collector,
+        DownscalerClass=XYZScaler)
 
     print("copying image_series_information.csv over")
     for sub_dir in sub_dir_list:
