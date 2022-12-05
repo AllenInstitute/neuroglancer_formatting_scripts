@@ -442,15 +442,19 @@ def write_array_to_group(
     else:
         scaler = None
 
+    chunk_x = min(shape[0]//4, 64)
+    chunk_y = min(shape[1]//4, 64)
+    chunk_z = min(shape[2]//4, 64)
+
     write_image(
         image=arr,
         scaler=scaler,
         group=group,
         coordinate_transformations=coord_transform,
         axes=axes,
-        storage_options={'chunks':(shape[0]//4,
-                                   shape[1]//4,
-                                   shape[2]//4)})
+        storage_options={'chunks':(chunk_x,
+                                   chunk_y,
+                                   chunk_z)})
 
 
 
