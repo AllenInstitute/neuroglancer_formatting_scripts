@@ -32,12 +32,12 @@ def create_celltypes_url(
 
     if max_count_bucket is not None:
 
-        max_count_layer = get_heatmap_imag_layer(
+        max_count_layer = get_heatmap_image_layer(
             bucket_name=max_count_bucket,
             dataset_name=None,
             public_name="max gene counts",
-            color=color,
-            range_max=10.0,
+            color='red',
+            range_max=50.0,
             visible=False)
 
         image_layers = [image_layers, max_count_layer]

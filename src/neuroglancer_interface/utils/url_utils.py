@@ -77,9 +77,9 @@ def get_heatmap_image_layer(
     rgb_color = get_color_lookup()[color]
     result = dict()
     result["type"] = "image"
-    result["source"] = f"zarr://s3://{bucket_name}
+    result["source"] = f"zarr://s3://{bucket_name}"
     if dataset_name is not None:
-        result["source"] = += f"/{dataset_name}"
+        result["source"] += f"/{dataset_name}"
     result["name"] = f"{public_name} ({color})"
     result["blend"] = "default"
     result["shader"] = get_rgb_heat_map_shader_code(
