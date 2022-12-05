@@ -31,14 +31,15 @@ class MetadataCollectorABC(object):
             raise RuntimeError(f"{output_path} exists already")
 
         metadata = dict(self.metadata)
-        local_masks = dict()
-        for k in self.masks:
-            if self.masks[k] is not None:
-                local_masks[k] = dict()
-                for el in self.masks[k]:
-                    local_masks[k][el] = {'path': self.masks[k][el]['path']}
+        if hasattr(self, 'masks') and self.masks is not None:
+            local_masks = dict()
+            for k in self.masks:
+                if self.masks[k] is not None:
+                    local_masks[k] = dict()
+                    for el in self.masks[k]:
+                        local_masks[k][el] = {'path': self.masks[k][el]['path']}
 
-        metadata['masks'] = local_masks
+            metadata['masks'] = local_masks
 
         with open(output_path, 'w') as out_file:
             out_file.write(json.dumps(metadata, indent=2))

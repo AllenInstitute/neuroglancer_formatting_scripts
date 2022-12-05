@@ -8,7 +8,6 @@ import time
 import zarr
 from numcodecs import blosc
 import multiprocessing
-from ome_zarr.scale import Scaler
 from ome_zarr.io import parse_url
 
 from ome_zarr.writer import write_image
@@ -452,8 +451,6 @@ def write_array_to_group(
                                    shape[1]//4,
                                    shape[2]//4)})
 
-
-    return results, list_of_nx_ny
 
 
 def get_celltype_lookups_from_rda_df(

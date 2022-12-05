@@ -1,4 +1,6 @@
+from typing import List, Any
 import numpy as np
+from ome_zarr.scale import Scaler
 from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
 
@@ -22,7 +24,7 @@ class XYScaler(Scaler):
         assert len(base.shape) == 3
 
         (results,
-         list_of_nx_ny) = _create_empty_pyramid(
+         list_of_nx_ny) = self.create_empty_pyramid(
                                base,
                                downscale=self.downscale)
 
@@ -95,7 +97,6 @@ class XYScaler(Scaler):
         list_of_nx_ny:
             List of valid keys of results
         """
-        result = []
         nx = base.shape[0]
         ny = base.shape[1]
         results = dict()
@@ -107,3 +108,5 @@ class XYScaler(Scaler):
             key = (nx, ny)
             results[key] = data
             list_of_nx_ny.append(key)
+
+        return results, list_of_nx_ny
