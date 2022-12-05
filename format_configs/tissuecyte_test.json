@@ -1,0 +1,13 @@
+{
+  "downscale": 2,
+  "tissuecyte": {
+    "input_dir": "/allen/scratch/aibstemp/lydian/resample_tissuecyte"
+  },
+  "ccf": {
+    "segmentation": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mouse_ccf_3_1_mm/annotation/ccf_2017/compacted/annotation_10.nii.gz",
+    "labels": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mouse_ccf_3_1_mm/annotation/ccf_2017/compacted/itksnap_label_description.txt"
+  },
+  "template": {
+    "template": "/allen/programs/celltypes/workgroups/rnaseqanalysis/lydian/mouse_ccf_3_1_mm/average_template/average_template_10.nii.gz"
+  }
+}
