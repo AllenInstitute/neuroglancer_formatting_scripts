@@ -33,6 +33,7 @@ def main():
     parser.add_argument('--config_path', type=str, default=None)
     parser.add_argument('--n_processors', type=int, default=6)
     parser.add_argument('--clobber', default=False, action='store_true')
+    parser.add_argument('--n_test', type=int, default=None)
     args = parser.parse_args()
 
     with open(args.config_path, 'rb') as in_file:
@@ -117,7 +118,8 @@ def main():
             downscale=config_data["downscale"],
             n_processors=args.n_processors,
             structure_set_masks=structure_set_masks,
-            structure_masks=structure_masks)
+            structure_masks=structure_masks,
+            n_test=args.n_test)
         print_status("Done formatting mfish data")
 
     if "cell_types" in config_data:
@@ -129,7 +131,8 @@ def main():
             clobber=False,
             n_processors=args.n_processors,
             structure_set_masks=structure_set_masks,
-            structure_masks=structure_masks)
+            structure_masks=structure_masks,
+            n_test=args.n_test)
         print_status("Done formatting cell types data")
 
     if do_census:

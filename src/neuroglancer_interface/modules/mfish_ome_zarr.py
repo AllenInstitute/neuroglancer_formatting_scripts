@@ -15,7 +15,8 @@ def convert_mfish_to_ome_zarr(
         downscale: int,
         n_processors: int,
         structure_set_masks=None,
-        structure_masks=None):
+        structure_masks=None,
+        n_test=None):
     """
     input_dir -- where the gene.nii.gz files live
 
@@ -50,6 +51,9 @@ def convert_mfish_to_ome_zarr(
     metadata_collector.metadata = mgr.dict()
 
     fname_list = [n for n in input_dir.rglob('*nii.gz')]
+
+    if n_test is not None:
+        fname_list = fname_list[:n_test]
 
     fname_list.sort()
 

@@ -24,7 +24,8 @@ def convert_cell_types_to_ome_zarr(
         clobber: bool,
         n_processors: int,
         structure_set_masks=None,
-        structure_masks=None):
+        structure_masks=None,
+        n_test=None):
     """
     output_dir -- e.g. mouse_5/cell_types
 
@@ -61,7 +62,8 @@ def convert_cell_types_to_ome_zarr(
             n_processors=n_processors,
             downscale=downscale,
             structure_set_masks=structure_set_masks,
-            structure_masks=structure_masks)
+            structure_masks=structure_masks,
+            n_test=n_test)
 
 
 def write_sub_group(
@@ -71,7 +73,8 @@ def write_sub_group(
         n_processors=4,
         downscale=2,
         structure_set_masks=None,
-        structure_masks=None):
+        structure_masks=None,
+        n_test=None):
 
 
     input_dir = pathlib.Path(input_dir)
@@ -81,6 +84,9 @@ def write_sub_group(
 
     fpath_list = [n for n in input_dir.rglob('*.nii.gz')
                   if n.is_file()]
+
+    if n_test is not None:
+        fpath_list = fpath_list[:n_test]
 
     manifest_path = input_dir / 'manifest.csv'
     if not manifest_path.is_file():
