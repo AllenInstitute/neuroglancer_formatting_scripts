@@ -35,12 +35,14 @@ def main():
     cell_types_bucket = f"{args.s3_location}/cell_types"
     template_bucket = f"{args.s3_location}/avg_template"
     segmentation_bucket = f"{args.s3_location}/ccf_annotations"
+    max_count_bucket = f"{args.s3_location}/max_count_image"
 
     write_celltypes_html(
         output_path=args.output_path,
         cell_types_bucket=cell_types_bucket,
         template_bucket=template_bucket,
         segmentation_bucket=segmentation_bucket,
+        max_count_bucket=max_count_bucket,
         cell_types_dir=data_dir/'cell_types',
         title=args.table_title)
     print("wrote html")

@@ -71,12 +71,15 @@ def get_heatmap_image_layer(
         dataset_name,
         public_name,
         color,
-        range_max):
+        range_max,
+        visible=True):
 
     rgb_color = get_color_lookup()[color]
     result = dict()
     result["type"] = "image"
-    result["source"] = f"zarr://s3://{bucket_name}/{dataset_name}"
+    result["source"] = f"zarr://s3://{bucket_name}
+    if dataset_name is not None:
+        result["source"] = += f"/{dataset_name}"
     result["name"] = f"{public_name} ({color})"
     result["blend"] = "default"
     result["shader"] = get_rgb_heat_map_shader_code(
@@ -84,7 +87,7 @@ def get_heatmap_image_layer(
                                        transparent=False,
                                        range_max=range_max)
     result["opacity"] = 1.0
-    result["visible"] = True
+    result["visible"] = visible
     return result
 
 

@@ -13,6 +13,7 @@ def create_celltypes_url(
         color='green',
         template_bucket='mouse1-template-prototype/template',
         segmentation_bucket='mouse1-atlas-prototype',
+        max_count_bucket=None,
         starting_position=None,
         public_name=None,
         x_mm=0.01,
@@ -28,6 +29,18 @@ def create_celltypes_url(
                        public_name=public_name,
                        color=color,
                        range_max=range_max)
+
+    if max_count_bucket is not None:
+
+        max_count_layer = get_heatmap_imag_layer(
+            bucket_name=max_count_bucket,
+            dataset_name=None,
+            public_name="max gene counts",
+            color=color,
+            range_max=10.0,
+            visible=False)
+
+        image_layers = [image_layers, max_count_layer]
 
     template_layer = get_template_layer(
             template_bucket=template_bucket,
