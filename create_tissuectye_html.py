@@ -73,12 +73,12 @@ def create_tissuecyte_html(
 
     dataset_dir = pathlib.Path(dataset_dir)
 
-    template_s3 = f"{s3_location}/{avg_template}"
-    segmentation_s3 = f"{s3_location}/{ccf_annotations}"
+    template_s3 = f"{s3_location}/avg_template"
+    segmentation_s3 = f"{s3_location}/ccf_annotations"
 
     metadata_path = dataset_dir / "tissuecyte/metadata.json"
     with open(metadata_path, "rb") as in_file:
-        metadata = json.load(metadata_path)
+        metadata = json.load(in_file)
 
     tissuecyte_dir = dataset_dir / "tissuecyte"
     tissuecyte_dir_list = [n for n in tissuecyte_dir.iterdir()
@@ -90,7 +90,7 @@ def create_tissuecyte_html(
     key_order = []
     for sub_dir in tissuecyte_dir_list:
         series_id = sub_dir.name
-        tissuecyte_s3 = f"{s3_location}/{series_id}"
+        tissuecyte_s3 = f"{s3_location}/tissuecyte/{series_id}"
         csv_path = sub_dir / "image_series_information.csv"
         range_lookup = dict()
         with open(csv_path, "r") as in_file:
@@ -107,7 +107,7 @@ def create_tissuecyte_html(
         x_mm = this_metadata["x_mm"]
         y_mm = this_metadata["y_mm"]
         z_mm = this_metadata["z_mm"]
-        url = create_tissuecyte_rul(
+        url = create_tissuecyte_url(
             tissuecyte_s3=tissuecyte_s3,
             segmentation_s3=segmentation_s3,
             template_s3=template_s3,
@@ -128,9 +128,10 @@ def create_tissuecyte_html(
         f"segmentation src: {segmentation_s3}"]
 
     write_basic_table(
-        ouptut_path=output_path,
+        output_path=output_path,
         title=table_title,
         key_to_link=key_to_link,
+        key_to_other_cols=key_to_other_cols,
         key_order=key_order,
         div_name="tissuecyte",
         search_by=['image_series_id'],
