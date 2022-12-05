@@ -12,35 +12,33 @@ def main():
     default_anno += '/michaelkunst/MERSCOPES/mouse/cluster_anno.csv'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default=None)
-    parser.add_argument('--cell_types_bucket', type=str, default=None)
-    parser.add_argument('--template_bucket', type=str, default=None)
-    parser.add_argument('--segmentation_bucket', type=str, default=None)
-    parser.add_argument('--output_path', type=str, default=None)
+    parser.add_argument('--data_dir', type=str, default=None,
+                        help='data dir for full dataset')
+    parser.add_argument('--s3_location', type=str, default=None,
+                        help='bucket_name/parent_dir_for_dataset')
     parser.add_argument('--table_title', type=str, default=None)
-    parser.add_argument('--x_mm', type=float, default=0.01)
-    parser.add_argument('--y_mm', type=float, default=0.01)
-    parser.add_argument('--z_mm', type=float, default=0.1)
-    parser.add_argument('--n_processors', type=int, default=6)
- 
     args = parser.parse_args()
+
+    if args.table_title is None:
+        raise RuntimeError(
+            "Must specify table_title")
 
     data_dir = None
     if args.data_dir is not None:
         data_dir = pathlib.Path(args.data_dir)
 
+    cell_types_bucket = f"{args.s3_location}/cell_types"
+    template_bucket = f"{args.s3_location}/avg_template"
+    segmenttion_bucket = f"{args.s3_location}/ccf_annotations"
+
     html_dir = pathlib.Path('html')
     write_celltypes_html(
         output_path=args.output_path,
-        cell_types_bucket=args.cell_types_bucket,
-        template_bucket=args.template_bucket,
-        segmentation_bucket=args.segmentation_bucket,
-        data_dir=data_dir,
-        title=args.table_title,
-        x_mm=args.x_mm,
-        y_mm=args.y_mm,
-        z_mm=args.z_mm,
-        n_processors=args.n_processors)
+        cell_types_bucket=cell_types_bucket,
+        template_bucket=template_bucket,
+        segmentation_bucket=segmentation_bucket,
+        cell_types_dir=data_dir/'cell_types',
+        title=args.table_title)
     print("wrote html")
     print(args.output_path)
 

@@ -11,6 +11,7 @@ from botocore import UNSIGNED
 from botocore.client import Config
 import boto3
 
+import json
 import time
 import multiprocessing
 import zarr
@@ -26,12 +27,8 @@ def write_celltypes_html(
         template_bucket="mouse1-template-prototype",
         range_max=0.1,
         color='green',
-        data_dir=None,
-        title="Mouse1 cell type count maps",
-        x_mm=0.01,
-        y_mm=0.01,
-        z_mm=0.1,
-        n_processors=6):
+        cell_types_dir=None,
+        title="Mouse1 cell type count maps"):
     """
     data_dir has children that are levels within the partonomy.
     Scan those children to assess the available cell types
@@ -41,8 +38,7 @@ def write_celltypes_html(
 
     print("getting starting position lookup")
     starting_position_lookup = get_starting_positions(
-            full_manifest=full_manifest,
-            n_processors=n_processors)
+            cell_types_dir)
     print("got starting position lookup")
 
     celltype_to_link = dict()
@@ -53,13 +49,13 @@ def write_celltypes_html(
     for celltype in full_manifest:
 
         data_path = celltype['data_path']
-
-        starting_position=starting_position_lookup[
-                            celltype['unique']]['starting_position']
-        total_cts = starting_position_lookup[
-                            celltype['unique']]['total_cts']
-
         s3_celltype = f"{celltype['hierarchy']}/{celltype['machine_readable']}"
+        this_metadata = starting_position_lookup[
+                            celltype[s3_lookup]]
+
+        starting_position = this_metadata['starting_position']
+        total_cts = this_metadata['total_cts']
+
         this_url = create_celltypes_url(
                         bucket=cell_types_bucket,
                         celltype=s3_celltype,
@@ -69,9 +65,9 @@ def write_celltypes_html(
                         segmentation_bucket=segmentation_bucket,
                         public_name=celltype['human_readable'],
                         starting_position=starting_position,
-                        x_mm=x_mm,
-                        y_mm=y_mm,
-                        z_mm=z_mm)
+                        x_mm=this_metadata["x_mm"],
+                        y_mm=this_metadata["y_mm"],
+                        z_mm=this_metadata["z_mm"])
 
         hierarchy = celltype['hierarchy']
         celltype_name = celltype['human_readable']
@@ -116,126 +112,26 @@ def write_celltypes_html(
         metadata_lines=metadata_lines)
 
 
-def idx_from_cluster_name(cluster_name):
-    params = cluster_name.split('_')
-    if len(params) == 0:
-        return 0
-    try:
-        idx = int(params[0])
-    except ValueError:
-        idx = 0
-    return idx
-
-def find_valid_celltypes(
-        bucket,
-        subclass_list,
-        class_list,
-        cluster_list,
-        pass_all=False,
-        data_dir=None):
-    """
-    Determine which cell types have actually been loaded into S3
-    """
-    if not pass_all and data_dir is None:
-        s3_client = boto3.client(
-                        's3',
-                        config=Config(signature_version=UNSIGNED))
-
-    valid_celltypes = []
-
-    for (child, child_list) in [('subclasses', subclass_list),
-                                ('classes', class_list),
-                                ('clusters', cluster_list)]:
-        for this_type in child_list:
-            type_key = f"{child}/{this_type}"
-            if pass_all:
-                valid_celltypes.append(type_key)
-            elif data_dir is not None:
-                full_dir = data_dir / type_key
-                if full_dir.is_dir():
-                    valid_celltypes.append(type_key)
-            else:
-                test_key = f"{type_key}/.zattrs"
-                response = s3_client.list_objects_v2(
-                        Bucket=bucket,
-                        Prefix=test_key)
-                if response['KeyCount'] > 0:
-                    valid_celltypes.append(type_key)
-    return valid_celltypes
-
-
 def get_starting_positions(
-        full_manifest,
-        n_processors):
+        cell_types_dir):
 
-    mgr = multiprocessing.Manager()
-    output_dict = mgr.dict()
-    output_lock = mgr.Lock()
-    sub_manifests = []
-    for ii in range(n_processors):
-        sub_manifests.append([])
-    for ii in range(len(full_manifest)):
-        jj = ii % n_processors
-        sub_manifests[jj].append(full_manifest[ii])
-    process_list = []
-    for ii in range(n_processors):
-        p = multiprocessing.Process(
-                target=_get_starting_position_worker,
-                kwargs={'full_manifest': sub_manifests[ii],
-                        'output_dict': output_dict,
-                        'output_lock': output_lock})
-        p.start()
-        process_list.append(p)
-
-    for p in process_list:
-        p.join()
-
-    return dict(output_dict)
-
-def _get_starting_position_worker(
-        full_manifest,
-        output_dict,
-        output_lock):
-
-    t0 = time.time()
-    ntot = len(full_manifest)
-    ct = 0
-    this_lookup = dict()
-    for celltype in full_manifest:
-        data_path = celltype['data_path']
-        starting_position = None
-        (max_plane,
-         total_cts) = get_ct_data(
-                        data_dir=data_path.parent,
-                        celltype=data_path.name)
-        starting_position=[550, 550, max_plane]
-        this_lookup[celltype['unique']] = {
-                'starting_position': starting_position,
-                'total_cts': total_cts}
-        ct += 1
-        if ct % 50 == 0:
-            duration = time.time()-t0
-            per = duration/ct
-            pred = per*ntot
-            remain = pred-duration
-            print(f"got {ct} of {ntot}; "
-                  f"predict {remain:.2e} seconds of {pred:.2e} left")
-
-    with output_lock:
-        for k in this_lookup:
-            output_dict[k] = this_lookup[k]
-
-
-def get_ct_data(
-        data_dir,
-        celltype):
-
-    if not (data_dir / celltype).is_dir():
-        raise RuntimeError(
-            f"ct data cannot parse {data_dir} {celltype}")
-    arr = np.array(zarr.open(data_dir / celltype, 'r')['0'])
-    plane_sums = np.sum(arr, axis=(0,1))
-    max_z = np.argmax(plane_sums)
-    all_ct = np.sum(plane_sums)
-
-    return (max_z, all_ct)
+    lookup = ()
+    child_dir_list = [n for n in cell_types_dir.iterdir()
+                      if n.isdir()]
+    for child_dir in child_dir_list:
+        metadata_path = child_dir / "metadata.json"
+        with open(metadata_path, "rb") as in_file:
+            metadata = json.load(metadata_path)
+        for element in metadata:
+            unq_key = f"{child_dir.name}/{element}"
+            if unq_key in lookup:
+                raise RuntimeError(
+                    f"more than one metadata entry for {unq_key}")
+            plane = metadata[element]["max_plane"]
+            this = {"starting_position": [550, 550, int(plane)],
+                    "total_cts": metadata[element]["total_cts"],
+                    "x_mm": metadata[element]["x_mm"],
+                    "y_mm": metadata[element]["y_mm"],
+                    "z_mm": metadata[element]["z_mm"]}
+            lookup[unq_key] = this
+        return lookup
