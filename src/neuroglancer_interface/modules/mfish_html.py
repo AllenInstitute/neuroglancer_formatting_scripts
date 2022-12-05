@@ -19,10 +19,10 @@ def write_mfish_html(
         html_title="Mouse1 MFISH transcript count maps",
         data_dir=None):
 
-    metadata_path = data_dir / "metadata.json"
+    metadata_path = data_dir / "mfish_heatmaps/metadata.json"
     with open(metadata_path, "rb") as in_file:
         full_metadata = json.load(in_file)
-    full_metaadata.pop("masks")
+    full_metadata.pop("masks")
 
     gene_list = list(full_metadata.keys())
     gene_list.sort()

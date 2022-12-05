@@ -29,11 +29,11 @@ def main():
 
     write_mfish_html(
         output_path=pathlib.Path(args.output_path),
-        mfish_bucket=args.mfish_bucket,
+        mfish_bucket=mfish_bucket,
         segmentation_bucket=segmentation_bucket,
         template_bucket=template_bucket,
-        html_title=args.table_title,d
-        data_dir=pathilb.Path(args.data_dir))
+        html_title=args.table_title,
+        data_dir=pathlib.Path(args.data_dir))
 
 
 if __name__ == "__main__":
