@@ -113,9 +113,9 @@ class XYZScaler(ScalerBase):
                                base,
                                downscale=self.downscale)
 
-        for nxnynz in list_of_nx_ny:
-            img = skimage_resize(base[:, :, :], nxnynz)
-            results[nxny][:, :, :] = img
+        for nxyz in list_of_nx_ny:
+            img = skimage_resize(base[:, :, :], nxyz)
+            results[nxyz][:, :, :] = img
 
         output = [base]
         return output + [results[key].astype(base.dtype)
@@ -152,7 +152,7 @@ class XYZScaler(ScalerBase):
         nz = base.shape[2]
         results = dict()
         list_of_nx_ny = []
-        while max(nx, ny, nz) > 32:
+        while max(nx, ny, nz) > 128:
             nx = nx//downscale
             ny = ny//downscale
             nz = nz//downscale

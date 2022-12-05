@@ -1,4 +1,6 @@
 import shutil
+import pathlib
+import multiprocessing
 
 from neuroglancer_interface.classes.metadata_collectors import (
     BasicMetadataCollector)
@@ -16,7 +18,7 @@ def convert_tissuecyte_to_ome_zarr(
         downscale=2,
         n_processors=6):
 
-    ouptut_dir = pathlib.Path(output_dir)
+    output_dir = pathlib.Path(output_dir)
     input_dir = pathlib.Path(input_dir)
 
     if not input_dir.is_dir():
@@ -61,7 +63,7 @@ def convert_tissuecyte_to_ome_zarr(
 
     root_group = write_nii_file_list_to_ome_zarr(
         file_path_list=fname_list,
-        group_name_list=group_name_lsit,
+        group_name_list=group_name_list,
         output_dir=output_dir,
         downscale=downscale,
         clobber=False,
@@ -72,7 +74,8 @@ def convert_tissuecyte_to_ome_zarr(
     print("copying image_series_information.csv over")
     for sub_dir in sub_dir_list:
         src_path = sub_dir / "image_series_information.csv"
-        dest_path = output_dir / src_path.parent.name / src_path.name
-        shutil.copy(src_path, dest_path)
+        if src_path.exists():
+            dest_path = output_dir / src_path.parent.name / src_path.name
+            shutil.copy(src_path, dest_path)
 
     metadata_collector.write_to_file()

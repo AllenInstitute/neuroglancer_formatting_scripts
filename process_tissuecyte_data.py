@@ -23,6 +23,9 @@ from neuroglancer_interface.utils.census_utils import (
     get_mask_lookup,
     create_census)
 
+from neuroglancer_interface.classes.downscalers import (
+    XYZScaler)
+
 
 def print_status(msg):
     print(f"===={msg}====")
@@ -67,16 +70,15 @@ def main():
             output_dir=output_dir/"avg_template",
             downscale=config_data["downscale"],
             n_processors=1,
-            clobber=False)
+            clobber=False,
+            DownscalerClass=XYZScaler)
         print_status("Done formatting avg template image")
-
 
     if "tissuecyte" in config_data:
         print_status("Formatting mfish data")
         convert_tissuecyte_to_ome_zarr(
             input_dir=config_data["tissuecyte"]["input_dir"],
             output_dir=output_dir/"tissuecyte",
-            clobber=False,
             downscale=config_data["downscale"],
             n_processors=args.n_processors)
         print_status("Done formatting tissuecyte data")

@@ -131,7 +131,8 @@ def write_nii_file_list_to_ome_zarr(
             group_name_list=group_name_list,
             root_group=parent_group,
             downscale=downscale,
-            metadata_collector=metadata_collector)
+            metadata_collector=metadata_collector,
+            DownscalerClass=DownscalerClass)
 
     else:
         n_workers = max(1, n_processors-1)
