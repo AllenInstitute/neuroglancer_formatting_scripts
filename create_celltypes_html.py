@@ -17,11 +17,16 @@ def main():
     parser.add_argument('--s3_location', type=str, default=None,
                         help='bucket_name/parent_dir_for_dataset')
     parser.add_argument('--table_title', type=str, default=None)
+    parser.add_argument('--output_path', type=str, default=None)
     args = parser.parse_args()
 
     if args.table_title is None:
         raise RuntimeError(
             "Must specify table_title")
+
+    if args.output_path is None:
+        raise RuntimeError(
+            "Must specify output_path")
 
     data_dir = None
     if args.data_dir is not None:
@@ -31,7 +36,6 @@ def main():
     template_bucket = f"{args.s3_location}/avg_template"
     segmenttion_bucket = f"{args.s3_location}/ccf_annotations"
 
-    html_dir = pathlib.Path('html')
     write_celltypes_html(
         output_path=args.output_path,
         cell_types_bucket=cell_types_bucket,
