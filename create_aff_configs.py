@@ -12,10 +12,10 @@ def simple_id_from_csv(file_path):
     of image_series_ids
     """
     id_list = []
-    with open(file_path, 'r') as in_file:
-        header = in_file.readline()
+    with open(file_path, 'rb') as in_file:
+        header = in_file.readline().decode('utf-8-sig')
         for line in in_file:
-            params = line.strip().split(',')
+            params = line.decode('utf-8-sig').strip().split(',')
             id_value = None
             for p in params:
                 try:
