@@ -8,13 +8,13 @@ import time
 import zarr
 from numcodecs import blosc
 import multiprocessing
-from ome_zarr.scale import Scaler
 from ome_zarr.io import parse_url
-from skimage.transform import pyramid_gaussian
-from skimage.transform import resize as skimage_resize
+
 from ome_zarr.writer import write_image
 from neuroglancer_interface.utils.multiprocessing_utils import (
     _winnow_process_list)
+from neuroglancer_interface.classes.downscalers import (
+    XYScaler)
 
 
 blosc.use_threads = False
@@ -54,7 +54,8 @@ def write_nii_file_list_to_ome_zarr(
         clobber=False,
         prefix=None,
         root_group=None,
-        metadata_collector=None):
+        metadata_collector=None,
+        DownscalerClass=XYScaler):
     """
     Convert a list of nifti files into OME-zarr format
 
@@ -130,7 +131,8 @@ def write_nii_file_list_to_ome_zarr(
             group_name_list=group_name_list,
             root_group=parent_group,
             downscale=downscale,
-            metadata_collector=metadata_collector)
+            metadata_collector=metadata_collector,
+            DownscalerClass=DownscalerClass)
 
     else:
         n_workers = max(1, n_processors-1)
@@ -154,7 +156,8 @@ def write_nii_file_list_to_ome_zarr(
                             'group_name_list': group_lists[ii],
                             'root_group': parent_group,
                             'downscale': downscale,
-                            'metadata_collector': metadata_collector})
+                            'metadata_collector': metadata_collector,
+                            'DownscalerClass': DownscalerClass})
             p.start()
             process_list.append(p)
 
@@ -173,7 +176,8 @@ def _write_nii_file_list_worker(
         group_name_list,
         root_group,
         downscale,
-        metadata_collector=None):
+        metadata_collector=None,
+        DownscalerClass=XYScaler):
     """
     Worker function to actually convert a subset of nifti
     files to OME-zarr
@@ -202,7 +206,8 @@ def _write_nii_file_list_worker(
             group_name=grp_name,
             nii_file_path=f_path,
             downscale=downscale,
-            metadata_collector=metadata_collector)
+            metadata_collector=metadata_collector,
+            DownscalerClass=DownscalerClass)
 
 
 def write_nii_to_group(
@@ -212,7 +217,8 @@ def write_nii_to_group(
         downscale,
         transpose=True,
         metadata_collector=None,
-        metadata_key=None):
+        metadata_key=None,
+        DownscalerClass=XYScaler):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -267,7 +273,8 @@ def write_nii_to_group(
         x_scale=x_scale,
         y_scale=y_scale,
         z_scale=z_scale,
-        downscale=downscale)
+        downscale=downscale,
+        DownscalerClass=DownscalerClass)
 
     print(f"wrote {nii_file_path} to {group_name}")
 
@@ -302,7 +309,8 @@ def write_summed_nii_files_to_group(
         file_path_list,
         group,
         downscale = 2,
-        transpose=True):
+        transpose=True,
+        DownscalerClass=XYScaler):
     """
     Sum the arrays in all of the files in file_path list
     into a single array and write that to the specified
@@ -355,7 +363,8 @@ def write_summed_nii_files_to_group(
         x_scale=x_scale,
         y_scale=y_scale,
         z_scale=z_scale,
-        downscale=downscale)
+        downscale=downscale,
+        DownscalerClass=DownscalerClass)
 
 
 def write_array_to_group(
@@ -364,7 +373,8 @@ def write_array_to_group(
         x_scale: float,
         y_scale: float,
         z_scale: float,
-        downscale: int = 1):
+        downscale: int = 1,
+        DownscalerClass=XYScaler):
     """
     Write a numpy array to an ome-zarr group
 
@@ -401,7 +411,7 @@ def write_array_to_group(
 
     if downscale > 1:
         (_,
-         list_of_nx_ny) = _create_empty_pyramid(
+         list_of_nx_ny) = DownscalerClass.create_empty_pyramid(
                               base=arr,
                               downscale=downscale)
 
@@ -410,7 +420,7 @@ def write_array_to_group(
         for nxny in list_of_nx_ny:
             this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
                                      y_scale*arr.shape[1]/nxny[1],
-                                     z_scale],
+                                     z_scale*arr.shape[2]/nxny[2]],
                            'type': 'scale'}]
             coord_transform.append(this_coord)
 
@@ -426,11 +436,15 @@ def write_array_to_group(
          "unit": "millimeter"}]
 
     if downscale > 1:
-        scaler = XYScaler(
+        scaler = DownscalerClass(
                    method='gaussian',
                    downscale=downscale)
     else:
         scaler = None
+
+    chunk_x = min(shape[0]//4, 64)
+    chunk_y = min(shape[1]//4, 64)
+    chunk_z = min(shape[2]//4, 64)
 
     write_image(
         image=arr,
@@ -438,118 +452,10 @@ def write_array_to_group(
         group=group,
         coordinate_transformations=coord_transform,
         axes=axes,
-        storage_options={'chunks':(shape[0]//4,
-                                   shape[1]//4,
-                                   shape[2]//4)})
+        storage_options={'chunks':(chunk_x,
+                                   chunk_y,
+                                   chunk_z)})
 
-
-
-def _create_empty_pyramid(base, downscale=2):
-    """
-    Create a lookup table of empty arrays for an
-    image/volume pyramid
-
-    Parameters
-    ----------
-    base: np.ndarray
-        The array that will be converted into an image/volume
-        pyramid
-
-    downscale: int
-        The factor by which to downscale base at each level of
-        zoom
-
-    Returns
-    -------
-    results: dict
-        A dict mapping an image shape (nx, ny) to
-        an empty array of size (nx, ny, nz)
-
-        NOTE: we are not downsampling nz in this setup
-
-    list_of_nx_ny:
-        List of valid keys of results
-    """
-    result = []
-    nx = base.shape[0]
-    ny = base.shape[1]
-    results = dict()
-    list_of_nx_ny = []
-    while nx > base.shape[2] or ny > base.shape[2]:
-        nx = nx//downscale
-        ny = ny//downscale
-        data = np.zeros((nx, ny, base.shape[2]), dtype=float)
-        key = (nx, ny)
-        results[key] = data
-        list_of_nx_ny.append(key)
-
-    return results, list_of_nx_ny
-
-
-
-class XYScaler(Scaler):
-    """
-    A scaler that ignores the z dimension, since it is
-    so small relative to the other two dimensions in this initial
-    dataset
-    """
-
-    def resize_image(self, image: np.ndarray) -> np.ndarray:
-        raise RuntimeError("did not expect to run resize_image")
-
-    def laplacian(self, base: np.ndarray) -> List[np.ndarray]:
-        raise RuntimeError("did not expect to run laplacian")
-
-    def local_mean(self, base: np.ndarray) -> List[np.ndarray]:
-        raise RuntimeError("did not expect to run local_mean")
-
-    def nearest(self, base: np.ndarray) -> List[np.ndarray]:
-        assert len(base.shape) == 3
-
-        (results,
-         list_of_nx_ny) = _create_empty_pyramid(
-                               base,
-                               downscale=self.downscale)
-
-        for iz in range(base.shape[2]):
-            for nxny in list_of_nx_ny:
-                img = skimage_resize(base[:, :, iz], nxny)
-                results[nxny][:, :, iz] = img
-
-        output = [base]
-        return output + [results[key].astype(base.dtype)
-                         for key in list_of_nx_ny]
-
-
-    def gaussian(self, base: np.ndarray) -> List[np.ndarray]:
-
-        # I wouldn't expect this to be okay, but apparently
-        # this code never actually executes
-        raise RuntimeError("gaussian")
-
-        (results,
-         list_of_nx_ny) = _create_empty_pyramid(
-                              base,
-                              downscale=self.downscale)
-
-        for iz in range(base.shape[2]):
-            gen = pyramid_gaussian(
-                    base[:, :, iz],
-                    downscale=self.downscale,
-                    max_layer=-1,
-                    multichannel=False)
-            for layer in gen:
-                nx = layer.shape[0]
-                ny = layer.shape[1]
-                key = (nx, ny)
-                if key not in results:
-                    break
-                results[key][:, :, iz] = layer
-
-        print(results)
-        output = [base]
-        return output + [np.round(results[key]).astype(base.dtype)
-                         for key in list_of_nx_ny]
 
 
 def get_celltype_lookups_from_rda_df(

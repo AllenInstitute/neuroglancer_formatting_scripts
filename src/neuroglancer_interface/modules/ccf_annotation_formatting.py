@@ -126,7 +126,7 @@ def make_info_file(
         encoding = 'raw', # other options: 'jpeg', 'compressed_segmentation' (req. uint32 or uint64)
         resolution = resolution_xyz, # X,Y,Z values in nanometers, 40 microns in each dim
         voxel_offset = [ 0, 0, 0 ], # values X,Y,Z values in voxels
-        chunk_size = [ 1024, 1024, 1 ], # rechunk of image X,Y,Z in voxels.
+        chunk_size = [ 64, 64, 64 ], # rechunk of image X,Y,Z in voxels.
         volume_size = volume_size_xyz, # X,Y,Z size in voxels
     )
 

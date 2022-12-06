@@ -5,21 +5,14 @@ from neuroglancer_interface.utils.census_utils import (
     census_from_mask_lookup_and_arr)
 
 
-class CellTypeMetadataCollector(object):
+class MetadataCollectorABC(object):
 
-    def __init__(
+    def collect_metadata(
             self,
-            metadata_output_path=None,
-            structure_set_masks=None,
-            structure_masks=None):
-        self._metadata = None
-        self._lock = None
-        self.masks = None
-        self.output_path = metadata_output_path
-        if structure_set_masks is not None or structure_masks is not None:
-            self.masks = {
-                "structure_sets": structure_set_masks,
-                "structures": structure_masks}
+            data_array,
+            metadata_key,
+            other_metadata=None):
+        raise NotImplementedError("this is the base.collecte_metadata")
 
     @property
     def metadata(self):
@@ -38,17 +31,63 @@ class CellTypeMetadataCollector(object):
             raise RuntimeError(f"{output_path} exists already")
 
         metadata = dict(self.metadata)
-        local_masks = dict()
-        for k in self.masks:
-            if self.masks[k] is not None:
-                local_masks[k] = dict()
-                for el in self.masks[k]:
-                    local_masks[k][el] = {'path': self.masks[k][el]['path']}
+        if hasattr(self, 'masks') and self.masks is not None:
+            local_masks = dict()
+            for k in self.masks:
+                if self.masks[k] is not None:
+                    local_masks[k] = dict()
+                    for el in self.masks[k]:
+                        local_masks[k][el] = {'path': self.masks[k][el]['path']}
 
-        metadata['masks'] = local_masks
+            metadata['masks'] = local_masks
 
         with open(output_path, 'w') as out_file:
             out_file.write(json.dumps(metadata, indent=2))
+
+
+class BasicMetadataCollector(MetadataCollectorABC):
+    """
+    This metadata collector just collects x_mm, y_mm, z_mm
+    """
+    def __init__(
+            self,
+            metadata_output_path=None):
+
+        self._metadata=None
+        self._lock = None
+        self.output_path = metadata_output_path
+
+
+    def collect_metadata(
+            self,
+            data_array,
+            metadata_key,
+            other_metadata=None):
+
+        with self._lock:
+            if metadata_key in self.metadata:
+                raise RuntimeError(
+                    f"Trying to write {metadata_key} more than once")
+            self.metadata[metadata_key] = other_metadata
+
+
+class CellTypeMetadataCollector(MetadataCollectorABC):
+
+    def __init__(
+            self,
+            metadata_output_path=None,
+            structure_set_masks=None,
+            structure_masks=None):
+
+        self._metadata = None
+        self._lock = None
+        self.masks = None
+        self.output_path = metadata_output_path
+        if structure_set_masks is not None or structure_masks is not None:
+            self.masks = {
+                "structure_sets": structure_set_masks,
+                "structures": structure_masks}
+
 
     def collect_metadata(
             self,
