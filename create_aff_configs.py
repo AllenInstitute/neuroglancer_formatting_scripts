@@ -1,5 +1,4 @@
 import json
-import numpy as np
 import argparse
 import pathlib
 import urllib.request
@@ -45,7 +44,6 @@ def get_image_series_metadata(image_series_id, passed_only=True):
     response = json.loads(raw_response[0])["msg"]
 
     image_series_metadata = []
-    baseline_resolution = None
     for element in response:
         if passed_only and element["failed"]:
             continue
@@ -59,15 +57,6 @@ def get_image_series_metadata(image_series_id, passed_only=True):
         this["image_series_id"] = element["data_set_id"]
         this["specimen_tissue_index"] = element["section_number"]
         image_series_metadata.append(this)
-        if baseline_resolution is None:
-            baseline_resolution = this['resolution']
-        else:
-            if not np.allclose(this['resolution'], baseline_resolution):
-                msg = f"\nMultiple resolutions for {image_series_id}\n"
-                msg += json.dumps(image_series_metadata, indent=2)
-                print(this)
-                raise RuntimeError(msg)
-
     return image_series_metadata
 
 
