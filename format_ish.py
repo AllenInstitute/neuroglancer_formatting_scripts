@@ -1,4 +1,5 @@
 from cloudvolume import CloudVolume
+import warnings
 import argparse
 import shutil
 import PIL
@@ -254,7 +255,7 @@ def process_image(
         else:
             if not np.allclose(baseline_resolution,
                                image_config['resolution']):
-                raise RuntimeError(
+                warnings.warn(
                     "\nInconsistent resolutions\n"
                     f"{baseline_resolution} != {image_config['resolution']}")
 
