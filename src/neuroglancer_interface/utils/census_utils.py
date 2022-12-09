@@ -40,13 +40,20 @@ def census_from_mask_lookup_and_arr(
         voxel = [int(mask_pixels[ii][idx])
                  for ii in range(len(mask_pixels))]
 
+        per_idx = dict()
+        for idx in range(data_arr.shape[0]):
+            this_slice = np.where(mask_pixels[0]==idx)
+            this_sum = valid[this_slice].sum()
+            per_idx[idx] = float(this_sum)
+
         # need to transpose because of the way we
         # are transposing the data for display
         # in neuroglancer (see data_utils.get_array_from_img)
         voxel = [voxel[2], voxel[1], voxel[0]]
 
         this_result = {'counts': float(total),
-                       'max_voxel': voxel}
+                       'max_voxel': voxel,
+                       'per_slice': per_idx}
         result[mask_key] = this_result
     return result
 
