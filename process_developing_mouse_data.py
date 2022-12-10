@@ -159,6 +159,11 @@ def main():
             out_file.write(json.dumps(census, indent=2))
         print_status("Done gathering census")
 
+    print_status("Copying over config")
+    dest_path = pathlib.Path(config_data['output_dir']) / 'config.json'
+    assert not dest_path.exists()
+    shutil.copy(args.config_path, dest_path)
+
     print_status("Done formatting all data")
     print(f"written to\n{config_data['output_dir']}")
 
