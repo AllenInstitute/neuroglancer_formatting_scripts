@@ -65,6 +65,19 @@ def check_census(heatmap_path, census_data, mask_lookup, rng):
         elif ct>1.0e-3:
             non_zero = True
 
+        per_idx = census_data[s]['per_slice']
+        assert len(per_idx) == 66
+        assert mask_arr.shape[0] == 66
+
+        slice_sum = 0.0
+        for idx in range(66):
+            this_slice = heatmap_arr[idx, :, :]
+            mask_slice = mask_arr[idx, :, :].astype(bool)
+            this_sum = this_slice[mask_slice].sum()
+            slice_sum += this_sum
+            np.testing.assert_allclose(this_sum, per_idx[idx], atol=0.0, rtol=0.0001)
+
+        np.testing.assert_allclose(slice_sum, ct, atol=0.0, rtol=0.0001)
         if is_bizarre:
             print(f"validated {ct} {test_voxel} {test_max_val:.5e} -- {expected_ct} {max_voxel} {this_max_val:.5e}"
                    f" {zero} {non_zero}")
@@ -133,7 +146,7 @@ def validate_census(census_path, rng=None):
 
 def main():
     rng = np.random.default_rng(2231321)
-    census_path = "/allen/aibs/technology/danielsf/mouse3_test/census.json"
+    census_path = "/allen/aibs/technology/danielsf/mouse_3b.2/census.json"
     validate_census(census_path, rng=rng) 
 
 
