@@ -34,17 +34,18 @@ def census_from_mask_lookup_and_arr(
     result = dict()
     for mask_key in mask_lookup:
         mask_pixels = mask_lookup[mask_key]['mask']
-        valid = data_arr[mask_pixels]
-        total = valid.sum()
-        idx = np.argmax(valid)
+
+        idx = np.argmax(data_arr[mask_pixels])
         voxel = [int(mask_pixels[ii][idx])
                  for ii in range(len(mask_pixels))]
 
-        per_idx = dict()
-        for idx in range(data_arr.shape[0]):
-            this_slice = np.where(mask_pixels[0]==idx)
-            this_sum = valid[this_slice].sum()
-            per_idx[idx] = float(this_sum)
+        this_mask = np.zeros(data_arr.shape, dtype=bool)
+        this_mask[mask_pixels] = True
+        total = data_arr[this_mask].sum()
+
+        masked_data = np.zeros(data_arr.shape, dtype=np.dtype)
+        masked_data[this_mask] = data_arr[this_mask]
+        per_idx = masked_data.sum(axis=(0,1)).astype(float)
 
         # need to transpose because of the way we
         # are transposing the data for display
@@ -53,7 +54,7 @@ def census_from_mask_lookup_and_arr(
 
         this_result = {'counts': float(total),
                        'max_voxel': voxel,
-                       'per_slice': per_idx}
+                       'per_slice': list(per_idx)}
         result[mask_key] = this_result
     return result
 
