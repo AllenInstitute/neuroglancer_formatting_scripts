@@ -31,23 +31,23 @@ def census_from_mask_lookup_and_arr(
     number of counts and the "brightest" voxel
     """
 
-    this_mask = np.zeros(
-                data_arr.shape, dtype=bool)
-
     result = dict()
     for mask_key in mask_lookup:
         mask_pixels = mask_lookup[mask_key]['mask']
+        per_idx = np.zeros(data_arr.shape[2], dtype=float)
 
         voxel = _get_max_voxel(
             data_arr=data_arr,
             mask_pixels=mask_pixels)
 
-        this_mask[:, :] = False
-        this_mask[mask_pixels] = True
+        unq_slice = np.unique(mask_pixels[2])
+        for idx_value in unq_slice:
+            valid = (mask_pixels[2] == idx_value)
+            per_idx[idx_value] = data_arr[
+                            mask_pixels[0][valid],
+                            mask_pixels[1][valid],
+                            mask_pixels[2][valid]].sum()
 
-        masked_data = np.zeros(data_arr.shape, dtype=np.dtype)
-        masked_data[this_mask] = data_arr[this_mask]
-        per_idx = masked_data.sum(axis=(0,1))
         total = per_idx.sum()
 
         this_result = {'counts': float(total),
