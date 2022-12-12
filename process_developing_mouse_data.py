@@ -35,6 +35,7 @@ def main():
     parser.add_argument('--clobber', default=False, action='store_true')
     parser.add_argument('--n_test', type=int, default=None)
     parser.add_argument('--output_dir', type=str, default=None)
+    parser.add_argument('--only_metadata', default=False, action='store_true')
     args = parser.parse_args()
 
     if args.output_dir is None:
@@ -55,7 +56,7 @@ def main():
 
     output_dir.mkdir()
 
-    if "ccf" in config_data:
+    if "ccf" in config_data and not args.only_metadata:
         print_status("Formatting CCF annotations")
         format_ccf_annotations(
             annotation_path=config_data["ccf"]["labels"],
@@ -64,7 +65,7 @@ def main():
             clobber=False)
         print_status("Done formatting CCF annotations")
 
-    if "template" in config_data:
+    if "template" in config_data and not args.only_metadata:
         print_status("Formatting avg template image")
         write_nii_file_list_to_ome_zarr(
             file_path_list=[pathlib.Path(config_data["template"]["template"])],
@@ -75,7 +76,7 @@ def main():
             clobber=False)
         print_status("Done formatting avg template image")
 
-    if "max_counts" in config_data:
+    if "max_counts" in config_data and not args.only_metadata:
         print_status("Formatting max count image")
         write_nii_file_list_to_ome_zarr(
             file_path_list=[pathlib.Path(config_data["max_counts"]["path"])],
@@ -125,7 +126,8 @@ def main():
             n_processors=args.n_processors,
             structure_set_masks=structure_set_masks,
             structure_masks=structure_masks,
-            n_test=args.n_test)
+            n_test=args.n_test,
+            only_metadata=args.only_metadata)
         print_status("Done formatting mfish data")
 
     if "cell_types" in config_data:
@@ -138,7 +140,8 @@ def main():
             n_processors=args.n_processors,
             structure_set_masks=structure_set_masks,
             structure_masks=structure_masks,
-            n_test=args.n_test)
+            n_test=args.n_test,
+            only_metadata=args.only_metadata)
         print_status("Done formatting cell types data")
 
     if do_census:
@@ -171,7 +174,7 @@ def main():
     shutil.copy(args.config_path, dest_path)
 
     print_status("Done formatting all data")
-    print(f"written to\n{config_data['output_dir']}")
+    print(f"written to\n{output_dir}")
 
 if __name__ == "__main__":
     main()

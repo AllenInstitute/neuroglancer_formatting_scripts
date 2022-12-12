@@ -16,7 +16,8 @@ def convert_mfish_to_ome_zarr(
         n_processors: int,
         structure_set_masks=None,
         structure_masks=None,
-        n_test=None):
+        n_test=None,
+        only_metadata=False):
     """
     input_dir -- where the gene.nii.gz files live
 
@@ -74,7 +75,8 @@ def convert_mfish_to_ome_zarr(
         downscale=downscale,
         clobber=clobber,
         n_processors=n_processors,
-        metadata_collector=metadata_collector)
+        metadata_collector=metadata_collector,
+        only_metadata=only_metadata)
 
 
     metadata_collector.write_to_file()
