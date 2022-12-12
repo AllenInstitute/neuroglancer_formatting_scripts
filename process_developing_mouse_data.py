@@ -34,12 +34,16 @@ def main():
     parser.add_argument('--n_processors', type=int, default=6)
     parser.add_argument('--clobber', default=False, action='store_true')
     parser.add_argument('--n_test', type=int, default=None)
+    parser.add_argument('--output_dir', type=str, default=None)
     args = parser.parse_args()
+
+    if args.output_dir is None:
+        raise RuntieError("must specify output_dir")
 
     with open(args.config_path, 'rb') as in_file:
         config_data = json.load(in_file)
 
-    output_dir = pathlib.Path(config_data['output_dir'])
+    output_dir = pathlib.Path(args.output_dir)
     if output_dir.exists():
         if not args.clobber:
             raise RuntimeError(
@@ -162,7 +166,7 @@ def main():
         print_status("Done gathering census")
 
     print_status("Copying over config")
-    dest_path = pathlib.Path(config_data['output_dir']) / 'config.json'
+    dest_path = output_dir / 'config.json'
     assert not dest_path.exists()
     shutil.copy(args.config_path, dest_path)
 

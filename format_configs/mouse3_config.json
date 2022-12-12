@@ -32,6 +32,5 @@
   "census": {
       "structure_masks": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/structure_masks",
       "structure_set_masks": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_3b/alignment/RegPrelimDefNN_mouse3/iter0/structure_set_masks"
-  },
-  "output_dir": "/allen/aibs/technology/danielsf/mouse_3b.2"
+  }
 }
