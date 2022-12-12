@@ -1,6 +1,7 @@
 import SimpleITK
 import json
 import numpy as np
+import argparse
 
 def check_census(heatmap_path, census_data, mask_lookup, rng):
     n_validated = 0
@@ -8,7 +9,7 @@ def check_census(heatmap_path, census_data, mask_lookup, rng):
     heatmap_arr = SimpleITK.GetArrayFromImage(
                     SimpleITK.ReadImage(heatmap_path))
 
- 
+
     sub_keys = list(census_data.keys())
     sub_keys.sort()
     rng.shuffle(sub_keys)
@@ -107,7 +108,7 @@ def validate_census(census_path, rng=None):
         zarr_path_lookup = full_census['zarr_paths']
 
         eg_key = list(census.keys())[0]
-        eg_census = census[eg_key]       
+        eg_census = census[eg_key]
 
         for hier in ("cluster", "Level_1", "Level_2"):
             cell_type_list = list(eg_census['celltypes'][hier].keys())
@@ -116,7 +117,7 @@ def validate_census(census_path, rng=None):
                 heatmap_path = zarr_path_lookup[f"{hier}/{cell_type}"]
                 census_data = dict()
                 for struct in census:
-                    census_data[struct] = census[struct]['celltypes'][hier][cell_type] 
+                    census_data[struct] = census[struct]['celltypes'][hier][cell_type]
                 n_validated += check_census(
                     heatmap_path=heatmap_path,
                     census_data=census_data,
@@ -145,10 +146,12 @@ def validate_census(census_path, rng=None):
     print("done")
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--census_path', type=str, default=None)
+    args = parser.parse_args()
     rng = np.random.default_rng(2231321)
-    census_path = "/allen/aibs/technology/danielsf/mouse_3b.2/census.json"
-    validate_census(census_path, rng=rng) 
-
+    validate_census(args.census_path, rng=rng)
+    print(f"validated {args.census_path}")
 
 if __name__ == "__main__":
     main()
