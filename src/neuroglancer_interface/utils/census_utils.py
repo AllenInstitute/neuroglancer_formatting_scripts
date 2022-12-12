@@ -31,6 +31,9 @@ def census_from_mask_lookup_and_arr(
     number of counts and the "brightest" voxel
     """
 
+    this_mask = np.zeros(
+                data_arr.shape, dtype=bool)
+
     result = dict()
     for mask_key in mask_lookup:
         mask_pixels = mask_lookup[mask_key]['mask']
@@ -39,7 +42,7 @@ def census_from_mask_lookup_and_arr(
         voxel = [int(mask_pixels[ii][idx])
                  for ii in range(len(mask_pixels))]
 
-        this_mask = np.zeros(data_arr.shape, dtype=bool)
+        this_mask[:, :] = False
         this_mask[mask_pixels] = True
         total = data_arr[this_mask].sum()
 
