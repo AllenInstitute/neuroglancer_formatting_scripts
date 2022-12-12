@@ -102,12 +102,12 @@ def main():
         structure_set_masks = get_mask_lookup(
                 mask_dir=config_data["census"]["structure_set_masks"],
                 n_processors=args.n_processors,
-                n_test=args.n_test)
+                n_test=None)
 
         structure_masks = get_mask_lookup(
                 mask_dir=config_data["census"]["structure_masks"],
                 n_processors=args.n_processors,
-                n_test=args.n_test)
+                n_test=None)
 
         print_status("Done reading structure masks for census")
     else:
