@@ -44,15 +44,15 @@ def census_from_mask_lookup_and_arr(
 
         this_mask[:, :] = False
         this_mask[mask_pixels] = True
-        total = data_arr[this_mask].sum()
 
         masked_data = np.zeros(data_arr.shape, dtype=np.dtype)
         masked_data[this_mask] = data_arr[this_mask]
-        per_idx = masked_data.sum(axis=(0,1)).astype(float)
+        per_idx = masked_data.sum(axis=(0,1))
+        total = per_idx.sum()
 
         this_result = {'counts': float(total),
                        'max_voxel': voxel,
-                       'per_slice': list(per_idx)}
+                       'per_slice': list(per_idx.astype(float))}
         result[mask_key] = this_result
     return result
 
