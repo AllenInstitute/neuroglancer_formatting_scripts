@@ -38,9 +38,9 @@ def census_from_mask_lookup_and_arr(
     for mask_key in mask_lookup:
         mask_pixels = mask_lookup[mask_key]['mask']
 
-        idx = np.argmax(data_arr[mask_pixels])
-        voxel = [int(mask_pixels[ii][idx])
-                 for ii in range(len(mask_pixels))]
+        voxel = _get_max_voxel(
+            data_arr=data_arr,
+            mask_pixels=mask_pixels)
 
         this_mask[:, :] = False
         this_mask[mask_pixels] = True
@@ -50,17 +50,25 @@ def census_from_mask_lookup_and_arr(
         masked_data[this_mask] = data_arr[this_mask]
         per_idx = masked_data.sum(axis=(0,1)).astype(float)
 
-        # need to transpose because of the way we
-        # are transposing the data for display
-        # in neuroglancer (see data_utils.get_array_from_img)
-        voxel = [voxel[2], voxel[1], voxel[0]]
-
         this_result = {'counts': float(total),
                        'max_voxel': voxel,
                        'per_slice': list(per_idx)}
         result[mask_key] = this_result
     return result
 
+
+def _get_max_voxel(
+        data_arr, mask_pixels):
+    idx = np.argmax(data_arr[mask_pixels])
+    voxel = [int(mask_pixels[ii][idx])
+             for ii in range(len(mask_pixels))]
+
+    # need to transpose because of the way we
+    # are transposing the data for display
+    # in neuroglancer (see data_utils.get_array_from_img)
+    voxel = [voxel[2], voxel[1], voxel[0]]
+
+    return voxel
 
 
 def get_structure_name_lookup(
