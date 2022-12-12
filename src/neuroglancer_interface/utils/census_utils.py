@@ -192,7 +192,7 @@ def _get_mask_lookup_worker(file_path_list, output_dict, lock):
         for id_val in result:
             output_dict[id_val] = result[id_val]
 
-def get_mask_lookup(mask_dir, n_processors):
+def get_mask_lookup(mask_dir, n_processors, n_test=None):
     """
     get a dict mapping integer ID to mask pixels
 
@@ -202,6 +202,9 @@ def get_mask_lookup(mask_dir, n_processors):
         directory to scann for all nii.gz files
 
     n_processors: int
+
+    n_test: int
+        if not None, only load this many masks for testing
 
     Returns
     -------
@@ -215,6 +218,9 @@ def get_mask_lookup(mask_dir, n_processors):
     assert len(id_set) == len(file_path_list)
 
     file_path_list.sort()
+
+    if n_test is not None:
+        file_path_list = file_path_list[:n_test]
 
     mgr = multiprocessing.Manager()
     result = mgr.dict()
