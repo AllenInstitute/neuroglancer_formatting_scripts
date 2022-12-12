@@ -239,21 +239,23 @@ def write_nii_to_group(
         How much to downscale the image by at each level
         of zoom.
     """
-
+    global_t0 = time.time()
     if group_name is not None:
         this_group = root_group.create_group(f"{group_name}")
     else:
         this_group = root_group
+    t0 = time.time()
     img = SimpleITK.ReadImage(nii_file_path)
-
     arr = get_array_from_img(
                 img,
                 transpose=transpose)
+    dur_read = time.time()-t0
 
     (x_scale,
      y_scale,
      z_scale) = get_scales_from_img(img)
 
+    t0 = time.time()
     if metadata_collector is not None:
 
         other_metadata = {
@@ -266,6 +268,8 @@ def write_nii_to_group(
             data_array=arr,
             other_metadata=other_metadata,
             metadata_key=group_name)
+    dur_meta = time.time()-t0
+
 
     write_array_to_group(
         arr=arr,
@@ -276,7 +280,10 @@ def write_nii_to_group(
         downscale=downscale,
         DownscalerClass=DownscalerClass)
 
-    print(f"wrote {nii_file_path} to {group_name}")
+    dur_all = time.time()-global_t0
+    print(f"wrote {nii_file_path} to {group_name}; timing: "
+          f"read {dur_read:.2e} meta {dur_meta:.2e} "
+          f"all {dur_all:.2e}")
 
 def get_array_from_img(img, transpose=True):
     """
