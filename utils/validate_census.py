@@ -66,8 +66,10 @@ def check_census(heatmap_path, census_data, mask_lookup, rng):
         elif ct>1.0e-3:
             non_zero = True
 
-        per_idx = census_data[s]['per_slice']
-        assert len(per_idx) == 66
+        per_idx_lookup = census_data[s]['per_slice']
+        per_idx = np.zeros(mask_arr.shape[0], dtype=float)
+        for idx in per_idx_lookup:
+            per_idx[int(idx)] = per_idx_lookup[idx]
         assert mask_arr.shape[0] == 66
 
         slice_sum = 0.0
