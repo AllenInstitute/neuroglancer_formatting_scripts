@@ -121,8 +121,7 @@ def write_nii_file_list_to_ome_zarr(
                         clobber=clobber)
 
     if prefix is not None:
-        if not only_metadata:
-            parent_group = root_group.create_group(prefix)
+        parent_group = root_group.create_group(prefix)
     else:
         parent_group = root_group
 
