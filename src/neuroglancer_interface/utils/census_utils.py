@@ -50,9 +50,14 @@ def census_from_mask_lookup_and_arr(
 
         total = per_idx.sum()
 
+        per_slice_lookup = dict()
+        for idx in range(len(per_idx)):
+            if per_idx[idx] > 1.0e-20:
+                per_slice_lookup[int(idx)] = float(per_idx[idx])
+
         this_result = {'counts': float(total),
                        'max_voxel': voxel,
-                       'per_slice': list(per_idx.astype(float))}
+                       'per_slice': per_slice_lookup}
         result[mask_key] = this_result
     return result
 
