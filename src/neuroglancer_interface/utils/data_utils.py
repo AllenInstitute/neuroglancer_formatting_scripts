@@ -121,7 +121,8 @@ def write_nii_file_list_to_ome_zarr(
                         clobber=clobber)
 
     if prefix is not None:
-        parent_group = root_group.create_group(prefix)
+        if not only_metadata:
+            parent_group = root_group.create_group(prefix)
     else:
         parent_group = root_group
 
@@ -247,7 +248,8 @@ def write_nii_to_group(
     """
     global_t0 = time.time()
     if group_name is not None:
-        this_group = root_group.create_group(f"{group_name}")
+        if not only_metadata:
+            this_group = root_group.create_group(f"{group_name}")
     else:
         this_group = root_group
     t0 = time.time()
