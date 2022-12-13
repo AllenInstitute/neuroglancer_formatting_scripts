@@ -51,7 +51,8 @@ def census_from_mask_lookup_and_arr(
                                 mask_pixels[2][valid]].sum())
 
             total += this_val
-            per_slice_lookup[int(idx_value)] = this_val
+            if this_val > 1.0e-20:
+                per_slice_lookup[int(idx_value)] = this_val
 
         this_result = {'counts': float(total),
                        'max_voxel': voxel,
