@@ -41,13 +41,17 @@ def census_from_mask_lookup_and_arr(
 
         unq_slice = np.unique(mask_pixels[2])
         per_slice_lookup = dict()
+        total = 0.0
         for idx_value in unq_slice:
             valid = (mask_pixels[2] == idx_value)
-            per_slice_lookup[int(idx_value)] =  float(
+            this_val =  float(
                             data_arr[
                                 mask_pixels[0][valid],
                                 mask_pixels[1][valid],
                                 mask_pixels[2][valid]].sum())
+
+            total += this_val
+            per_slice_lookup[int(idx_value)] = this_val
 
         this_result = {'counts': float(total),
                        'max_voxel': voxel,
