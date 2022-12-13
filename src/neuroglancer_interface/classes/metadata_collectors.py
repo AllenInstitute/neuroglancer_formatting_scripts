@@ -119,9 +119,13 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
         if len(this_census) > 0:
             this['census'] = this_census
 
-        with self._lock:
+        per_slice_lookup = dict()
+        for mask_key in this['census']:
+            for structure_key in this['census'][mask_key]:
+                arr = this['census'][mask_key][structure_key].pop('per_slice')
+                per_slice_lookup[f"{mask_key}/{structure_key}"] = arr
 
-            per_slice = np.array(this['census'].pop('per_slice'))
+        with self._lock:
 
             if metadata_key in self.metadata:
                 raise RuntimeError(
@@ -129,9 +133,10 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
             self.metadata[metadata_key] = this
 
             with h5py.File(self.h5_output_path, "a") as out_file:
-                out_file.create_dataset(
-                    f"{metadata_ke}/per_slice}",
-                    data=per_slice)
+                for mask_key in per_slice_lookup:
+                    out_file.create_dataset(
+                        f"{metadata_key}/{mask_key}",
+                        data=np.array(per_slice_lookup[mask_key]))
 
     def add_final_metadata(self, metadata):
         if hasattr(self, 'masks') and self.masks is not None:
