@@ -1,6 +1,7 @@
 import numpy as np
 import pathlib
 import json
+import h5py
 from neuroglancer_interface.utils.census_utils import (
     census_from_mask_lookup_and_arr)
 
@@ -29,7 +30,7 @@ class MetadataCollectorABC(object):
         raise NotImplementedError("base.add_final_metadata")
 
     def write_to_file(self):
-        output_path = pathlib.Path(self.output_path)
+        output_path = pathlib.Path(self.json_output_path)
         if output_path.exists():
             raise RuntimeError(f"{output_path} exists already")
 
@@ -49,7 +50,7 @@ class BasicMetadataCollector(MetadataCollectorABC):
 
         self._metadata=None
         self._lock = None
-        self.output_path = metadata_output_path
+        self.json_output_path = metadata_output_path
 
     def add_final_metadata(self, metadata):
         return metadata
@@ -72,13 +73,18 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
     def __init__(
             self,
             metadata_output_path=None,
+            h5_output_path=None,
             structure_set_masks=None,
             structure_masks=None):
 
         self._metadata = None
         self._lock = None
         self.masks = None
-        self.output_path = metadata_output_path
+        self.json_output_path = metadata_output_path
+        self.h5_output_path = pathlib.Path(h5_output_path)
+        if self.h5_output_path.exists():
+            raise RuntimeError(f"{self.h5_output_path} already exists")
+
         if structure_set_masks is not None or structure_masks is not None:
             self.masks = {
                 "structure_sets": structure_set_masks,
@@ -114,10 +120,18 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
             this['census'] = this_census
 
         with self._lock:
+
+            per_slice = np.array(this['census'].pop('per_slice'))
+
             if metadata_key in self.metadata:
                 raise RuntimeError(
                     f"Trying to write {metadata_key} more than once")
             self.metadata[metadata_key] = this
+
+            with h5py.File(self.h5_output_path, "a") as out_file:
+                out_file.create_dataset(
+                    f"{metadata_ke}/per_slice}",
+                    data=per_slice)
 
     def add_final_metadata(self, metadata):
         if hasattr(self, 'masks') and self.masks is not None:
