@@ -41,11 +41,9 @@ def convert_mfish_to_ome_zarr(
             "is not a dir")
 
     metadata_path = output_dir / 'metadata.json'
-    metadata_h5_path = output_dir / 'per_slice_counts.h5'
 
     metadata_collector = CellTypeMetadataCollector(
             metadata_output_path=metadata_path,
-            h5_output_path=metadata_h5_path,
             structure_set_masks=structure_set_masks,
             structure_masks=structure_masks)
 
