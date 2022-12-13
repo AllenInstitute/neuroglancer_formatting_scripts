@@ -307,14 +307,6 @@ def create_census(
         else:
             assert zarr_paths == zarr_path_baseline
 
-    # experiment popping per_slice
-    for meta_key in full_census:
-        for structure_key in full_census[meta_key]:
-            this_structure = full_census[meta_key][structure_key]
-            for class_key in this_structure:
-                for this_class in this_structure[class_key]:
-                    this_structure[class_key][this_class].pop('per_slice')
-
     final = {'census': full_census,
              'zarr_paths': zarr_paths}
     return final
