@@ -64,20 +64,24 @@ def convert_census_to_hdf5(
     n_counts = len(count_names)
 
     with h5py.File(output_path, "w") as out_file:
+
+        c_row = min(512, n_counts)
+        c_col = min(512, n_structures)
+
         out_file.create_dataset(
                 "counts",
                 shape=(n_counts, n_structures),
                 dtype=float,
-                chunks=(512, 512))
+                chunks=(c_row, c_col))
 
         out_file.create_dataset(
                 "max_voxel",
                 shape=(n_counts, n_structures, 3),
                 dtype=int,
-                chunks=(512, 512, 3))
+                chunks=(c_row, c_col, 3))
 
-        chunk_size=(512,
-                    max(1, 512//n_slices),
+        chunk_size=(c_row,
+                    min(c_col, max(1, 512//n_slices)),
                     n_slices)
 
         out_file.create_dataset(

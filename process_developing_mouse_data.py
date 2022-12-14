@@ -28,7 +28,7 @@ from neuroglancer_interface.utils.census_utils import (
     create_census)
 
 from neuroglancer_interface.utils.census_conversion import (
-    convert_census_to_h5)
+    convert_census_to_hdf5)
 
 
 def print_status(msg):
@@ -38,8 +38,8 @@ def print_status(msg):
 def get_n_slices(config_data):
     eg_dir = pathlib.Path(config_data["cell_types"]["input_list"][0]["input_dir"])
     fname_list = [n for n in eg_dir.rglob("*.nii.gz")]
-    img = SimpleITK.ReadIamge(fname_list[0])
-    arr = get_array_from_image(img)
+    img = SimpleITK.ReadImage(fname_list[0])
+    arr = get_array_from_img(img)
     n_slices = arr.shape[2]
     return n_slices
 
@@ -190,7 +190,7 @@ def main():
         n_slices = get_n_slices(config_data)
 
         census_h5_path = output_dir / 'census_h5.h5'
-        convert_census_to_hd5(
+        convert_census_to_hdf5(
             input_path=census_json_path,
             output_path=census_h5_path,
             n_slices=n_slices,
