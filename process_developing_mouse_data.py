@@ -5,6 +5,7 @@ import argparse
 import json
 import pathlib
 import shutil
+import SimpleITK
 
 from neuroglancer_interface.modules.ccf_annotation_formatting import (
     format_ccf_annotations)
@@ -18,14 +19,29 @@ from neuroglancer_interface.modules.mfish_ome_zarr import (
 from neuroglancer_interface.modules.cell_types_ome_zarr import (
     convert_cell_types_to_ome_zarr)
 
+from neuroglancer_interface.utils.data_utils import (
+    get_array_from_img)
+
 from neuroglancer_interface.utils.census_utils import (
     get_structure_name_lookup,
     get_mask_lookup,
     create_census)
 
+from neuroglancer_interface.utils.census_conversion import (
+    convert_census_to_h5)
+
 
 def print_status(msg):
     print(f"===={msg}====")
+
+
+def get_n_slices(config_data):
+    eg_dir = pathlib.Path(config_data["cell_types"]["input_list"][0]["input_dir"])
+    fname_list = [n for n in eg_dir.rglob("*.nii.gz")]
+    img = SimpleITK.ReadIamge(fname_list[0])
+    arr = get_array_from_image(img)
+    n_slices = arr.shape[2]
+    return n_slices
 
 
 def main():
@@ -146,8 +162,8 @@ def main():
 
     if do_census:
         print_status("Gathering census")
-        census_path = output_dir / "census.json"
-        if census_path.exists():
+        census_json_path = output_dir / "census.json"
+        if census_json_path.exists():
             raise RuntimeError(
                 f"{census_path} exists")
         census = create_census(
@@ -164,9 +180,22 @@ def main():
             assert human_name not in census['structure_set_masks']
             census['structure_set_masks'][human_name] = structure_set_masks[k]['path']
 
-        with open(census_path, "w") as out_file:
+        with open(census_json_path, "w") as out_file:
             out_file.write(json.dumps(census, indent=2))
         print_status("Done gathering census")
+
+        print_status("Converting census to HDF5")
+
+        # hack to get n_slices
+        n_slices = get_n_slices(config_data)
+
+        census_h5_path = output_dir / 'census_h5.h5'
+        convert_census_to_hd5(
+            input_path=census_json_path,
+            output_path=census_h5_path,
+            n_slices=n_slices,
+            clobber=False)
+        print_status(f"Done converting census to HDF5 -- n_slices {n_slices}")
 
     print_status("Copying over config")
     dest_path = output_dir / 'config.json'

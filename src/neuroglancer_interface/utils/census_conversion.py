@@ -3,7 +3,6 @@ import h5py
 import numpy as np
 import time
 import pathlib
-import argparse
 
 
 def convert_census_to_hdf5(
@@ -196,20 +195,3 @@ def _write_keys(output_path, lookups):
         out_file.create_dataset(
             'cell_types',
             data=json.dumps(cell_type_lookup).encode('utf-8'))
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--input_path', type=str, default=None)
-    parser.add_argument('--output_path', type=str, default=None)
-    parser.add_argument('--clobber', default=False, action='store_true')
-    args = parser.parse_args()
-
-    convert_census_to_hdf5(
-        input_path=args.input_path,
-        output_path=args.output_path,
-        clobber=args.clobber)
-
-
-if __name__ == "__main__":
-    main()
