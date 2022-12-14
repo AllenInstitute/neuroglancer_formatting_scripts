@@ -58,15 +58,11 @@ def convert_census_to_hdf5(
         for name in name_list:
             count_names.append(f"celltypes${prefix}${name}")
 
-    structure_to_idx = {n:ii for ii, n in enumerate(structure_names)}
-    count_to_idx = {n:ii for ii, n in enumerate(count_names)}
     print(f"{len(structure_names)} structures")
     print(f"{len(count_names)} counts")
 
     n_structures = len(structure_names)
     n_counts = len(count_names)
-    per_slice = np.zeros(n_slices, dtype=float)
-
 
     with h5py.File(output_path, "w") as out_file:
         out_file.create_dataset(
@@ -81,8 +77,8 @@ def convert_census_to_hdf5(
                 dtype=int,
                 chunks=(512, 512, 3))
 
-        chunk_size=(min(n_counts, n_structures),
-                    512//n_slices,
+        chunk_size=(512,
+                    max(1, 512//n_slices),
                     n_slices)
 
         out_file.create_dataset(
@@ -91,54 +87,128 @@ def convert_census_to_hdf5(
                 chunks=chunk_size,
                 compression="gzip")
 
-        t0 = time.time()
-        s_ct = 0
-        t_ct = 0
-        for structure_name in structure_names:
-            structure_idx = structure_to_idx[structure_name]
-            s_key_list = structure_name.split('$')
-            this_census = census_data
-            for k in s_key_list:
-                this_census = this_census[k]
-            s_ct += 1
-            for count_name in count_names:
-                count_idx = count_to_idx[count_name]
-                c_key_list = count_name.split('$')
-                this_data = this_census
-                for k in c_key_list:
-                    this_data = this_data[k]
-                t_ct += 1
-                out_file["counts"][count_idx, structure_idx] = this_data["counts"]
-                out_file["max_voxel"][count_idx,
-                                      structure_idx,
-                                      :] = np.array(this_data["max_voxel"])
-                
-                per_slice[:] = 0.0
-                for idx in this_data["per_slice"]:
-                    per_slice[int(idx)] = this_data["per_slice"][idx]
-                
-                out_file["per_slice"][count_idx,
-                                      structure_idx,
-                                      :] = per_slice
+    lookups = _write_data_in_chunks(
+                structure_names=structure_names,
+                count_names=count_names,
+                output_path=output_path,
+                census_data=census_data,
+                n_slices=n_slices)
 
-                if t_ct % 1000 == 0:
-                    duration = time.time()-t0
-                    per = duration/t_ct
-                    pred = per*(n_structures*n_counts)
-                    remain = pred-duration
-                    print(f"{t_ct} in {duration:2e} -- "
-                          f"{remain:.2e} of {pred:.2e}")
+    _write_keys(output_path, lookups)
+
+
+def _write_data_in_chunks(
+        structure_names,
+        count_names,
+        output_path,
+        census_data,
+        n_slices):
+
+    n_structures = len(structure_names)
+    n_counts = len(count_names)
+
+    idx_to_structure = {ii:n for ii, n in enumerate(structure_names)}
+    idx_to_count = {ii:n for ii, n in enumerate(count_names)}
+
+    dump_every = max(1, 10000000//(n_counts*n_slices))
+    count_chunk = np.zeros((n_counts, dump_every), dtype=float)
+    voxel_chunk = np.zeros((n_counts, dump_every, 3), dtype=int)
+    per_slice_chunk = np.zeros((n_counts, dump_every, n_slices), dtype=float)
+
+    t0 = time.time()
+    s_ct = 0
+    t_ct = 0
+
+    min_struct = 0
+    for structure_idx in range(n_structures):
+        structure_name = idx_to_structure[structure_idx]
+        s_key_list = structure_name.split('$')
+        this_census = census_data
+        for k in s_key_list:
+            this_census = this_census[k]
+        s_ct += 1
+        for count_idx in range(n_counts):
+            count_name = idx_to_count[count_idx]
+            c_key_list = count_name.split('$')
+            this_data = this_census
+            for k in c_key_list:
+                this_data = this_data[k]
+            t_ct += 1
+            count_chunk[count_idx,
+                        structure_idx-min_struct] = this_data["counts"]
+
+            voxel_chunk[count_idx,
+                        structure_idx-min_struct,
+                        :] = np.array(this_data["max_voxel"])
+
+            for slice_idx in this_data["per_slice"]:
+                per_slice_chunk[count_idx,
+                                structure_idx-min_struct,
+                                int(slice_idx)] = this_data["per_slice"][slice_idx]
+
+
+        if structure_idx >= (min_struct+dump_every-1) or structure_idx == (n_structures-1):
+            max_valid = structure_idx+1-min_struct
+            with h5py.File(output_path, "a") as out_file:
+                out_file["counts"][:, min_struct:structure_idx+1] = count_chunk[:, :max_valid]
+                out_file["max_voxel"][:, min_struct:structure_idx+1, :] = voxel_chunk[:, :max_valid, :]
+                out_file["per_slice"][:, min_struct:structure_idx+1, :] = per_slice_chunk[:, :max_valid, :]
+
+            count_chunk[:, :] = 0.0
+            voxel_chunk[:, :, :] = 0
+            per_slice_chunk[:, :, :] = 0.0
+
+            min_struct = structure_idx+1
+            duration = time.time()-t0
+            per = duration/t_ct
+            pred = per*(n_structures*n_counts)
+            remain = pred-duration
+            print(f"{t_ct} in {duration:2e} -- "
+                  f"{remain:.2e} of {pred:.2e} left")
+
+    return {'idx_to_structure': idx_to_structure,
+            'idx_to_count': idx_to_count}
+
+
+def _write_keys(output_path, lookups):
+
+    structure_lookup = {lookups['idx_to_structure'][ii].replace('$','/'): int(ii)
+                        for ii in lookups['idx_to_structure']}
+
+    gene_lookup = dict()
+    cell_type_lookup = dict()
+    for ii in lookups['idx_to_count']:
+        name = lookups['idx_to_count'][ii]
+        if name.startswith('genes$'):
+            gene_lookup[name.replace('genes$','').replace('$','/')] = int(ii)
+        elif name.startswith('celltypes$'):
+            cell_type_lookup[name.replace('celltypes$','').replace('$','/')] = int(ii)
+        else:
+            raise RuntimeError(f"cannot parse name {name}")
+
+    with h5py.File(output_path, 'a') as out_file:
+        out_file.create_dataset(
+            'structures',
+            data=json.dumps(structure_lookup).encode('utf-8'))
+        out_file.create_dataset(
+            'genes',
+            data=json.dumps(gene_lookup).encode('utf-8'))
+        out_file.create_dataset(
+            'cell_types',
+            data=json.dumps(cell_type_lookup).encode('utf-8'))
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_path', type=str, default=None)
     parser.add_argument('--output_path', type=str, default=None)
+    parser.add_argument('--clobber', default=False, action='store_true')
     args = parser.parse_args()
 
     convert_census_to_hdf5(
         input_path=args.input_path,
-        output_path=args.output_path)
+        output_path=args.output_path,
+        clobber=args.clobber)
 
 
 if __name__ == "__main__":
