@@ -25,7 +25,8 @@ def convert_cell_types_to_ome_zarr(
         n_processors: int,
         structure_set_masks=None,
         structure_masks=None,
-        n_test=None):
+        n_test=None,
+        only_metadata=False):
     """
     output_dir -- e.g. mouse_5/cell_types
 
@@ -63,7 +64,8 @@ def convert_cell_types_to_ome_zarr(
             downscale=downscale,
             structure_set_masks=structure_set_masks,
             structure_masks=structure_masks,
-            n_test=n_test)
+            n_test=n_test,
+            only_metadata=only_metadata)
 
 
 def write_sub_group(
@@ -74,7 +76,8 @@ def write_sub_group(
         downscale=2,
         structure_set_masks=None,
         structure_masks=None,
-        n_test=None):
+        n_test=None,
+        only_metadata=False):
 
 
     input_dir = pathlib.Path(input_dir)
@@ -119,7 +122,8 @@ def write_sub_group(
             clobber=False,
             prefix=prefix,
             downscale=downscale,
-            metadata_collector=metadata_collector)
+            metadata_collector=metadata_collector,
+            only_metadata=only_metadata)
 
     print("copying manifest over")
     output_dir = pathlib.Path(root_group.store.path)

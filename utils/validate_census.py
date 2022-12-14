@@ -1,6 +1,7 @@
 import SimpleITK
 import json
 import numpy as np
+import argparse
 
 def check_census(heatmap_path, census_data, mask_lookup, rng):
     n_validated = 0
@@ -8,7 +9,7 @@ def check_census(heatmap_path, census_data, mask_lookup, rng):
     heatmap_arr = SimpleITK.GetArrayFromImage(
                     SimpleITK.ReadImage(heatmap_path))
 
- 
+
     sub_keys = list(census_data.keys())
     sub_keys.sort()
     rng.shuffle(sub_keys)
@@ -65,6 +66,21 @@ def check_census(heatmap_path, census_data, mask_lookup, rng):
         elif ct>1.0e-3:
             non_zero = True
 
+        per_idx_lookup = census_data[s]['per_slice']
+        per_idx = np.zeros(mask_arr.shape[0], dtype=float)
+        for idx in per_idx_lookup:
+            per_idx[int(idx)] = per_idx_lookup[idx]
+        assert mask_arr.shape[0] == 66
+
+        slice_sum = 0.0
+        for idx in range(66):
+            this_slice = heatmap_arr[idx, :, :]
+            mask_slice = mask_arr[idx, :, :].astype(bool)
+            this_sum = this_slice[mask_slice].sum()
+            slice_sum += this_sum
+            np.testing.assert_allclose(this_sum, per_idx[idx], atol=0.0, rtol=0.0001)
+
+        np.testing.assert_allclose(slice_sum, ct, atol=0.0, rtol=0.0001)
         if is_bizarre:
             print(f"validated {ct} {test_voxel} {test_max_val:.5e} -- {expected_ct} {max_voxel} {this_max_val:.5e}"
                    f" {zero} {non_zero}")
@@ -94,7 +110,7 @@ def validate_census(census_path, rng=None):
         zarr_path_lookup = full_census['zarr_paths']
 
         eg_key = list(census.keys())[0]
-        eg_census = census[eg_key]       
+        eg_census = census[eg_key]
 
         for hier in ("cluster", "Level_1", "Level_2"):
             cell_type_list = list(eg_census['celltypes'][hier].keys())
@@ -103,7 +119,7 @@ def validate_census(census_path, rng=None):
                 heatmap_path = zarr_path_lookup[f"{hier}/{cell_type}"]
                 census_data = dict()
                 for struct in census:
-                    census_data[struct] = census[struct]['celltypes'][hier][cell_type] 
+                    census_data[struct] = census[struct]['celltypes'][hier][cell_type]
                 n_validated += check_census(
                     heatmap_path=heatmap_path,
                     census_data=census_data,
@@ -132,10 +148,12 @@ def validate_census(census_path, rng=None):
     print("done")
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--census_path', type=str, default=None)
+    args = parser.parse_args()
     rng = np.random.default_rng(2231321)
-    census_path = "/allen/aibs/technology/danielsf/mouse3_test/census.json"
-    validate_census(census_path, rng=rng) 
-
+    validate_census(args.census_path, rng=rng)
+    print(f"validated {args.census_path}")
 
 if __name__ == "__main__":
     main()

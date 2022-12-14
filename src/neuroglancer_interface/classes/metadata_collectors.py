@@ -12,7 +12,7 @@ class MetadataCollectorABC(object):
             data_array,
             metadata_key,
             other_metadata=None):
-        raise NotImplementedError("this is the base.collecte_metadata")
+        raise NotImplementedError("this is the base.collect_metadata")
 
     @property
     def metadata(self):
@@ -25,22 +25,16 @@ class MetadataCollectorABC(object):
     def set_lock(self, lock_obj):
         self._lock = lock_obj
 
+    def add_final_metadata(self, metadata):
+        raise NotImplementedError("base.add_final_metadata")
+
     def write_to_file(self):
         output_path = pathlib.Path(self.output_path)
         if output_path.exists():
             raise RuntimeError(f"{output_path} exists already")
 
         metadata = dict(self.metadata)
-        if hasattr(self, 'masks') and self.masks is not None:
-            local_masks = dict()
-            for k in self.masks:
-                if self.masks[k] is not None:
-                    local_masks[k] = dict()
-                    for el in self.masks[k]:
-                        local_masks[k][el] = {'path': self.masks[k][el]['path']}
-
-            metadata['masks'] = local_masks
-
+        metadata = self.add_final_metadata(metadata)
         with open(output_path, 'w') as out_file:
             out_file.write(json.dumps(metadata, indent=2))
 
@@ -57,6 +51,8 @@ class BasicMetadataCollector(MetadataCollectorABC):
         self._lock = None
         self.output_path = metadata_output_path
 
+    def add_final_metadata(self, metadata):
+        return metadata
 
     def collect_metadata(
             self,
@@ -122,3 +118,15 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
                 raise RuntimeError(
                     f"Trying to write {metadata_key} more than once")
             self.metadata[metadata_key] = this
+
+    def add_final_metadata(self, metadata):
+        if hasattr(self, 'masks') and self.masks is not None:
+            local_masks = dict()
+            for k in self.masks:
+                if self.masks[k] is not None:
+                    local_masks[k] = dict()
+                    for el in self.masks[k]:
+                        local_masks[k][el] = {'path': self.masks[k][el]['path']}
+
+            metadata['masks'] = local_masks
+        return metadata

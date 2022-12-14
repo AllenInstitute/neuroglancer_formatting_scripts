@@ -34,22 +34,47 @@ def census_from_mask_lookup_and_arr(
     result = dict()
     for mask_key in mask_lookup:
         mask_pixels = mask_lookup[mask_key]['mask']
-        valid = data_arr[mask_pixels]
-        total = valid.sum()
-        idx = np.argmax(valid)
-        voxel = [int(mask_pixels[ii][idx])
-                 for ii in range(len(mask_pixels))]
 
-        # need to transpose because of the way we
-        # are transposing the data for display
-        # in neuroglancer (see data_utils.get_array_from_img)
-        voxel = [voxel[2], voxel[1], voxel[0]]
+        voxel = _get_max_voxel(
+            data_arr=data_arr,
+            mask_pixels=mask_pixels)
+
+        unq_slice = np.unique(mask_pixels[2])
+        per_slice_lookup = dict()
+        total = 0.0
+        for idx_value in unq_slice:
+            valid = (mask_pixels[2] == idx_value)
+            this_val =  float(
+                            data_arr[
+                                mask_pixels[0][valid],
+                                mask_pixels[1][valid],
+                                mask_pixels[2][valid]].sum())
+
+            total += this_val
+            if this_val > 1.0e-20:
+                per_slice_lookup[int(idx_value)] = this_val
 
         this_result = {'counts': float(total),
-                       'max_voxel': voxel}
+                       'max_voxel': voxel,
+                       'per_slice': per_slice_lookup}
+
         result[mask_key] = this_result
+
     return result
 
+
+def _get_max_voxel(
+        data_arr, mask_pixels):
+    idx = np.argmax(data_arr[mask_pixels])
+    voxel = [int(mask_pixels[ii][idx])
+             for ii in range(len(mask_pixels))]
+
+    # need to transpose because of the way we
+    # are transposing the data for display
+    # in neuroglancer (see data_utils.get_array_from_img)
+    voxel = [voxel[2], voxel[1], voxel[0]]
+
+    return voxel
 
 
 def get_structure_name_lookup(
@@ -184,7 +209,7 @@ def _get_mask_lookup_worker(file_path_list, output_dict, lock):
         for id_val in result:
             output_dict[id_val] = result[id_val]
 
-def get_mask_lookup(mask_dir, n_processors):
+def get_mask_lookup(mask_dir, n_processors, n_test=None):
     """
     get a dict mapping integer ID to mask pixels
 
@@ -194,6 +219,9 @@ def get_mask_lookup(mask_dir, n_processors):
         directory to scann for all nii.gz files
 
     n_processors: int
+
+    n_test: int
+        if not None, only load this many masks for testing
 
     Returns
     -------
@@ -207,6 +235,9 @@ def get_mask_lookup(mask_dir, n_processors):
     assert len(id_set) == len(file_path_list)
 
     file_path_list.sort()
+
+    if n_test is not None:
+        file_path_list = file_path_list[:n_test]
 
     mgr = multiprocessing.Manager()
     result = mgr.dict()

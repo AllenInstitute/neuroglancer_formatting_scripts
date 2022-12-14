@@ -55,7 +55,8 @@ def write_nii_file_list_to_ome_zarr(
         prefix=None,
         root_group=None,
         metadata_collector=None,
-        DownscalerClass=XYScaler):
+        DownscalerClass=XYScaler,
+        only_metadata=False):
     """
     Convert a list of nifti files into OME-zarr format
 
@@ -132,7 +133,8 @@ def write_nii_file_list_to_ome_zarr(
             root_group=parent_group,
             downscale=downscale,
             metadata_collector=metadata_collector,
-            DownscalerClass=DownscalerClass)
+            DownscalerClass=DownscalerClass,
+            only_metadata=only_metadata)
 
     else:
         n_workers = max(1, n_processors-1)
@@ -157,7 +159,8 @@ def write_nii_file_list_to_ome_zarr(
                             'root_group': parent_group,
                             'downscale': downscale,
                             'metadata_collector': metadata_collector,
-                            'DownscalerClass': DownscalerClass})
+                            'DownscalerClass': DownscalerClass,
+                            'only_metadata': only_metadata})
             p.start()
             process_list.append(p)
 
@@ -177,7 +180,8 @@ def _write_nii_file_list_worker(
         root_group,
         downscale,
         metadata_collector=None,
-        DownscalerClass=XYScaler):
+        DownscalerClass=XYScaler,
+        only_metadata=False):
     """
     Worker function to actually convert a subset of nifti
     files to OME-zarr
@@ -207,7 +211,8 @@ def _write_nii_file_list_worker(
             nii_file_path=f_path,
             downscale=downscale,
             metadata_collector=metadata_collector,
-            DownscalerClass=DownscalerClass)
+            DownscalerClass=DownscalerClass,
+            only_metadata=only_metadata)
 
 
 def write_nii_to_group(
@@ -218,7 +223,8 @@ def write_nii_to_group(
         transpose=True,
         metadata_collector=None,
         metadata_key=None,
-        DownscalerClass=XYScaler):
+        DownscalerClass=XYScaler,
+        only_metadata=False):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -239,21 +245,24 @@ def write_nii_to_group(
         How much to downscale the image by at each level
         of zoom.
     """
-
+    global_t0 = time.time()
     if group_name is not None:
-        this_group = root_group.create_group(f"{group_name}")
+        if not only_metadata:
+            this_group = root_group.create_group(f"{group_name}")
     else:
         this_group = root_group
+    t0 = time.time()
     img = SimpleITK.ReadImage(nii_file_path)
-
     arr = get_array_from_img(
                 img,
                 transpose=transpose)
+    dur_read = time.time()-t0
 
     (x_scale,
      y_scale,
      z_scale) = get_scales_from_img(img)
 
+    t0 = time.time()
     if metadata_collector is not None:
 
         other_metadata = {
@@ -266,17 +275,23 @@ def write_nii_to_group(
             data_array=arr,
             other_metadata=other_metadata,
             metadata_key=group_name)
+    dur_meta = time.time()-t0
 
-    write_array_to_group(
-        arr=arr,
-        group=this_group,
-        x_scale=x_scale,
-        y_scale=y_scale,
-        z_scale=z_scale,
-        downscale=downscale,
-        DownscalerClass=DownscalerClass)
 
-    print(f"wrote {nii_file_path} to {group_name}")
+    if not only_metadata:
+        write_array_to_group(
+            arr=arr,
+            group=this_group,
+            x_scale=x_scale,
+            y_scale=y_scale,
+            z_scale=z_scale,
+            downscale=downscale,
+            DownscalerClass=DownscalerClass)
+
+    dur_all = time.time()-global_t0
+    print(f"wrote {nii_file_path} to {group_name}; timing: "
+          f"read {dur_read:.2e} meta {dur_meta:.2e} "
+          f"all {dur_all:.2e}")
 
 def get_array_from_img(img, transpose=True):
     """
