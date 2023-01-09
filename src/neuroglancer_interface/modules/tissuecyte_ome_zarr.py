@@ -108,7 +108,8 @@ def copy_over_image_series_metadata(
         image_series_id_set = set([int(sub_dir.name)
                                    for sub_dir in sub_dir_list])
         for ii in range(len(input_metadata)):
-            if input_metadata[ii]['image_series_id'] not in sub_dir_list:
+            this_id = int(input_metadata[ii]['image_series_id'])
+            if this_id not in image_series_id_set:
                 to_pop.append(ii)
         to_pop.reverse()
         for ii in to_pop:
