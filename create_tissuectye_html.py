@@ -128,10 +128,11 @@ def create_tissuecyte_lookup(
     key_order = []
     for series_id in series_id_list:
         tissuecyte_s3 = f"{s3_location}/tissuecyte/{series_id}"
-        range_lookup = image_series_metadata[int(series_id)]
+        this_metadata = image_series_metadata[int(series_id)]
 
-        red_max = float(range_lookup['red_upper'])
-        green_max = float(range_lookup['green_upper'])
+        red_max = float(this_metadata['red_upper'])
+        green_max = float(this_metadata['green_upper'])
+        mouse_id = this_metadata['mouse_id']
 
         this_metadata = metadata[f"{series_id}/green"]
         x_mm = this_metadata["x_mm"]
@@ -149,8 +150,8 @@ def create_tissuecyte_lookup(
 
         key_to_link[series_id] = url
         key_order.append(series_id)
-        key_to_other_cols[series_id] = {'names': ['image_series_id'],
-                                        'values': [str(series_id)]}
+        key_to_other_cols[series_id] = {'names': ['image_series_id', 'labtracks ID'],
+                                        'values': [str(series_id), int(mouse_id)]}
 
     return {'key_to_link': key_to_link,
             'key_order': key_order,
@@ -193,7 +194,7 @@ def create_tissuecyte_html(
         key_to_other_cols=key_to_other_cols,
         key_order=key_order,
         div_name="tissuecyte",
-        search_by=['image_series_id'],
+        search_by=['image_series_id', 'labtracks ID'],
         metadata_lines=None)
 
     print(f"wrote {output_path}")
