@@ -307,7 +307,7 @@ def get_array_from_img(img, transpose=True):
 def get_scales_from_img(img):
     """
     Takes in a SimpleITK image;
-    returns (x_scale, y_scale, z_scale)
+    returns (x_scale, y_scale, z_scale) in mm
     """
     if 'pixdim[1]' in img.GetMetaDataKeys():
         x_scale = float(img.GetMetaData('pixdim[1]'))
