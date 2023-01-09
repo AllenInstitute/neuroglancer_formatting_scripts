@@ -78,4 +78,12 @@ def convert_tissuecyte_to_ome_zarr(
             dest_path = output_dir / src_path.parent.name / src_path.name
             shutil.copy(src_path, dest_path)
 
+    k = "image_series_metadata.json"
+    input_metadata_path = input_dir / k
+    if input_metadata_path.exists():
+        print("copying image_series_metadata.json over")
+        output_metadata_path = output_dir / k
+        shtuil.copy(src=input_metadata_path,
+                    dst=output_metadata_path)
+
     metadata_collector.write_to_file()
