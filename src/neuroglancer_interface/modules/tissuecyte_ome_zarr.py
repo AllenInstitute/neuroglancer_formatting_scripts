@@ -1,4 +1,5 @@
 import shutil
+import json
 import pathlib
 import multiprocessing
 
@@ -78,12 +79,41 @@ def convert_tissuecyte_to_ome_zarr(
             dest_path = output_dir / src_path.parent.name / src_path.name
             shutil.copy(src_path, dest_path)
 
+    copy_over_image_series_metadata(
+        input_dir=input_dir,
+        output_dir=output_dir)
+
+    metadata_collector.write_to_file()
+
+
+def copy_over_image_series_metadata(
+        input_dir,
+        output_dir):
+    """
+    input_dir is the directory where the resampled .nii.gz files originate
+
+    output_dir is the dir where the metadata file will be written
+    """
+
+    sub_dir_list = [n for n in input_dir.iterdir()
+                    if n.is_dir()]
+
     k = "image_series_metadata.json"
     input_metadata_path = input_dir / k
     if input_metadata_path.exists():
         print("copying image_series_metadata.json over")
-        output_metadata_path = output_dir / k
-        shtuil.copy(src=input_metadata_path,
-                    dst=output_metadata_path)
+        with open(input_metadata_path, 'rb') as in_file:
+            input_metadata = json.load(in_file)
+        to_pop = []
+        image_series_id_set = set([int(sub_dir.name)
+                                   for sub_dir in sub_dir_list])
+        for ii in range(len(input_metadata)):
+            if input_metadata[ii]['image_series_id'] not in sub_dir_list:
+                to_pop.append(ii)
+        to_pop.reverse()
+        for ii in to_pop:
+            input_metadata.pop(ii)
 
-    metadata_collector.write_to_file()
+        output_metadata_path = output_dir / k
+        with open(output_metadata_path, 'w') as out_file:
+            out_file.write(json.dumps(input_metadata, indent=2))
