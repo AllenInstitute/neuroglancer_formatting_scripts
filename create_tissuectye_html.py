@@ -2,6 +2,11 @@ import pathlib
 import json
 import argparse
 
+from botocore import UNSIGNED
+from botocore.client import Config as botocore_Config
+import boto3
+import io
+
 from neuroglancer_interface.utils.url_utils import (
     get_final_url,
     get_heatmap_image_layer,
@@ -65,40 +70,68 @@ def create_tissuecyte_url(
     return url
 
 
+def _get_tissuecyte_metadata(
+        bucket_name,
+        data_prefix,
+        filename='metadata.json'):
+
+    s3_config = botocore_Config(signature_version=UNSIGNED)
+    s3_client = boto3.client('s3', config=s3_config)
+    metadata_key = f"data/{data_prefix}/tissuecyte/{filename}"
+    metadata_response = s3_client.get_object(
+                            Bucket=bucket_name,
+                            Key=metadata_key)
+    metadata_stream = io.BytesIO()
+    for chunk in metadata_response['Body'].iter_chunks():
+        metadata_stream.write(chunk)
+    metadata_stream.seek(0)
+    metadata = json.load(metadata_stream)
+    return metadata
+
+
 def create_tissuecyte_html(
-        dataset_dir,
-        s3_location,
+        bucket_name,
+        data_prefix,
         table_title,
         output_path):
+    """
+    Data prefix is the directory under bucket_name/data/
+    """
 
-    dataset_dir = pathlib.Path(dataset_dir)
+    metadata = _get_tissuecyte_metadata(
+                    bucket_name=bucket_name,
+                    data_prefix=data_prefix,
+                    filename='metadata.json')
+
+    image_series_metadata = _get_tissuecyte_metadata(
+                    bucket_name=bucket_name,
+                    data_prefix=data_prefix,
+                    filename='image_series_metadata.json')
+
+    # convert to a lookup table
+    image_series_metadata = {
+        this['image_series_id']: this
+        for this in image_series_metadata}
+
+
+    series_id_list = set()
+    for k in metadata:
+        series_id = k.split('/')[0]
+        series_id_list.add(series_id)
+    series_id_list = list(series_id_list)
+    series_id_list.sort()
+
+    s3_location = f"{bucket_name}/data/{data_prefix}"
 
     template_s3 = f"{s3_location}/avg_template"
     segmentation_s3 = f"{s3_location}/ccf_annotations"
 
-    metadata_path = dataset_dir / "tissuecyte/metadata.json"
-    with open(metadata_path, "rb") as in_file:
-        metadata = json.load(in_file)
-
-    tissuecyte_dir = dataset_dir / "tissuecyte"
-    tissuecyte_dir_list = [n for n in tissuecyte_dir.iterdir()
-                           if n.is_dir()]
-
-    tissuecyte_dir_list.sort()
     key_to_link = dict()
     key_to_other_cols = dict()
     key_order = []
-    for sub_dir in tissuecyte_dir_list:
-        series_id = sub_dir.name
+    for series_id in series_id_list:
         tissuecyte_s3 = f"{s3_location}/tissuecyte/{series_id}"
-        csv_path = sub_dir / "image_series_information.csv"
-        range_lookup = dict()
-        with open(csv_path, "r") as in_file:
-            header = in_file.readline().strip().split(',')
-            data = in_file.readline().strip().split(',')
-            assert len(header) == len(data)
-            for h, d in zip(header, data):
-                range_lookup[h] = d
+        range_lookup = image_series_metadata[int(series_id)]
 
         red_max = float(range_lookup['red_upper'])
         green_max = float(range_lookup['green_upper'])
@@ -143,15 +176,16 @@ def create_tissuecyte_html(
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--s3_location", type=str, default=None)
-    parser.add_argument("--data_dir", type=str, default=None)
+    parser.add_argument("--bucket_name", type=str,
+                        default='tissuecyte-visualizations')
+    parser.add_argument("--data_prefix", type=str, default=None)
     parser.add_argument("--output_path", type=str, default=None)
     parser.add_argument("--table_title", type=str, default=None)
     args = parser.parse_args()
 
     create_tissuecyte_html(
-        dataset_dir=args.data_dir,
-        s3_location=args.s3_location,
+        bucket_name=args.bucket_name,
+        data_prefix=args.data_prefix,
         table_title=args.table_title,
         output_path=args.output_path)
 
