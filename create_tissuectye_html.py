@@ -89,11 +89,9 @@ def _get_tissuecyte_metadata(
     return metadata
 
 
-def create_tissuecyte_html(
+def create_tissuecyte_lookup(
         bucket_name,
-        data_prefix,
-        table_title,
-        output_path):
+        data_prefix):
     """
     Data prefix is the directory under bucket_name/data/
     """
@@ -117,12 +115,11 @@ def create_tissuecyte_html(
     series_id_list = set()
     for k in metadata:
         series_id = k.split('/')[0]
-        series_id_list.add(series_id)
+        series_id_list.add(int(series_id))
     series_id_list = list(series_id_list)
     series_id_list.sort()
 
     s3_location = f"{bucket_name}/data/{data_prefix}"
-
     template_s3 = f"{s3_location}/avg_template"
     segmentation_s3 = f"{s3_location}/ccf_annotations"
 
@@ -155,10 +152,39 @@ def create_tissuecyte_html(
         key_to_other_cols[series_id] = {'names': ['image_series_id'],
                                         'values': [str(series_id)]}
 
-    metadata_lines = [
-        f"tissuecyte src: {tissuecyte_s3}",
-        f"template src: {template_s3}",
-        f"segmentation src: {segmentation_s3}"]
+    return {'key_to_link': key_to_link,
+            'key_order': key_order,
+            'key_to_other_cols': key_to_other_cols}
+
+
+def create_tissuecyte_html(
+        bucket_name,
+        data_prefix_list,
+        table_title,
+        output_path):
+
+    key_to_link = dict()
+    key_to_other_cols = dict()
+    key_order = []
+
+    for data_prefix in data_prefix_list:
+        result = create_tissuecyte_lookup(
+                bucket_name=bucket_name,
+                data_prefix=data_prefix)
+
+        for k in result['key_to_link']:
+            key_to_link[k] = result['key_to_link'][k]
+        for k in result['key_order']:
+            key_order.append(k)
+        for k in result['key_to_other_cols']:
+            key_to_other_cols[k]= result['key_to_other_cols'][k]
+
+    key_order.sort()
+
+    #metadata_lines = [
+    #    f"tissuecyte src: {tissuecyte_s3}",
+    #    f"template src: {template_s3}",
+    #    f"segmentation src: {segmentation_s3}"]
 
     write_basic_table(
         output_path=output_path,
@@ -168,7 +194,7 @@ def create_tissuecyte_html(
         key_order=key_order,
         div_name="tissuecyte",
         search_by=['image_series_id'],
-        metadata_lines=metadata_lines)
+        metadata_lines=None)
 
     print(f"wrote {output_path}")
 
@@ -178,14 +204,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bucket_name", type=str,
                         default='tissuecyte-visualizations')
-    parser.add_argument("--data_prefix", type=str, default=None)
+    parser.add_argument("--data_prefix", type=str, default=None, nargs='+')
     parser.add_argument("--output_path", type=str, default=None)
     parser.add_argument("--table_title", type=str, default=None)
     args = parser.parse_args()
 
+    if not isinstance(args.data_prefix, list):
+        data_prefix = [args.data_prefix]
+    else:
+        data_prefix = args.data_prefix
+
     create_tissuecyte_html(
         bucket_name=args.bucket_name,
-        data_prefix=args.data_prefix,
+        data_prefix_list=data_prefix,
         table_title=args.table_title,
         output_path=args.output_path)
 
