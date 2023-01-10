@@ -9,9 +9,31 @@ from neuroglancer_interface.modules.ccf_annotation_formatting import (
     format_labels)
 
 def write_out_ccf(
-    segmentation_path_list: List[pathlib.Path],
-    label_path: pathlib.Path,
-    output_dir: pathlib.Path):
+        segmentation_path_list: List[pathlib.Path],
+        label_path: pathlib.Path,
+        output_dir: pathlib.Path) -> None:
+    """
+    Write CCF annotations to disk in neuroglancer-friendly format
+
+    Parameters
+    ----------
+    segmentation_path_list:
+        List of paths to CCF annotations at different scales (the nii.gz files)
+
+    label_path:
+        Path to the text file mapping uint16 to region name
+
+    output_dir:
+        The directory where output will be written.
+
+    Returns
+    -------
+    None
+        Data is written to output_dir in correct format
+    """
+
+    if not output_dir.exists():
+        output_dir.mkdir()
 
     parent_info = create_info_dict(
             segmentation_path_list=segmentation_path_list)
@@ -31,10 +53,25 @@ def write_out_ccf(
 
 def do_chunking(
         metadata: dict,
-        parent_output_dir: pathlib.Path):
+        parent_output_dir: pathlib.Path) -> None:
     """
     Take the metadata created by get_scale_metadata and actually
     do the chunking of the CCF annotation file.
+
+    Parameters
+    ----------
+    metadata:
+        The info['scales'] element corresponding to the scale of CCF
+        atlas being written
+
+    parent_output_dir:
+        The output dir for the entire CCF annotation. A sub-directory
+        will be created where the chunked version of this annotation
+        will be written.
+
+    Returns
+    -------
+    None
     """
 
     file_path = pathlib.Path(metadata['local_file_path'])
@@ -73,9 +110,10 @@ def do_chunking(
              
 
 def create_info_dict(
-        segmentation_path_list: List[pathlib.Path]):
+        segmentation_path_list: List[pathlib.Path]) -> dict:
     """
-    Create the dict that will be JSONized to make the info file
+    Create the dict that will be JSONized to make the info file.
+    Return that dict.
     """
 
     scale_list = []
@@ -102,11 +140,11 @@ def create_info_dict(
 
 def get_scale_metadata(
         segmentation_path,
-        chunk_size=(128, 128, 128)):
+        chunk_size=(128, 128, 128)) -> dict:
     """
     Get the dict representing a single scale of a segmentation volume
 
-    these need to be ordered from native resolution to zoomed out resolution
+    These need to be ordered from native resolution to zoomed out resolution
     """
     sitk_img = SimpleITK.ReadImage(segmentation_path)
     scale_mm = get_scales_from_img(sitk_img)
