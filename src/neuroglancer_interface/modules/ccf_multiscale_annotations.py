@@ -166,7 +166,10 @@ def create_info_dict(
     result = dict()
     result['type'] = 'segmentation'
     result['segment_properties'] = 'segment_properties'
-    result['data_type'] = 'uint16'
+    if use_compression:
+        result['data_type'] = 'uint32'
+    else:
+        result['data_type'] = 'uint16'
     result['num_channels'] = 1
     result['scales'] = scale_list
 
