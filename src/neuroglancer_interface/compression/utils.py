@@ -192,6 +192,8 @@ def update_byte_stream(
     # I think so; the least significant bit comes first,
     # (unless it should not...)
 
+    assert this_value < 2**n_bits
+
     this_binary = f'{this_value:0{n_bits}b}'
     pwr = 2**bit_count
     for idx in range(n_bits-1, -1, -1):
