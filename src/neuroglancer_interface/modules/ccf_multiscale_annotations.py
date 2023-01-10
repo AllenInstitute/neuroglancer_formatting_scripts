@@ -7,12 +7,16 @@ from neuroglancer_interface.utils.data_utils import get_scales_from_img
 from neuroglancer_interface.utils.ccf_utils import (
     get_labels,
     format_labels)
+from neuroglancer_interface.compression.utils import (
+    compress_ccf_data)
+
 
 def write_out_ccf(
         segmentation_path_list: List[pathlib.Path],
         label_path: pathlib.Path,
         output_dir: pathlib.Path,
-        use_compression=False) -> None:
+        use_compression=False,
+        compression_blocksize=64) -> None:
     """
     Write CCF annotations to disk in neuroglancer-friendly format
 
@@ -38,7 +42,8 @@ def write_out_ccf(
 
     parent_info = create_info_dict(
             segmentation_path_list=segmentation_path_list,
-            use_compression=use_compression)
+            use_compression=use_compression,
+            compression_blocksize=compression_blocksize)
 
     for scale_metadata in parent_info['scales']:
         do_chunking(metadata=scale_metadata,
@@ -80,6 +85,7 @@ def do_chunking(
         use_compression = False
     elif metadata['encoding'] == 'compressed_segmentation':
         use_compression = True
+        blocksize = metadata['compressed_segmentation_block_size'][0]
     else:
         raise RuntimeError(
             f"cannot parse encoding: {metadata['encoding']}")
@@ -115,7 +121,10 @@ def do_chunking(
                 this_file = output_dir / name
                 this_data = sitk_arr[x0:x1, y0:y1, z0:z1]
                 if use_compression:
-                    raise NotImplementedError()
+                    compress_ccf_data(
+                        data=this_data,
+                        file_path=this_file,
+                        blocksize=blocksize)
                 else:
                     _write_chunk_uncompressed(
                             file_path=this_file,
@@ -132,7 +141,8 @@ def _write_chunk_uncompressed(file_path, data):
 
 def create_info_dict(
         segmentation_path_list: List[pathlib.Path],
-        use_compression=False) -> dict:
+        use_compression=False,
+        compression_blocksize=64) -> dict:
     """
     Create the dict that will be JSONized to make the info file.
     Return that dict.
@@ -141,7 +151,10 @@ def create_info_dict(
     scale_list = []
     size_list = []
     for pth in segmentation_path_list:
-        this = get_scale_metadata(segmentation_path=pth)
+        this = get_scale_metadata(
+                    segmentation_path=pth,
+                    use_compression=use_compression,
+                    compression_blocksize=compression_blocksize)
         scale_list.append(this)
         size_list.append(this['size'][0]*this['size'][1]*this['size'][2])
 
@@ -164,7 +177,8 @@ def create_info_dict(
 def get_scale_metadata(
         segmentation_path,
         chunk_size=(256, 256, 256),
-        use_compression=False) -> dict:
+        use_compression=False,
+        compression_blocksize=64) -> dict:
     """
     Get the dict representing a single scale of a segmentation volume
 
@@ -185,6 +199,10 @@ def get_scale_metadata(
         result['encoding'] = 'raw'
     else:
         result['encoding'] = 'compressed_segmentation'
+        result['compressed_segmentation_block_size'] = [
+            compression_blocksize,
+            compression_blocksize,
+            compression_blocksize]
 
     mm_to_nm = 10**6
     x_nm = int(mm_to_nm*scale_mm[0])
