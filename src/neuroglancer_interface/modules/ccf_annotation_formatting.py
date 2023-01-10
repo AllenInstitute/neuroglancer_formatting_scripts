@@ -33,9 +33,9 @@ def format_ccf_annotations(
     """
 
     write_out_ccf(
-        segmentation_path_list=[segmentation_path],
-        label_path=annotation_path,
-        output_dir=output_dir)
+        segmentation_path_list=[pathlib.Path(segmentation_path)],
+        label_path=pathlib.Path(annotation_path),
+        output_dir=pathlib.Path(output_dir))
 
     print("Successfully formatted CCF annotations!")
 
