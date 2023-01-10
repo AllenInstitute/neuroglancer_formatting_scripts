@@ -56,7 +56,8 @@ def write_nii_file_list_to_ome_zarr(
         root_group=None,
         metadata_collector=None,
         DownscalerClass=XYScaler,
-        only_metadata=False):
+        only_metadata=False,
+        default_chunk=64):
     """
     Convert a list of nifti files into OME-zarr format
 
@@ -92,6 +93,10 @@ def write_nii_file_list_to_ome_zarr(
     root_group:
         Optional root group into which to write ome-zarr
         group. If None, will be created.
+
+    default_chunk: int
+        default size for single dimension of chunk when writing
+        data to disk
 
     Returns
     -------
@@ -160,7 +165,8 @@ def write_nii_file_list_to_ome_zarr(
                             'downscale': downscale,
                             'metadata_collector': metadata_collector,
                             'DownscalerClass': DownscalerClass,
-                            'only_metadata': only_metadata})
+                            'only_metadata': only_metadata,
+                            'default_chunk': default_chunk})
             p.start()
             process_list.append(p)
 
@@ -181,7 +187,8 @@ def _write_nii_file_list_worker(
         downscale,
         metadata_collector=None,
         DownscalerClass=XYScaler,
-        only_metadata=False):
+        only_metadata=False,
+        default_chunk=64):
     """
     Worker function to actually convert a subset of nifti
     files to OME-zarr
@@ -212,7 +219,8 @@ def _write_nii_file_list_worker(
             downscale=downscale,
             metadata_collector=metadata_collector,
             DownscalerClass=DownscalerClass,
-            only_metadata=only_metadata)
+            only_metadata=only_metadata,
+            default_chunk=default_chunk)
 
 
 def write_nii_to_group(
@@ -224,7 +232,8 @@ def write_nii_to_group(
         metadata_collector=None,
         metadata_key=None,
         DownscalerClass=XYScaler,
-        only_metadata=False):
+        only_metadata=False,
+        default_chunk=64):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -286,7 +295,8 @@ def write_nii_to_group(
             y_scale=y_scale,
             z_scale=z_scale,
             downscale=downscale,
-            DownscalerClass=DownscalerClass)
+            DownscalerClass=DownscalerClass,
+            default_chunk=default_chunk)
 
     dur_all = time.time()-global_t0
     print(f"wrote {nii_file_path} to {group_name}; timing: "
@@ -325,7 +335,8 @@ def write_summed_nii_files_to_group(
         group,
         downscale = 2,
         transpose=True,
-        DownscalerClass=XYScaler):
+        DownscalerClass=XYScaler,
+        default_chunk=64):
     """
     Sum the arrays in all of the files in file_path list
     into a single array and write that to the specified
@@ -379,7 +390,8 @@ def write_summed_nii_files_to_group(
         y_scale=y_scale,
         z_scale=z_scale,
         downscale=downscale,
-        DownscalerClass=DownscalerClass)
+        DownscalerClass=DownscalerClass,
+        default_chunk=default_chunk)
 
 
 def write_array_to_group(
@@ -389,7 +401,8 @@ def write_array_to_group(
         y_scale: float,
         z_scale: float,
         downscale: int = 1,
-        DownscalerClass=XYScaler):
+        DownscalerClass=XYScaler,
+        default_chunk=64):
     """
     Write a numpy array to an ome-zarr group
 
@@ -457,9 +470,9 @@ def write_array_to_group(
     else:
         scaler = None
 
-    chunk_x = min(shape[0]//4, 64)
-    chunk_y = min(shape[1]//4, 64)
-    chunk_z = min(shape[2]//4, 64)
+    chunk_x = min(shape[0]//4, default_chunk)
+    chunk_y = min(shape[1]//4, default_chunk)
+    chunk_z = min(shape[2]//4, default_chunk)
 
     write_image(
         image=arr,
