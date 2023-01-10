@@ -60,8 +60,8 @@ def main():
             segmentation_path_list =[
                     pathlib.Path(p)
                     for p in config_data["ccf"]["segmentation"]],
-            label_path=pathilb.Path(config_data["ccf"]["labels"]),
-            ouptut_dir=output_dir/"ccf_annotations")
+            label_path=pathlib.Path(config_data["ccf"]["labels"]),
+            output_dir=output_dir/"ccf_annotations")
 
         print_status("Done formatting CCF annotations")
 
