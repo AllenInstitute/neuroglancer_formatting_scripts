@@ -70,7 +70,8 @@ def convert_tissuecyte_to_ome_zarr(
         clobber=False,
         n_processors=n_processors,
         metadata_collector=metadata_collector,
-        DownscalerClass=XYZScaler)
+        DownscalerClass=XYZScaler,
+        default_chunk=128)
 
     print("copying image_series_information.csv over")
     for sub_dir in sub_dir_list:
