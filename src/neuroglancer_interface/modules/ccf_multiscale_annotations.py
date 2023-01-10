@@ -140,7 +140,7 @@ def create_info_dict(
 
 def get_scale_metadata(
         segmentation_path,
-        chunk_size=(128, 128, 128)) -> dict:
+        chunk_size=(256, 256, 256)) -> dict:
     """
     Get the dict representing a single scale of a segmentation volume
 
