@@ -57,7 +57,7 @@ def write_nii_file_list_to_ome_zarr(
         metadata_collector=None,
         DownscalerClass=XYScaler,
         only_metadata=False,
-        default_chunk=256):
+        default_chunk=128):
     """
     Convert a list of nifti files into OME-zarr format
 
