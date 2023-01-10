@@ -31,7 +31,7 @@ def write_out_ccf(
 
 def do_chunking(
         metadata: dict,
-        parent_output_dir: pathlib.path):
+        parent_output_dir: pathlib.Path):
     """
     Take the metadata created by get_scale_metadata and actually
     do the chunking of the CCF annotation file.
@@ -42,7 +42,7 @@ def do_chunking(
         raise RuntimeError(f"{file_path} is not a file")
 
     sitk_img = SimpleITK.ReadImage(file_path)
-    sitk_arr = SimpleITK.GetArrayFromImage(file_path).transpose(2, 1, 0)
+    sitk_arr = SimpleITK.GetArrayFromImage(sitk_img).transpose(2, 1, 0)
     sitk_arr = np.round(sitk_arr).astype(np.uint16)
 
     if not sitk_arr.shape == metadata['size']:
@@ -51,13 +51,13 @@ def do_chunking(
             f"metadata says {metadata['size']}")
 
     output_dir = parent_output_dir / metadata['key']
-    output_dir.mkdir(exists_ok=True)
+    output_dir.mkdir(exist_ok=True)
     if not output_dir.is_dir():
         raise RuntimeError(f"{output_dir} is not a dir")
 
-    dx = metadata['chunk_sizes'][0]
-    dy = metadata['chunk_sizes'][1]
-    dz = metadata['chunk_sizes'][2]
+    dx = metadata['chunk_sizes'][0][0]
+    dy = metadata['chunk_sizes'][0][1]
+    dz = metadata['chunk_sizes'][0][2]
     for x0 in range(0, sitk_arr.shape[0], dx):
         x1 = min(sitk_arr.shape[0], x0+dx)
         for y0 in range(0, sitk_arr.shape[1], dy):
@@ -83,16 +83,17 @@ def create_info_dict(
     for pth in segmentation_path_list:
         this = get_scale_metadata(segmentation_path=pth)
         scale_list.append(this)
-        scale_list.append(this['size'][0]*this['size'][1]*this['size'][2])
+        size_list.append(this['size'][0]*this['size'][1]*this['size'][2])
 
     # from finest to coarsest resolution
-    scale_list = np.array(scale_list)
-    sorted_dex = np.argsort(-1*scale_list)
+    size_list = np.array(size_list)
+    sorted_dex = np.argsort(-1*size_list)
     scale_list = [scale_list[idx] for idx in sorted_dex]
 
+    result = dict()
     result['type'] = 'segmentation'
     result['segment_properties'] = 'segment_properties'
-    result['data_type'] = 'unit16'
+    result['data_type'] = 'uint16'
     result['num_channels'] = 1
     result['scales'] = scale_list
 
@@ -117,7 +118,7 @@ def get_scale_metadata(
     voxel_offset = (0, 0, 0)
 
     result = dict()
-    result['chunk_sizes'] = chunk_size
+    result['chunk_sizes'] = [chunk_size]
     result['encoding'] = 'raw'
 
     mm_to_nm = 10**6
