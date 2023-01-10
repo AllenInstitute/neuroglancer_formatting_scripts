@@ -6,8 +6,8 @@ import json
 import pathlib
 import shutil
 
-from neuroglancer_interface.modules.ccf_annotation_formatting import (
-    format_ccf_annotations)
+from neuroglancer_interface.modules.ccf_multiscale_annotations import (
+    write_out_ccf)
 
 from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr)
@@ -55,11 +55,14 @@ def main():
 
     if "ccf" in config_data:
         print_status("Formatting CCF annotations")
-        format_ccf_annotations(
-            annotation_path=pathlib.Path(config_data["ccf"]["labels"]),
-            segmentation_path=pathlib.Path(config_data["ccf"]["segmentation"]),
-            output_dir=output_dir/"ccf_annotations",
-            clobber=False)
+
+        write_out_ccf(
+            segmentation_path_list =[
+                    pathlib.Path(p)
+                    for p in config_data["ccf"]["segmentation"]],
+            label_path=pathilb.Path(config_data["ccf"]["labels"]),
+            ouptut_dir=output_dir/"ccf_annotations")
+
         print_status("Done formatting CCF annotations")
 
     if "template" in config_data:
