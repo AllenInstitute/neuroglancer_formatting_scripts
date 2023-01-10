@@ -43,6 +43,8 @@ def do_chunking(
 
     sitk_img = SimpleITK.ReadImage(file_path)
     sitk_arr = SimpleITK.GetArrayFromImage(file_path).transpose(2, 1, 0)
+    sitk_arr = np.round(sitk_arr).astype(np.uint16)
+
     if not sitk_arr.shape == metadata['size']:
         raise RuntimeError(
             f"array shape {sitk_arr.shape}\n"
@@ -123,7 +125,7 @@ def get_scale_metadata(
     y_nm = int(mm_to_nm*scale_mm[1])
     z_nm = int(mm_to_nm*scale_mm[2])
 
-    result['key'] = f"{x_nam}_{y_nm}_{z_nm}"
+    result['key'] = f"{x_nm}_{y_nm}_{z_nm}"
 
     result['resolution'] = (x_nm, y_nm, z_nm)
     result['size'] = img_shape
