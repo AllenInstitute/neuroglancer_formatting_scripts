@@ -56,8 +56,8 @@ def main():
     if "ccf" in config_data:
         print_status("Formatting CCF annotations")
         format_ccf_annotations(
-            annotation_path=config_data["ccf"]["labels"],
-            segmentation_path=config_data["ccf"]["segmentation"],
+            annotation_path=pathlib.Path(config_data["ccf"]["labels"]),
+            segmentation_path=pathlib.Path(config_data["ccf"]["segmentation"]),
             output_dir=output_dir/"ccf_annotations",
             clobber=False)
         print_status("Done formatting CCF annotations")
