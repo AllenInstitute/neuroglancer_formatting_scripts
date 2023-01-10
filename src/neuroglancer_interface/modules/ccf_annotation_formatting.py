@@ -14,8 +14,33 @@ from neuroglancer_interface.utils.ccf_utils import (
     get_labels,
     format_labels)
 
+from neuroglancer_interface.modules.ccf_multiscale_annotations import (
+    write_out_ccf)
+
 
 def format_ccf_annotations(
+        annotation_path,
+        segmentation_path,
+        output_dir,
+        clobber):
+
+    """
+    annotation_path -- path to text file with label names
+
+    segmentation_path -- path to ccf nii.gz file
+
+    output_dir -- probably ends with ccf_annotations....?
+    """
+
+    write_out_ccf(
+        segmentation_path_list=[segmentation_path],
+        label_path=annotation_path,
+        output_dir=output_dir)
+
+    print("Successfully formatted CCF annotations!")
+
+
+def format_ccf_annotations_legacy(
         annotation_path,
         segmentation_path,
         output_dir,
