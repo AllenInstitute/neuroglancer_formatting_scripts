@@ -107,7 +107,8 @@ def do_chunking(
                     this_data = sitk_arr[x0:x1, y0:y1, z0:z1]
                     this_data = this_data.tobytes("F")
                     out_file.write(this_data)
-             
+
+    print(f"chunked {file_path}")             
 
 def create_info_dict(
         segmentation_path_list: List[pathlib.Path]) -> dict:
@@ -135,6 +136,7 @@ def create_info_dict(
     result['num_channels'] = 1
     result['scales'] = scale_list
 
+    print("created info dict")
     return result
 
 
