@@ -10,6 +10,10 @@ from cloudvolume import CloudVolume
 from taskqueue import LocalTaskQueue
 #import igneous.task_creation as igneous_task_creation
 
+from neuroglancer_interface.utils.ccf_utils import (
+    get_labels,
+    format_labels)
+
 
 def format_ccf_annotations(
         annotation_path,
@@ -49,52 +53,6 @@ def format_ccf_annotations(
         layer_dir=output_dir)
 
     print("Successfully formatted CCF annotations!")
-
-def get_labels(annotation_path):
-    name_lookup = {}
-    name_set = set()
-    name_pattern = re.compile('".*"')
-    with open(annotation_path, 'r') as in_file:
-        for line in in_file:
-            idx = int(line.split()[0])
-            name = name_pattern.findall(line)[0]
-            name = name.replace('"','')
-            name = name.split(' - ')[0]
-            if name in name_set:
-                raise RuntimeError(
-                    f"{name} repeated")
-            if idx in name_lookup:
-                raise RuntimeError(
-                    f"idx {idx} repeated")
-            name_set.add(name)
-            name_lookup[idx] = name
-    return name_lookup
-
-
-def format_labels(labels):
-    """
-    convert an idx -> label lookup into a dict conforming to the metadata
-    schema expected by neuroglancer for a segmentation layer
-    """
-    output = dict()
-    output["@type"] = "neuroglancer_segment_properties"
-    inline = dict()
-    inline["ids"] = []
-    properties = dict()
-    properties["id"] = "label"
-    properties["type"] = "label"
-    properties["values"] = []
-
-    k_list = list(labels.keys())
-    k_list.sort()
-    for k in k_list:
-        value = labels[k]
-        properties["values"].append(value)
-        inline["ids"].append(str(k))
-
-    inline["properties"] = [properties]
-    output["inline"] = inline
-    return output
 
 
 def make_info_file(

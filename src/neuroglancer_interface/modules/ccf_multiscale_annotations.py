@@ -4,7 +4,7 @@ import pathlib
 import SimpleITK
 import numpy as np
 from neuroglancer_interface.utils.data_utils import get_scales_from_img
-from neuroglancer_interface.modules.ccf_annotation_formatting import (
+from neuroglancer_interface.utils.ccf_utils import (
     get_labels,
     format_labels)
 
