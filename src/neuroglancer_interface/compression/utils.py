@@ -150,6 +150,7 @@ def encode_block(data):
                         block=data,
                         encoder_dict=encoder,
                         n_bits=n_bits)
+
         byte_stream = bits_to_bytes(bit_stream)
 
     expected_len = np.ceil(ct*n_bits/8).astype(int)
@@ -165,27 +166,41 @@ def encode_block(data):
             'n_bits': n_bits}
 
 def block_to_bits(block, encoder_dict, n_bits):
-    block = block.flatten(order='F')
-    bit_stream = ''
-    for val in block:
-        encoded_val = encoder_dict[val]
-        bit_stream += f'{encoded_val:0{n_bits}b}'[::-1]
+
+    n_total_bits = block.size*n_bits
+    if n_total_bits % 32 > 0:
+        n_total_bits += (32-(n_total_bits%32))
+    assert n_total_bits%32 == 0
+
+    bit_stream = np.zeros(n_total_bits, dtype=bool)
+    bit_masks = np.array([2**ii for ii in range(n_bits)]).astype(int)
+    block = np.array([encoder_dict[val] for val in block.flatten('F')])
+
+    for i_bit in range(n_bits):
+        detections = block & bit_masks[i_bit]
+        bit_stream[i_bit::n_bits] = (detections > 0)
+
     return bit_stream
 
 def bits_to_bytes(bit_stream):
     byte_stream = b''
-    for i0 in range(0, len(bit_stream), 32):
-        chunk = bit_stream[i0:i0+32]
-        val = 0
-        pwr = 1
-        for b in chunk:
-            if b == '1':
-                val += pwr
-            pwr*=2
-        byte_stream = add_int_to_byte_stream(
-                current_int=val,
-                byte_stream=byte_stream)
 
+    n_bits = len(bit_stream)
+    assert n_bits % 32 == 0
+
+    bit_grid = np.array(bit_stream).reshape(n_bits//32, 32)
+
+    values = np.zeros(bit_grid.shape[0], dtype=int)
+    pwr = 1
+    for icol in range(bit_grid.shape[1]):
+        these_bits = bit_grid[:, icol]
+        values[these_bits] += pwr
+        pwr *= 2
+
+    for val in values:
+        byte_stream = add_int_to_byte_stream(
+                        current_int=val,
+                        byte_stream=byte_stream)
     return byte_stream
 
 def update_byte_stream(
