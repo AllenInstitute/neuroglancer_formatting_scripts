@@ -79,7 +79,7 @@ def main():
             n_processors=1,
             clobber=False,
             DownscalerClass=XYZScaler,
-            default_chunk=args.chunk_size)
+            default_chunk=64)
         print_status("Done formatting avg template image")
 
     if "tissuecyte" in config_data:
