@@ -9,6 +9,11 @@ def compress_ccf_data(
         data,
         file_path,
         blocksize=64):
+    """
+    Write data (a np.ndarray) to file_path, compressing according
+    to neuroglancer's compressed_segmentation framework using the
+    specified blocksize.
+    """
 
     nx = data.shape[0]
     ny = data.shape[1]
@@ -97,6 +102,17 @@ def get_block(
         y_spec,
         z_spec,
         blocksize):
+    """
+    Get and return a block of data from all_data (a np.ndarray).
+
+    x_spec, y_spec, and z_spec are of the form (min_val, max_val)
+    and specify the block of data to return.
+
+    blocksize is the desired size (the block will be a cube)
+    of the datablock. if x_spec, y_spec, z_spec specify a block
+    that is smaller than a (blocksize, blocksize, blocksize) cube,
+    use np.pad to fill out the block.
+    """
 
     block = all_data[x_spec[0]:x_spec[1],
                      y_spec[0]:y_spec[1],
@@ -166,7 +182,31 @@ def encode_block(data):
             'n_bits': n_bits}
 
 def block_to_bits(block, encoder_dict, n_bits):
+    """
+    Convert block into a string of bits encoded according
+    to encoder_dict.
 
+    Parameters
+    ----------
+    block: np.ndarray
+        Data to encode
+
+    encoder_dict: dict
+        Dict mapping values in block to encoded values
+        (smaller ints)
+
+    n_bits: int
+        Number of bits used to store each value in the
+        returned bit stream
+
+    Returns
+    -------
+    bit_stream: np.ndarray
+       Booleans representing the bits of the encoded
+       values. Should be block.size*n_bits long.
+       Values will be little-endian (least significatn
+       bit first).
+    """
     n_total_bits = block.size*n_bits
     if n_total_bits % 32 > 0:
         n_total_bits += (32-(n_total_bits%32))
@@ -183,12 +223,20 @@ def block_to_bits(block, encoder_dict, n_bits):
     return bit_stream
 
 def bits_to_bytes(bit_stream):
+    """
+    Convert a bit stream (as produced by block_to_bits) to
+    a byte stream that can be written out to the compressed
+    data file.
+    """
 
     n_bits = len(bit_stream)
     assert n_bits % 32 == 0
 
+    # Convert the bit stream into a series of little-endian
+    # 32 bit unsigned integers. These values will ultimately
+    # get converted to bytes and stored in the output byte
+    # stream.
     bit_grid = np.array(bit_stream).reshape(n_bits//32, 32)
-
     values = np.zeros(bit_grid.shape[0], dtype=int)
     pwr = 1
     for icol in range(bit_grid.shape[1]):
@@ -196,7 +244,10 @@ def bits_to_bytes(bit_stream):
         values[these_bits] += pwr
         pwr *= 2
 
+    # initialize empty byte stream
     byte_stream = bytearray(n_bits//8)
+
+    # transcribe values in byte stream
     for i_val, val in enumerate(values):
         byte_stream[i_val*4:(i_val+1)*4] = int(val).to_bytes(4, byteorder='little')
 
@@ -207,7 +258,16 @@ def get_block_lookup_table(data):
     """
     Get the lookup table for encoded values in data.
 
-    Return both as a string of bytes and as a python dictionary
+    Returns
+    -------
+    dict mapping raw values to encoded values
+
+    byte stream representing the lookup table of raw values
+    (this is just a sequence of values; the value's position
+    in bytestream represents its encoded value, i.e. the 5th
+    raw value in byte stream gets encoded to the value 5)
+
+    number of bits used to encode each value
     """
     max_val = data.max()
     if data.max() >= 2**32:
