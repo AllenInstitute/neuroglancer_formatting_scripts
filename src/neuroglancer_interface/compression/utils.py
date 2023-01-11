@@ -108,6 +108,7 @@ def get_block(
     pad_y = 0
     if block.shape[1] != blocksize:
         pad_y = blocksize-block.shape[1]
+    pad_z = 0
     if block.shape[2] != blocksize:
         pad_z = blocksize-block.shape[2]
 
