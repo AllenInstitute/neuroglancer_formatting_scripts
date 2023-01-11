@@ -65,9 +65,7 @@ def main():
             output_dir=output_dir/"ccf_annotations",
             use_compression=True,
             compression_blocksize=32,
-            chunk_size=(args.chunk_size,
-                        args.chunk_size,
-                        args.chunk_size))
+            chunk_size=(64, 64, 64))
 
         print_status("Done formatting CCF annotations")
 

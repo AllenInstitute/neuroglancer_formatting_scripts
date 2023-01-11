@@ -37,7 +37,8 @@ def format_ccf_annotations(
         label_path=pathlib.Path(annotation_path),
         output_dir=pathlib.Path(output_dir),
         use_compression=True,
-        compression_blocksize=32)
+        compression_blocksize=32,
+        chunk_size=(64, 64, 64))
 
     print("Successfully formatted CCF annotations!")
 
