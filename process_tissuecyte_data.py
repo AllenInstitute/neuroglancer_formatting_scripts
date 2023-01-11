@@ -36,6 +36,7 @@ def main():
     parser.add_argument('--config_path', type=str, default=None)
     parser.add_argument('--n_processors', type=int, default=6)
     parser.add_argument('--clobber', default=False, action='store_true')
+    parser.add_argument('--chunk_size', type=int, default=256)
     args = parser.parse_args()
 
     with open(args.config_path, 'rb') as in_file:
@@ -61,7 +62,10 @@ def main():
                     pathlib.Path(p)
                     for p in config_data["ccf"]["segmentation"]],
             label_path=pathlib.Path(config_data["ccf"]["labels"]),
-            output_dir=output_dir/"ccf_annotations")
+            output_dir=output_dir/"ccf_annotations",
+            use_compression=True,
+            compression_blocksize=32,
+            chunk_size=(64, 64, 64))
 
         print_status("Done formatting CCF annotations")
 
@@ -74,7 +78,8 @@ def main():
             downscale=config_data["downscale"],
             n_processors=1,
             clobber=False,
-            DownscalerClass=XYZScaler)
+            DownscalerClass=XYZScaler,
+            default_chunk=64)
         print_status("Done formatting avg template image")
 
     if "tissuecyte" in config_data:
@@ -83,7 +88,8 @@ def main():
             input_dir=config_data["tissuecyte"]["input_dir"],
             output_dir=output_dir/"tissuecyte",
             downscale=config_data["downscale"],
-            n_processors=args.n_processors)
+            n_processors=args.n_processors,
+            chunk_size=args.chunk_size)
         print_status("Done formatting tissuecyte data")
 
     print_status("Done formatting all data")
