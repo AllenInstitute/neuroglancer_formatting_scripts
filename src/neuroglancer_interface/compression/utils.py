@@ -147,7 +147,7 @@ def encode_block(data):
     current_int = 0
     bit_count = 0
 
-    ct = 0
+    ct = data.size
     if n_bits > 0:
         for iz in range(nz):
             for iy in range(ny):
