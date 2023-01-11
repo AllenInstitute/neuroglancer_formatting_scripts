@@ -16,7 +16,8 @@ def write_out_ccf(
         label_path: pathlib.Path,
         output_dir: pathlib.Path,
         use_compression=False,
-        compression_blocksize=64) -> None:
+        compression_blocksize=64,
+        chunk_size=(256, 256, 256)) -> None:
     """
     Write CCF annotations to disk in neuroglancer-friendly format
 
@@ -43,7 +44,8 @@ def write_out_ccf(
     parent_info = create_info_dict(
             segmentation_path_list=segmentation_path_list,
             use_compression=use_compression,
-            compression_blocksize=compression_blocksize)
+            compression_blocksize=compression_blocksize,
+            chunk_size=chunk_size)
 
     for scale_metadata in parent_info['scales']:
         do_chunking(metadata=scale_metadata,
@@ -142,7 +144,8 @@ def _write_chunk_uncompressed(file_path, data):
 def create_info_dict(
         segmentation_path_list: List[pathlib.Path],
         use_compression=False,
-        compression_blocksize=64) -> dict:
+        compression_blocksize=64,
+        chunk_size=(256, 256, 256)) -> dict:
     """
     Create the dict that will be JSONized to make the info file.
     Return that dict.

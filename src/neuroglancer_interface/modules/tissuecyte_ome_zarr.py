@@ -17,7 +17,8 @@ def convert_tissuecyte_to_ome_zarr(
         input_dir=None,
         output_dir=None,
         downscale=2,
-        n_processors=6):
+        n_processors=6,
+        chunk_size=128):
 
     output_dir = pathlib.Path(output_dir)
     input_dir = pathlib.Path(input_dir)
@@ -71,7 +72,7 @@ def convert_tissuecyte_to_ome_zarr(
         n_processors=n_processors,
         metadata_collector=metadata_collector,
         DownscalerClass=XYZScaler,
-        default_chunk=128)
+        default_chunk=chunk_size)
 
     print("copying image_series_information.csv over")
     for sub_dir in sub_dir_list:
