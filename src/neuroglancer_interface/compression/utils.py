@@ -183,7 +183,6 @@ def block_to_bits(block, encoder_dict, n_bits):
     return bit_stream
 
 def bits_to_bytes(bit_stream):
-    byte_stream = b''
 
     n_bits = len(bit_stream)
     assert n_bits % 32 == 0
@@ -197,82 +196,11 @@ def bits_to_bytes(bit_stream):
         values[these_bits] += pwr
         pwr *= 2
 
-    for val in values:
-        byte_stream = add_int_to_byte_stream(
-                        current_int=val,
-                        byte_stream=byte_stream)
-    return byte_stream
+    byte_stream = bytearray(n_bits//8)
+    for i_val, val in enumerate(values):
+        byte_stream[i_val*4:(i_val+1)*4] = int(val).to_bytes(4, byteorder='little')
 
-def update_byte_stream(
-        this_value,
-        n_bits,
-        current_int,
-        bit_count,
-        byte_stream):
-    """
-    this_value is the value being added to the byte_stream
-
-    n_bits is the number of bits used to encode a value
-
-    current_int is the cache of the integer being written out
-    to byte_stream
-
-    bit_count is where we are in the current_byte
-
-    byte_stream is the byte_stream being updated
-
-    Returns
-    -------
-    updated values for current_int, bit_count, byte_stream
-    """
-
-    # is this adding the bits in the correct order...
-    # I think so; the least significant bit comes first,
-    # (unless it should not...)
-
-    assert this_value < 2**n_bits
-
-    # reverse it so the number is little endian
-    this_binary = f'{this_value:0{n_bits}b}'[::-1]
-    if n_bits > 0:
-        if len(this_binary) != n_bits:
-            raise RuntimeError(
-                f"value {this_value}\nbits {n_bits}\n"
-                f"binary {this_binary}")
-    else:
-        assert this_value == 0
-
-    pwr = 2**bit_count
-    for idx in range(n_bits):
-        if this_binary[idx] == '1':
-            current_int += pwr
-        pwr *= 2
-        bit_count += 1
-        if bit_count == 32:
-            byte_stream = add_int_to_byte_stream(
-                    current_int=current_int,
-                    byte_stream=byte_stream)
-            bit_count = 0
-            current_int = 0
-
-    return (current_int,
-            bit_count,
-            byte_stream)
-
-
-def add_int_to_byte_stream(
-        current_int,
-        byte_stream):
-    """
-    Add current_int as a 32 bit little-endian integer to
-    byte_stream
-    """
-    n0 = len(byte_stream)
-    assert current_int < 2**32
-    as_bytes = int(current_int).to_bytes(4, byteorder='little')
-    byte_stream += as_bytes
-    assert len(byte_stream) == (n0+4)
-    return byte_stream
+    return bytes(byte_stream)
 
 
 def get_block_lookup_table(data):
