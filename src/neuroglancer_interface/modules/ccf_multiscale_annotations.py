@@ -37,7 +37,7 @@ def write_out_ccf(
     None
         Data is written to output_dir in correct format
     """
-
+    print(f"{chunk_size}")
     if not output_dir.exists():
         output_dir.mkdir()
 
@@ -157,7 +157,8 @@ def create_info_dict(
         this = get_scale_metadata(
                     segmentation_path=pth,
                     use_compression=use_compression,
-                    compression_blocksize=compression_blocksize)
+                    compression_blocksize=compression_blocksize,
+                    chunk_size=chunk_size)
         scale_list.append(this)
         size_list.append(this['size'][0]*this['size'][1]*this['size'][2])
 
