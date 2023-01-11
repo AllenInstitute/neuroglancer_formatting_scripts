@@ -144,33 +144,13 @@ def encode_block(data):
     nz = data.shape[2]
 
     byte_stream = b''
-    current_int = 0
-    bit_count = 0
-
     ct = data.size
     if n_bits > 0:
-        for iz in range(nz):
-            for iy in range(ny):
-                for ix in range(nx):
-                    idx = (ix+nx*(iy+ny*iz))
-
-                    val = data[ix, iy, iz]
-
-                    encoded_val = encoder[val]
-                    ct += 1
-                    (current_int,
-                     bit_count,
-                     byte_stream) = update_byte_stream(
-                         this_value=encoded_val,
-                         n_bits=n_bits,
-                         current_int=current_int,
-                         bit_count=bit_count,
-                         byte_stream=byte_stream)
-
-        if bit_count > 0:
-            byte_stream = add_int_to_byte_stream(
-                    current_int=current_int,
-                    byte_stream=byte_stream)
+        bit_stream = block_to_bits(
+                        block=data,
+                        encoder_dict=encoder,
+                        n_bits=n_bits)
+        byte_stream = bits_to_bytes(bit_stream)
 
     expected_len = np.ceil(ct*n_bits/8).astype(int)
     if len(byte_stream) != expected_len:
@@ -184,6 +164,29 @@ def encode_block(data):
             'lookup_table': encoding['bytes'],
             'n_bits': n_bits}
 
+def block_to_bits(block, encoder_dict, n_bits):
+    block = block.flatten(order='F')
+    bit_stream = ''
+    for val in block:
+        encoded_val = encoder_dict[val]
+        bit_stream += f'{encoded_val:0{n_bits}b}'[::-1]
+    return bit_stream
+
+def bits_to_bytes(bit_stream):
+    byte_stream = b''
+    for i0 in range(0, len(bit_stream), 32):
+        chunk = bit_stream[i0:i0+32]
+        val = 0
+        pwr = 1
+        for b in chunk:
+            if b == '1':
+                val += pwr
+            pwr*=2
+        byte_stream = add_int_to_byte_stream(
+                current_int=val,
+                byte_stream=byte_stream)
+
+    return byte_stream
 
 def update_byte_stream(
         this_value,
