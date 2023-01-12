@@ -15,3 +15,6 @@ def main():
         jp2_path=pathlib.Path(args.jp2_path),
         output_dir=pathlib.Path(args.output_dir),
         clobber=args.clobber)
+
+if __name__ == "__main__":
+    main()

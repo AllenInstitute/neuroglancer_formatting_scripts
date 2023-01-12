@@ -26,7 +26,7 @@ def convert_jp2_to_ome_zarr(
                     output_dir=output_dir,
                     clobber=clobber)
 
-    data_src = glymur.Jp2k(data_file)
+    data_src = glymur.Jp2k(jp2_path)
     write_array_to_group(
         arr=data_src[:, :, :],
         group=root_group,

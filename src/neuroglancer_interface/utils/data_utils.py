@@ -407,7 +407,8 @@ def write_summed_nii_files_to_group(
 def _get_nx_ny(
         arr,
         downscale,
-        downscale_cutoff):
+        downscale_cutoff,
+        DownscalerClass):
     (_,
      list_of_nx_ny) = DownscalerClass.create_empty_pyramid(
                           base=arr,
@@ -465,7 +466,8 @@ def write_array_to_group(
         list_of_nx_ny = _get_nx_ny(
                             arr=arr,
                             downscale=downscale,
-                            downscale_cutoff=downscale_cutoff)
+                            downscale_cutoff=downscale_cutoff,
+                            DownscalerClass=DownscalerClass)
 
         for nxny in list_of_nx_ny:
             this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],

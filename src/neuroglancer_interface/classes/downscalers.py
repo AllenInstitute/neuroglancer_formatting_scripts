@@ -29,7 +29,7 @@ class ScalerBase(Scaler):
         raise RuntimeError("gaussian")
 
     @classmethod
-    def create_empty_pyramid(cls, base, downscale=2):
+    def create_empty_pyramid(cls, base, downscale=2, donwscale_cutoff=128):
         raise NotImplementedError("base create_empty_pyramid")
 
 
@@ -46,7 +46,10 @@ class XYScaler(ScalerBase):
         (results,
          list_of_nx_ny) = self.create_empty_pyramid(
                                base,
-                               downscale=self.downscale)
+                               downscale=self.downscale,
+                               downscale_cutoff=self.downscale_cutoff)
+
+        print(f"downscaling to {list_of_nx_ny}")
 
         for iz in range(base.shape[2]):
             for nxny in list_of_nx_ny:
@@ -64,7 +67,8 @@ class XYScaler(ScalerBase):
     def create_empty_pyramid(
             cls,
             base,
-            downscale=2):
+            downscale=2,
+            downscale_cutoff=128):
         """
         Create a lookup table of empty arrays for an
         image/volume pyramid
@@ -96,7 +100,7 @@ class XYScaler(ScalerBase):
         results = dict()
         list_of_nx_ny = []
 
-        cutoff = max(self.downscale_cutoff, base.shape[2])
+        cutoff = max(downscale_cutoff, base.shape[2])
 
         while nx > cutoff or ny > cutoff:
             nx = nx//downscale
@@ -122,7 +126,10 @@ class XYZScaler(ScalerBase):
         (results,
          list_of_nx_ny) = self.create_empty_pyramid(
                                base,
-                               downscale=self.downscale)
+                               downscale=self.downscale,
+                               downscale_cutoff=self.downscale_cutoff)
+
+        print(f"downscaling to {list_of_nx_ny}")
 
         for nxyz in list_of_nx_ny:
             img = skimage_resize(base[:, :, :], nxyz)
@@ -138,7 +145,8 @@ class XYZScaler(ScalerBase):
     def create_empty_pyramid(
             cls,
             base,
-            downscale=2):
+            downscale=2,
+            downscale_cutoff=128):
         """
         Create a lookup table of empty arrays for an
         image/volume pyramid
@@ -167,7 +175,7 @@ class XYZScaler(ScalerBase):
         nz = base.shape[2]
         results = dict()
         list_of_nx_ny = []
-        while max(nx, ny, nz) > self.downscale_cutoff:
+        while max(nx, ny, nz) > downscale_cutoff:
             nx = nx//downscale
             ny = ny//downscale
             nz = nz//downscale
