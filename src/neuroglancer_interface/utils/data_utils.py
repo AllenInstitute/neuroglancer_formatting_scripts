@@ -452,7 +452,8 @@ def write_array_to_group(
     """
 
     # neuroglancer does not support 64 bit floats
-    arr = arr.astype(np.float32)
+    if arr.dtype == np.float64:
+        arr = arr.astype(np.float32)
 
     shape = arr.shape
 
