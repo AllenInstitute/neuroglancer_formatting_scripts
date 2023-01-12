@@ -54,6 +54,7 @@ class XYScaler(ScalerBase):
                 results[nxny][:, :, iz] = img
 
         output = [base]
+        print("done downscaling")
         return output + [results[key].astype(base.dtype)
                          for key in list_of_nx_ny]
 
@@ -128,6 +129,7 @@ class XYZScaler(ScalerBase):
             results[nxyz][:, :, :] = img
 
         output = [base]
+        print("done downscaling")
         return output + [results[key].astype(base.dtype)
                          for key in list_of_nx_ny]
 
