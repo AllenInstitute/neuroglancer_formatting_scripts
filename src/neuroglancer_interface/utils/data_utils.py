@@ -471,9 +471,9 @@ def write_array_to_group(
     else:
         scaler = None
 
-    chunk_x = min(shape[0]//4, default_chunk)
-    chunk_y = min(shape[1]//4, default_chunk)
-    chunk_z = min(shape[2]//4, default_chunk)
+    chunk_x = max(1, min(shape[0]//4, default_chunk))
+    chunk_y = max(1, min(shape[1]//4, default_chunk))
+    chunk_z = max(1, min(shape[2]//4, default_chunk))
 
     write_image(
         image=arr,
