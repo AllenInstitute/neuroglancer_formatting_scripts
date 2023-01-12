@@ -56,6 +56,7 @@ def write_nii_file_list_to_ome_zarr(
         root_group=None,
         metadata_collector=None,
         DownscalerClass=XYScaler,
+        downscale_cutoff=64,
         only_metadata=False,
         default_chunk=128):
     """
@@ -139,6 +140,7 @@ def write_nii_file_list_to_ome_zarr(
             downscale=downscale,
             metadata_collector=metadata_collector,
             DownscalerClass=DownscalerClass,
+            downscale_cutoff=downscale_cutoff,
             only_metadata=only_metadata,
             default_chunk=default_chunk)
 
@@ -166,6 +168,7 @@ def write_nii_file_list_to_ome_zarr(
                             'downscale': downscale,
                             'metadata_collector': metadata_collector,
                             'DownscalerClass': DownscalerClass,
+                            'downscale_cutoff': downscale_cutoff,
                             'only_metadata': only_metadata,
                             'default_chunk': default_chunk})
             p.start()
@@ -188,6 +191,7 @@ def _write_nii_file_list_worker(
         downscale,
         metadata_collector=None,
         DownscalerClass=XYScaler,
+        downscale_cutoff=64,
         only_metadata=False,
         default_chunk=64):
     """
@@ -220,6 +224,7 @@ def _write_nii_file_list_worker(
             downscale=downscale,
             metadata_collector=metadata_collector,
             DownscalerClass=DownscalerClass,
+            downscale_cutoff=downscale_cutoff,
             only_metadata=only_metadata,
             default_chunk=default_chunk)
 
@@ -233,6 +238,7 @@ def write_nii_to_group(
         metadata_collector=None,
         metadata_key=None,
         DownscalerClass=XYScaler,
+        downscale_cutoff=64,
         only_metadata=False,
         default_chunk=64):
     """
@@ -297,6 +303,7 @@ def write_nii_to_group(
             z_scale=z_scale,
             downscale=downscale,
             DownscalerClass=DownscalerClass,
+            downscale_cutoff=downscale_cutoff,
             default_chunk=default_chunk)
 
     dur_all = time.time()-global_t0
@@ -337,6 +344,7 @@ def write_summed_nii_files_to_group(
         downscale = 2,
         transpose=True,
         DownscalerClass=XYScaler,
+        downscale_cutoff=64,
         default_chunk=64):
     """
     Sum the arrays in all of the files in file_path list
@@ -392,7 +400,21 @@ def write_summed_nii_files_to_group(
         z_scale=z_scale,
         downscale=downscale,
         DownscalerClass=DownscalerClass,
+        downscale_cutoff=downscale_cutoff,
         default_chunk=default_chunk)
+
+
+def _get_nx_ny(
+        arr,
+        downscale,
+        downscale_cutoff):
+    (_,
+     list_of_nx_ny) = DownscalerClass.create_empty_pyramid(
+                          base=arr,
+                          downscale=downscale,
+                          downscale_cutoff=downscale_cutoff)
+
+    return list_of_nx_ny
 
 
 def write_array_to_group(
@@ -403,6 +425,7 @@ def write_array_to_group(
         z_scale: float,
         downscale: int = 1,
         DownscalerClass=XYScaler,
+        downscale_cutoff=64,
         default_chunk=64):
     """
     Write a numpy array to an ome-zarr group
@@ -439,12 +462,10 @@ def write_array_to_group(
          'type': 'scale'}]]
 
     if downscale > 1:
-        (_,
-         list_of_nx_ny) = DownscalerClass.create_empty_pyramid(
-                              base=arr,
-                              downscale=downscale)
-
-        del _
+        list_of_nx_ny = _get_nx_ny(
+                            arr=arr,
+                            downscale=downscale,
+                            downscale_cutoff=downscale_cutoff)
 
         for nxny in list_of_nx_ny:
             this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
@@ -467,7 +488,8 @@ def write_array_to_group(
     if downscale > 1:
         scaler = DownscalerClass(
                    method='gaussian',
-                   downscale=downscale)
+                   downscale=downscale,
+                   downscale_cutoff=downscale_cutoff)
     else:
         scaler = None
 

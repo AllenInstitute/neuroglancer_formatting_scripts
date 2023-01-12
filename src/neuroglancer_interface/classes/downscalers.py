@@ -1,10 +1,14 @@
 from typing import List, Any
 import numpy as np
 from ome_zarr.scale import Scaler
+from dataclasses import dataclass
 from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
 
+@dataclass
 class ScalerBase(Scaler):
+
+    downscale_cutoff: int = 128
 
     def nearest(self, base: np.ndarray) -> List[np.ndarray]:
         raise NotImplementedError("Base nearest")
@@ -56,7 +60,10 @@ class XYScaler(ScalerBase):
 
 
     @classmethod
-    def create_empty_pyramid(cls, base, downscale=2):
+    def create_empty_pyramid(
+            cls,
+            base,
+            downscale=2):
         """
         Create a lookup table of empty arrays for an
         image/volume pyramid
@@ -87,7 +94,10 @@ class XYScaler(ScalerBase):
         nz = base.shape[2]
         results = dict()
         list_of_nx_ny = []
-        while nx > base.shape[2] or ny > base.shape[2]:
+
+        cutoff = max(self.downscale_cutoff, base.shape[2])
+
+        while nx > cutoff or ny > cutoff:
             nx = nx//downscale
             ny = ny//downscale
             data = np.zeros((nx, ny, base.shape[2]), dtype=float)
@@ -123,7 +133,10 @@ class XYZScaler(ScalerBase):
 
 
     @classmethod
-    def create_empty_pyramid(cls, base, downscale=2):
+    def create_empty_pyramid(
+            cls,
+            base,
+            downscale=2):
         """
         Create a lookup table of empty arrays for an
         image/volume pyramid
@@ -152,7 +165,7 @@ class XYZScaler(ScalerBase):
         nz = base.shape[2]
         results = dict()
         list_of_nx_ny = []
-        while max(nx, ny, nz) > 128:
+        while max(nx, ny, nz) > self.downscale_cutoff:
             nx = nx//downscale
             ny = ny//downscale
             nz = nz//downscale
