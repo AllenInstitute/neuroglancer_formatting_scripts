@@ -76,9 +76,6 @@ def _write_data_to_hdf5(
 
     jp2_config = get_jp2_config(config_list)
 
-    # remove
-    jp2_config['shape'] = (1000, 1000)
-
     nz = len(config_list)
     shape = (jp2_config['shape'][0],
              jp2_config['shape'][1],
@@ -100,7 +97,7 @@ def _write_data_to_hdf5(
                 compression='gzip')
 
         for iz in range(len(config_list)):
-            raw_data = glymur.Jp2k(config_list[iz]['image_path'])[:1000, :1000, :]
+            raw_data = glymur.Jp2k(config_list[iz]['image_path'])[:, :, :]
             out_file['red'][:, :, iz] = raw_data[:, :, 0]
             out_file['green'][:, :, iz] = raw_data[:, :, 1]
 
