@@ -70,7 +70,7 @@ def _convert_jp2_to_ome_zarr(
             data = dask.array.from_array(in_file[data_key])
 
             write_array_to_group(
-                arr=data.transpose(2, 1, 0),
+                arr=data,
                 group=root_group.create_group(data_key),
                 x_scale=x_scale,
                 y_scale=y_scale,
