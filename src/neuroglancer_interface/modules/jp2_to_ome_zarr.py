@@ -77,8 +77,8 @@ def _convert_jp2_to_ome_zarr(
                 z_scale=z_scale,
                 downscale=2,
                 DownscalerClass=XYScaler,
-                downscale_cutoff=60,
-                default_chunk=256)
+                downscale_cutoff=512,
+                default_chunk=64)
 
             duration = (time.time()-t0)/3600.0
             print(f"{data_key} channel took "
