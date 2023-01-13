@@ -15,8 +15,27 @@ class ScalerBase(Scaler):
     def nearest(self, base: np.ndarray) -> List[np.ndarray]:
         raise NotImplementedError("Base nearest")
 
-    def resize_image(self, image: np.ndarray) -> np.ndarray:
-        raise RuntimeError("did not expect to run resize_image")
+    def resize_image(self, image: Any) -> Any:
+        if not isinstance(image, dask.array.Array)
+            raise RuntimeError("did not expect to run resize_image  on np.ndarray")
+        list_of_nx_ny = self.create_empty_pyramid(
+                    base=None,
+                    downscale=None,
+                    downscale_cutoff=None)
+
+        this_idx = None
+        for idx in range(len(list_of_nx_ny)):
+            if list_of_nx_ny[idx] == image.shape:
+                this_idx = idx
+                break
+        if this_idx is None:
+            raise RuntimeError(f"could not find shape {image.shape} in\n"
+                               f"{list_of_nx_ny}")
+        this_dtype = image.dtype
+        new_img = dask_resize(image,
+                              shape=list_of_nx_ny[this_idx+1],
+                              preserve_range=True).astype(this_dtype)
+        return new_img
 
     def laplacian(self, base: np.ndarray) -> List[np.ndarray]:
         raise RuntimeError("did not expect to run laplacian")
@@ -88,11 +107,8 @@ class XYScaler(ScalerBase):
         return output + [results[key].astype(base.dtype)
                          for key in list_of_nx_ny]
 
-
-
-    @classmethod
     def create_empty_pyramid(
-            cls,
+            self,
             base,
             downscale=2,
             downscale_cutoff=128):
@@ -121,20 +137,24 @@ class XYScaler(ScalerBase):
         list_of_nx_ny:
             List of valid keys of results
         """
-        nx = base.shape[0]
-        ny = base.shape[1]
-        nz = base.shape[2]
-        list_of_nx_ny = []
+        if not hasattr(self, '_list_of_nx_ny'):
+            nx = base.shape[0]
+            ny = base.shape[1]
+            nz = base.shape[2]
+            list_of_nx_ny = []
 
-        cutoff = max(downscale_cutoff, base.shape[2])
+            cutoff = max(downscale_cutoff, base.shape[2])
 
-        while nx > cutoff or ny > cutoff:
-            nx = nx//downscale
-            ny = ny//downscale
-            key = (nx, ny, nz)
-            list_of_nx_ny.append(key)
+            while nx > cutoff or ny > cutoff:
+                nx = nx//downscale
+                ny = ny//downscale
+                key = (nx, ny, nz)
+                list_of_nx_ny.append(key)
 
-        return list_of_nx_ny
+            self._list_of_nx_ny = list_of_nx_ny
+            self.max_layer = len(self._list_of_nx_ny)
+
+        return self._list_of_nx_ny
 
 
 class XYZScaler(ScalerBase):
@@ -205,15 +225,19 @@ class XYZScaler(ScalerBase):
         list_of_nx_ny:
             List of valid keys of results
         """
-        nx = base.shape[0]
-        ny = base.shape[1]
-        nz = base.shape[2]
-        list_of_nx_ny = []
-        while max(nx, ny, nz) > downscale_cutoff:
-            nx = nx//downscale
-            ny = ny//downscale
-            nz = nz//downscale
-            key = (nx, ny, nz)
-            list_of_nx_ny.append(key)
+        if not hasattr(self, '_list_of_nx_ny'):
+            nx = base.shape[0]
+            ny = base.shape[1]
+            nz = base.shape[2]
+            list_of_nx_ny = []
+            while max(nx, ny, nz) > downscale_cutoff:
+                nx = nx//downscale
+                ny = ny//downscale
+                nz = nz//downscale
+                key = (nx, ny, nz)
+                list_of_nx_ny.append(key)
 
-        return list_of_nx_ny
+            self._list_of_nx_ny = list_of_nx_ny
+            self.max_layer = len(list_of_nx_ny)
+
+        return self._list_of_nx_ny

@@ -408,9 +408,9 @@ def _get_nx_ny(
         arr,
         downscale,
         downscale_cutoff,
-        DownscalerClass):
+        downscaler):
 
-    list_of_nx_ny = DownscalerClass.create_empty_pyramid(
+    list_of_nx_ny = downscaler.create_empty_pyramid(
                           base=arr,
                           downscale=downscale,
                           downscale_cutoff=downscale_cutoff)
@@ -464,11 +464,16 @@ def write_array_to_group(
          'type': 'scale'}]]
 
     if downscale > 1:
+        scaler = DownscalerClass(
+                   method='gaussian',
+                   downscale=downscale,
+                   downscale_cutoff=downscale_cutoff)
+
         list_of_nx_ny = _get_nx_ny(
                             arr=arr,
                             downscale=downscale,
                             downscale_cutoff=downscale_cutoff,
-                            DownscalerClass=DownscalerClass)
+                            downscaler=scaler)
 
         for nxny in list_of_nx_ny:
             this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
@@ -476,6 +481,8 @@ def write_array_to_group(
                                      z_scale*arr.shape[2]/nxny[2]],
                            'type': 'scale'}]
             coord_transform.append(this_coord)
+    else:
+        scaler = None
 
     axes = [
         {"name": "x",
@@ -487,14 +494,6 @@ def write_array_to_group(
         {"name": "z",
          "type": "space",
          "unit": "millimeter"}]
-
-    if downscale > 1:
-        scaler = DownscalerClass(
-                   method='gaussian',
-                   downscale=downscale,
-                   downscale_cutoff=downscale_cutoff)
-    else:
-        scaler = None
 
     chunk_x = max(1, min(shape[0]//4, default_chunk))
     chunk_y = max(1, min(shape[1]//4, default_chunk))
