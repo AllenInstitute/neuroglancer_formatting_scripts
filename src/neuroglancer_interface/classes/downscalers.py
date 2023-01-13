@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Union
 import numpy as np
 from ome_zarr.scale import Scaler
 from dataclasses import dataclass
@@ -42,7 +42,11 @@ class XYScaler(ScalerBase):
     dataset
     """
 
-    def nearest(self, base: np.ndarray) -> List[np.ndarray]:
+    def nearest(
+            self,
+            base: Union[np.ndarray, dask.array.Array]
+    ) -> List[Union[np.ndarray, dask.array.Array]]:
+
         assert len(base.shape) == 3
 
         if isinstance(base, dask.array.Array):
@@ -140,7 +144,11 @@ class XYZScaler(ScalerBase):
     dataset
     """
 
-    def nearest(self, base: np.ndarray) -> List[np.ndarray]:
+    def nearest(
+            self,
+            base: Union[np.ndarray, dask.array.Array]
+    ) -> List[Union[np.ndarray, dask.array.Array]]:
+
         assert len(base.shape) == 3
 
         if isinstance(base, dask.array.Array):
