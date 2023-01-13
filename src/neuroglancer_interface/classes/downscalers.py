@@ -1,4 +1,4 @@
-from typing import List, Any, Union
+from typing import List, Any, Union, Tuple
 import numpy as np
 from ome_zarr.scale import Scaler
 from dataclasses import dataclass
@@ -61,7 +61,7 @@ class XYScaler(ScalerBase):
                                downscale=self.downscale,
                                downscale_cutoff=self.downscale_cutoff)
 
-        print(f"downscaling to {list_of_nx_ny}")
+        print(f"downscaling to {list_of_nx_ny} -- is_dask {is_dask}")
 
         results = dict()
         for nxny in list_of_nx_ny:
@@ -69,7 +69,7 @@ class XYScaler(ScalerBase):
                 chunks = tuple([max(1, n//4) for n in nxny])
                 results[nxny] = dask.array.empty_like(
                                     None,
-                                    name=f{"{nxny}"},
+                                    name=f"{nxny}",
                                     dtype=float,
                                     chunks=chunks,
                                     shape=(nxny))

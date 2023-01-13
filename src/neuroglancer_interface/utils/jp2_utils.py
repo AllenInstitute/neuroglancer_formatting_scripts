@@ -32,7 +32,7 @@ def get_jp2_config(
 
 def write_data_to_hdf5(
         config_list,
-        tmp_dir)
+        tmp_dir):
     """
     config_list is a list of dicts containign the config information
     for the jp2 files being stacked.
@@ -43,8 +43,10 @@ def write_data_to_hdf5(
     h5_path = pathlib.Path(
                 tempfile.mkstemp(
                     dir=tmp_dir,
-                    prefix='ome_zarr_temp_'
+                    prefix='ome_zarr_temp_',
                     suffix='.h5')[1])
+
+    h5_path.unlink()  # since tempfile.mkstemp creates the file
 
     try:
         _write_data_to_hdf5(
@@ -75,15 +77,14 @@ def _write_data_to_hdf5(
     jp2_config = get_jp2_config(config_list)
 
     nz = len(config_list)
-    shape = (jp2_config.shape[0],
-             jp2_config.shape[1],
+    shape = (jp2_config['shape'][0],
+             jp2_config['shape'][1],
              nz)
 
     chunks = (max(1, min(1000, shape[0]//4)),
               max(1, min(1000, shape[0]//4)),
               1)
 
-    ct = 0
     t0 = time.time()
     print(f"writing data to {h5_path.resolve().absolute()}")
     with h5py.File(h5_path, "w") as out_file:
@@ -95,7 +96,7 @@ def _write_data_to_hdf5(
                 chunks=chunks,
                 compression='gzip')
 
-        for iz in range(config_list):
+        for iz in range(len(config_list)):
             raw_data = glymur.Jp2k(config_list[iz]['image_path'])[:, :, :]
             out_file['red'][:, :, iz] = raw_data[:, :, 0]
             out_file['green'][:, :, iz] = raw_data[:, :, 1]
@@ -104,5 +105,8 @@ def _write_data_to_hdf5(
             per = duration/(iz+1)
             pred = per*nz
             remain = pred-duration
-            print(f"{ct} written in {duration:.2e} hrs; "
+            print(f"{iz+1} of {nz} written in {duration:.2e} hrs; "
                   f"predict {remain:.2e} of {pred:.2e} remaining")
+    duration = (time.time()-t0)/3600.0
+    print(f"finished writing {h5_path.resolve().absolute()} after "
+          f"{duration} hours")

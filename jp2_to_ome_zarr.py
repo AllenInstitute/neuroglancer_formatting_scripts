@@ -12,6 +12,7 @@ def main():
     parser.add_argument('--clobber', default=False, action='store_true')
     parser.add_argument('--nz_min', default=None, type=int)
     parser.add_argument('--nz_max', default=None, type=int)
+    parser.add_argument('--tmp_dir', default=None, type=str)
     args = parser.parse_args()
 
     config_list = json.load(open(args.config_list_path, "rb"))
@@ -25,7 +26,8 @@ def main():
         config_list=config_list,
         output_dir=pathlib.Path(args.output_dir),
         clobber=args.clobber,
-        nz_slice=nz_slice)
+        nz_slice=nz_slice,
+        tmp_dir=args.tmp_dir)
 
 if __name__ == "__main__":
     main()
