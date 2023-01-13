@@ -16,7 +16,7 @@ class ScalerBase(Scaler):
         raise NotImplementedError("Base nearest")
 
     def resize_image(self, image: Any) -> Any:
-        if not isinstance(image, dask.array.Array)
+        if not isinstance(image, dask.array.Array):
             raise RuntimeError("did not expect to run resize_image  on np.ndarray")
         list_of_nx_ny = self.create_empty_pyramid(
                     base=None,
@@ -28,12 +28,17 @@ class ScalerBase(Scaler):
             if list_of_nx_ny[idx] == image.shape:
                 this_idx = idx
                 break
+
+        if this_idx is None:
+            if image.shape[0] > list_of_nx_ny[0][0]:
+                this_idx = -1
+
         if this_idx is None:
             raise RuntimeError(f"could not find shape {image.shape} in\n"
                                f"{list_of_nx_ny}")
         this_dtype = image.dtype
         new_img = dask_resize(image,
-                              shape=list_of_nx_ny[this_idx+1],
+                              output_shape=list_of_nx_ny[this_idx+1],
                               preserve_range=True).astype(this_dtype)
         return new_img
 
