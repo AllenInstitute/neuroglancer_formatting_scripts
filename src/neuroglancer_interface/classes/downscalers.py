@@ -2,6 +2,8 @@ from typing import List, Any
 import numpy as np
 from ome_zarr.scale import Scaler
 from dataclasses import dataclass
+import dask.array
+from ome_zarr.dask_utils import resize as dask_resize
 from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
 
@@ -43,17 +45,38 @@ class XYScaler(ScalerBase):
     def nearest(self, base: np.ndarray) -> List[np.ndarray]:
         assert len(base.shape) == 3
 
-        (results,
-         list_of_nx_ny) = self.create_empty_pyramid(
+        if isinstance(base, dask.array.Array):
+            resize_func = dask_resize
+            is_dask = True
+        else:
+            resize_func = skimage_resize
+            is_dask = False
+
+        list_of_nx_ny = self.create_empty_pyramid(
                                base,
                                downscale=self.downscale,
                                downscale_cutoff=self.downscale_cutoff)
 
         print(f"downscaling to {list_of_nx_ny}")
 
+        results = dict()
+        for nxny in list_of_nx_ny:
+            if is_dask:
+                chunks = tuple([max(1, n//4) for n in nxny])
+                results[nxny] = dask.array.empty_like(
+                                    None,
+                                    name=f{"{nxny}"},
+                                    dtype=float,
+                                    chunks=chunks,
+                                    shape=(nxny))
+            else:
+                results[nxny] = np.zeros(nxny, dtype=float)
+
         for iz in range(base.shape[2]):
             for nxny in list_of_nx_ny:
-                img = skimage_resize(base[:, :, iz], (nxny[0], nxny[1]))
+                img = resize_func(base[:, :, iz],
+                                  (nxny[0], nxny[1]),
+                                  preserve_range=True)
                 results[nxny][:, :, iz] = img
 
         output = [base]
@@ -97,7 +120,6 @@ class XYScaler(ScalerBase):
         nx = base.shape[0]
         ny = base.shape[1]
         nz = base.shape[2]
-        results = dict()
         list_of_nx_ny = []
 
         cutoff = max(downscale_cutoff, base.shape[2])
@@ -105,12 +127,10 @@ class XYScaler(ScalerBase):
         while nx > cutoff or ny > cutoff:
             nx = nx//downscale
             ny = ny//downscale
-            data = np.zeros((nx, ny, base.shape[2]), dtype=float)
             key = (nx, ny, nz)
-            results[key] = data
             list_of_nx_ny.append(key)
 
-        return results, list_of_nx_ny
+        return list_of_nx_ny
 
 
 class XYZScaler(ScalerBase):
@@ -123,17 +143,24 @@ class XYZScaler(ScalerBase):
     def nearest(self, base: np.ndarray) -> List[np.ndarray]:
         assert len(base.shape) == 3
 
-        (results,
-         list_of_nx_ny) = self.create_empty_pyramid(
+        if isinstance(base, dask.array.Array):
+            resize_func = dask_resize
+        else:
+            resize_func = skimage_resize
+
+        list_of_nx_ny = self.create_empty_pyramid(
                                base,
                                downscale=self.downscale,
                                downscale_cutoff=self.downscale_cutoff)
 
         print(f"downscaling to {list_of_nx_ny}")
 
+        results = dict()
         for nxyz in list_of_nx_ny:
-            img = skimage_resize(base[:, :, :], nxyz)
-            results[nxyz][:, :, :] = img
+            img = resize_func(base[:, :, :],
+                              nxyz,
+                              preserve_range=True)
+            results[nxyz] = img
 
         output = [base]
         print("done downscaling")
@@ -173,15 +200,12 @@ class XYZScaler(ScalerBase):
         nx = base.shape[0]
         ny = base.shape[1]
         nz = base.shape[2]
-        results = dict()
         list_of_nx_ny = []
         while max(nx, ny, nz) > downscale_cutoff:
             nx = nx//downscale
             ny = ny//downscale
             nz = nz//downscale
-            data = np.zeros((nx, ny, nz), dtype=float)
             key = (nx, ny, nz)
-            results[key] = data
             list_of_nx_ny.append(key)
 
-        return results, list_of_nx_ny
+        return list_of_nx_ny

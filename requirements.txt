@@ -5,3 +5,4 @@ ome-zarr
 dominate
 task-queue
 pandas
+dask

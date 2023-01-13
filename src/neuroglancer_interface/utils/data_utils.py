@@ -409,8 +409,8 @@ def _get_nx_ny(
         downscale,
         downscale_cutoff,
         DownscalerClass):
-    (_,
-     list_of_nx_ny) = DownscalerClass.create_empty_pyramid(
+
+    list_of_nx_ny = DownscalerClass.create_empty_pyramid(
                           base=arr,
                           downscale=downscale,
                           downscale_cutoff=downscale_cutoff)
