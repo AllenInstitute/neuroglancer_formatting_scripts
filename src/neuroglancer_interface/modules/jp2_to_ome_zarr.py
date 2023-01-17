@@ -45,7 +45,7 @@ def convert_jp2_to_ome_zarr(
                 tmp_dir=tmp_dir)
 
     try:
-        _convert_jp2_to_ome_zarr(
+        _convert_hdf5_to_ome_zarr(
             h5_path=h5_path,
             root_group=root_group,
             x_scale=x_scale,
@@ -55,12 +55,15 @@ def convert_jp2_to_ome_zarr(
         if h5_path.exists():
             h5_path.unlink()
 
-def _convert_jp2_to_ome_zarr(
+def _convert_hdf5_to_ome_zarr(
         h5_path: pathlib.Path,
         root_group: Any,
         x_scale: float = 0.0003,
         y_scale: float = 0.0003,
-        z_scale: float = 1.0) -> None:
+        z_scale: float = 1.0,
+        downscale_cutoff=2501,
+        default_chunk=512,
+        downscaler_class=XYScaler) -> None:
 
 
     with h5py.File(h5_path, 'r') as in_file:
@@ -76,9 +79,9 @@ def _convert_jp2_to_ome_zarr(
                 y_scale=y_scale,
                 z_scale=z_scale,
                 downscale=2,
-                DownscalerClass=XYScaler,
-                downscale_cutoff=2501,
-                default_chunk=512)
+                DownscalerClass=downscaler_class,
+                downscale_cutoff=downscale_cutoff,
+                default_chunk=default_chunk)
 
             duration = (time.time()-t0)/3600.0
             print(f"{data_key} channel took "
