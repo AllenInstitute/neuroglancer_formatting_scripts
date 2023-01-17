@@ -81,8 +81,8 @@ def _write_data_to_hdf5(
              jp2_config['shape'][1],
              nz)
 
-    chunks = (max(1, min(1000, shape[0]//4)),
-              max(1, min(1000, shape[0]//4)),
+    chunks = (max(1, min(2000, shape[0]//4)),
+              max(1, min(2000, shape[1]//4)),
               1)
 
     t0 = time.time()
