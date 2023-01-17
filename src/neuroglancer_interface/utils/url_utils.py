@@ -74,7 +74,8 @@ def get_heatmap_image_layer(
         range_max,
         visible=True,
         opacity=1.0,
-        is_transparent=False):
+        is_transparent=False,
+        is_uint=False):
 
     rgb_color = get_color_lookup()[color]
     result = dict()
@@ -87,7 +88,8 @@ def get_heatmap_image_layer(
     result["shader"] = get_rgb_heat_map_shader_code(
                                        rgb_color,
                                        transparent=is_transparent,
-                                       range_max=range_max)
+                                       range_max=range_max,
+                                       is_uint=is_uint)
     result["opacity"] = opacity
     result["visible"] = visible
     return result
@@ -130,7 +132,8 @@ def get_rgb_heat_map_shader_code(
         color,
         transparent=True,
         range_max=20.0,
-        threshold=0.0):
+        threshold=0.0,
+        is_uint=False):
 
     if transparent:
         default = 'emitTransparent()'
@@ -140,7 +143,13 @@ def get_rgb_heat_map_shader_code(
     code = f"#uicontrol invlerp normalized(range=[0, {range_max}])\n"
     code += "void main()"
     code += " {\n  "
-    code += f"    if(getDataValue(0)>{threshold})"
+
+    if is_uint:
+        code += f"    if(int(getDataValue(0).value)>{int(threshold):d})"
+
+    else:
+        code += f"    if(getDataValue(0)>{threshold})"
+
     code += "{\n"
     code += "        emitRGB(normalized()*"
     code += "vec3("
