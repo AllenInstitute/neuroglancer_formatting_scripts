@@ -5,6 +5,8 @@ import json
 from neuroglancer_interface.modules.jp2_to_ome_zarr import (
     convert_jp2_to_ome_zarr)
 
+from neuroglancer_interface.utils.jp2_utils import _write_data_to_hdf5
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_list_path', type=str, default=None)
@@ -21,6 +23,13 @@ def main():
         nz_slice = (args.nz_min, args.nz_max)
     else:
         nz_slice = None
+
+    h5_path = pathlib.Path('/allen/aibs/technology/danielsf/highres_test_file.h5')
+    _write_data_to_hdf5(
+        config_list=config_list,
+        h5_path=h5_path,
+        clobber=False)
+    exit()
 
     convert_jp2_to_ome_zarr(
         config_list=config_list,
