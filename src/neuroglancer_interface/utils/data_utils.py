@@ -428,7 +428,8 @@ def write_array_to_group(
         DownscalerClass=XYScaler,
         downscale_cutoff=64,
         default_chunk=64,
-        axis_order=('x', 'y', 'z')):
+        axis_order=('x', 'y', 'z'),
+        storage_options=None):
     """
     Write a numpy array to an ome-zarr group
 
@@ -506,16 +507,20 @@ def write_array_to_group(
     chunk_y = max(1, min(shape[1]//4, default_chunk))
     chunk_z = max(1, min(shape[2]//4, default_chunk))
 
+    these_storage_opts = {'chunks': (chunk_x, chunk_y, chunk_z)}
+    if storage_options is not None:
+        for k in storage_options:
+            if k == 'chunks':
+                continue
+            these_storage_opts[k] = storage_options[k]
+
     write_image(
         image=arr,
         scaler=scaler,
         group=group,
         coordinate_transformations=coord_transform,
         axes=axes,
-        storage_options={'chunks':(chunk_x,
-                                   chunk_y,
-                                   chunk_z)})
-
+        storage_options=these_storage_opts)
 
 
 def get_celltype_lookups_from_rda_df(

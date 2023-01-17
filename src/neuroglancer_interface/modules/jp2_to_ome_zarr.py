@@ -6,6 +6,8 @@ import pathlib
 import numpy as np
 import dask.array
 
+from numcodecs import Blosc
+
 from neuroglancer_interface.utils.jp2_utils import (
     write_data_to_hdf5)
 
@@ -148,6 +150,11 @@ def _convert_hdf5_to_ome_zarr(
         default_chunk=512,
         downscaler_class=HighResScaler) -> None:
 
+    storage_options = {'compressor':
+                        Blosc(cname='lz4',
+                              clevel=5,
+                              shuffle=Blosc.SHUFFLE)}
+
 
     with h5py.File(h5_path, 'r') as in_file:
         for data_key in ('green', 'red'):
@@ -165,7 +172,8 @@ def _convert_hdf5_to_ome_zarr(
                 DownscalerClass=downscaler_class,
                 downscale_cutoff=downscale_cutoff,
                 default_chunk=default_chunk,
-                axis_order=('y', 'x', 'z'))
+                axis_order=('y', 'x', 'z'),
+                storage_options=storage_options)
 
             duration = (time.time()-t0)/3600.0
             print(f"{data_key} channel took "
