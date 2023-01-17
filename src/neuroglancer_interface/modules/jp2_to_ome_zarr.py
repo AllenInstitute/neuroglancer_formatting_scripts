@@ -17,6 +17,82 @@ from neuroglancer_interface.utils.utils import get_prime_factors
 from neuroglancer_interface.classes.downscalers import XYZScaler
 
 
+class HighResScaler(XYZScaler):
+
+    def create_empty_pyramid(
+            self,
+            base,
+            downscale=2,
+            downscale_cutoff=128):
+        """
+        Create a lookup table of empty arrays for an
+        image/volume pyramid
+
+        Parameters
+        ----------
+        base: np.ndarray
+            The array that will be converted into an image/volume
+            pyramid
+
+        downscale: int
+            The factor by which to downscale base at each level of
+            zoom
+
+        Returns
+        -------
+        results: dict
+            A dict mapping an image shape (nx, ny) to
+            an empty array of size (nx, ny, nz)
+
+            NOTE: we are not downsampling nz in this setup
+
+        list_of_nx_ny:
+            List of valid keys of results
+        """
+        if not hasattr(self, '_list_of_nx_ny'):
+            nx = base.shape[0]
+            ny = base.shape[1]
+            nz = base.shape[2]
+
+            nx_factor_list = get_prime_factors(nx)
+            ny_factor_list = get_prime_factors(ny)
+            nz_factor_list = get_prime_factors(nz)
+
+            list_of_nx_ny = []
+
+            keep_going = True
+            while keep_going:
+                keep_going = False
+                nx_factor = nx_factor_list[0]
+                ny_factor = ny_factor_list[0]
+                nz_factor = nz_factor_list[0]
+                if len(nx_factor_list) > 1:
+                    if nx // nx_factor >= self.downscale_cutoff:
+                        nx = nx // nx_factor
+                        nx_factor_list.pop(0)
+                        keep_going = True
+                if len(ny_factor_list) > 1:
+                    if ny//ny_factor >= self.downscale_cutoff:
+                        ny = ny // ny_factor
+                        ny_factor_list.pop(0)
+                        keep_going = True
+                if len(nz_factor_list) > 1:
+                    if nz // nz_factor >= self.downscale_cutoff:
+                        nz = nz // nz_factor
+                        nz_factor_list.pop(0)
+                        keep_going = True
+
+                if keep_going:
+                    list_of_nx_ny.append((nx, ny, nz))
+
+            self._list_of_nx_ny = list_of_nx_ny
+            self.max_layer = len(self._list_of_nx_ny)
+
+            print(f"list_of_nx_ny {self._list_of_nx_ny}")
+
+        return self._list_of_nx_ny
+
+
 def convert_jp2_to_ome_zarr(
         config_list: List[dict],
         output_dir: pathlib.Path,
@@ -96,77 +172,4 @@ def _convert_hdf5_to_ome_zarr(
                   f"{duration:.2e} hours")
 
 
-class HighResScaler(XYZScaler):
 
-    def create_empty_pyramid(
-            self,
-            base,
-            downscale=2,
-            downscale_cutoff=128):
-        """
-        Create a lookup table of empty arrays for an
-        image/volume pyramid
-
-        Parameters
-        ----------
-        base: np.ndarray
-            The array that will be converted into an image/volume
-            pyramid
-
-        downscale: int
-            The factor by which to downscale base at each level of
-            zoom
-
-        Returns
-        -------
-        results: dict
-            A dict mapping an image shape (nx, ny) to
-            an empty array of size (nx, ny, nz)
-
-            NOTE: we are not downsampling nz in this setup
-
-        list_of_nx_ny:
-            List of valid keys of results
-        """
-        if not hasattr(self, '_list_of_nx_ny'):
-            nx = base.shape[0]
-            ny = base.shape[1]
-            nz = base.shape[2]
-
-            nx_factor_list = get_prime_factors(nx)
-            ny_factor_list = get_prime_factors(ny)
-            nz_factor_list = get_prime_factors(nz)
-
-            list_of_nx_ny = []
-
-            keep_going = True
-            while keep_going:
-                keep_going = False
-                nx_factor = nx_factor_list[0]
-                ny_factor = ny_factor_list[0]
-                nz_factor = nz_factor_list[0]
-                if len(nx_factor_list) > 1:
-                    if nx // nx_factor >= self.downscale_cutoff:
-                        nx = nx // nx_factor
-                        nx_factor_list.pop(0)
-                        keep_going = True
-                if len(ny_factor_list) > 1:
-                    if ny//ny_factor >= self.downscale_cutoff:
-                        ny = ny // ny_factor
-                        ny_factor_list.pop(0)
-                        keep_going = True
-                if len(nz_factor_list) > 1:
-                    if nz // nz_factor >= self.downscale_cutoff:
-                        nz = nz // nz_factor
-                        nz_factor_list.pop(0)
-                        keep_going = True
-
-                if keep_going:
-                    list_of_nx_ny.append((nx, ny, nz))
-
-            self._list_of_nx_ny = list_of_nx_ny
-            self.max_layer = len(self._list_of_nx_ny)
-
-            print(f"list_of_nx_ny {self._list_of_nx_ny}")
-
-        return self._list_of_nx_ny
