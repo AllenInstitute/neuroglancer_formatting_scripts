@@ -427,7 +427,8 @@ def write_array_to_group(
         downscale: int = 1,
         DownscalerClass=XYScaler,
         downscale_cutoff=64,
-        default_chunk=64):
+        default_chunk=64,
+        axis_order=('x', 'y', 'z')):
     """
     Write a numpy array to an ome-zarr group
 
@@ -449,6 +450,12 @@ def write_array_to_group(
     downscale: int
         The amount by which to downscale the image at each
         level of zoom
+
+    axis_order:
+        controls the order in which axes are written out to .zattrs
+        (note x_scale, y_scale, z_scale will correspond to the 0th,
+        1st, and 2nd dimensions in the data, without regard to what
+        the axis names are; this needs to be fixed later)
     """
 
     # neuroglancer does not support 64 bit floats
@@ -485,13 +492,13 @@ def write_array_to_group(
         scaler = None
 
     axes = [
-        {"name": "x",
+        {"name": axis_order[0],
          "type": "space",
          "unit": "millimeter"},
-        {"name": "y",
+        {"name": axis_order[1],
          "type": "space",
          "unit": "millimeter"},
-        {"name": "z",
+        {"name": axis_order[2],
          "type": "space",
          "unit": "millimeter"}]
 

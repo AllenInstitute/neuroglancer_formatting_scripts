@@ -81,7 +81,8 @@ def _convert_hdf5_to_ome_zarr(
                 downscale=2,
                 DownscalerClass=downscaler_class,
                 downscale_cutoff=downscale_cutoff,
-                default_chunk=default_chunk)
+                default_chunk=default_chunk,
+                axis_order=('y', 'x', 'z'))
 
             duration = (time.time()-t0)/3600.0
             print(f"{data_key} channel took "
