@@ -24,7 +24,9 @@ def convert_jp2_to_ome_zarr(
         y_scale: float = 0.0003,
         z_scale: float = 1.0,
         tmp_dir: Union[str, pathlib.Path]=None,
-        nz_slice: Optional[Tuple[int, int]] = None) -> None:
+        nz_slice: Optional[Tuple[int, int]] = None,
+        downscale_cutoff: int = 2501,
+        default_chunk: int = 512) -> None:
     """
     Result is just written to the specified group.
     """
@@ -50,7 +52,9 @@ def convert_jp2_to_ome_zarr(
             root_group=root_group,
             x_scale=x_scale,
             y_scale=y_scale,
-            z_scale=z_scale)
+            z_scale=z_scale,
+            downscale_cutoff=downscale_cutoff,
+            default_chunk=default_chunk)
     finally:
         if h5_path.exists():
             h5_path.unlink()
