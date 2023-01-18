@@ -148,7 +148,8 @@ def _convert_hdf5_to_ome_zarr(
         z_scale: float = 0.1,
         downscale_cutoff=2501,
         default_chunk=128,
-        downscaler_class=HighResScaler) -> None:
+        downscaler_class=HighResScaler,
+        n_processors=4) -> None:
 
     storage_options = {'compressor':
                         Blosc(cname='lz4',
@@ -172,7 +173,8 @@ def _convert_hdf5_to_ome_zarr(
             downscale_cutoff=downscale_cutoff,
             default_chunk=default_chunk,
             axis_order=('y', 'x', 'z'),
-            storage_options=storage_options)
+            storage_options=storage_options,
+            n_processors=n_processors)
 
         duration = (time.time()-t0)/3600.0
         print(f"{data_key} channel took "

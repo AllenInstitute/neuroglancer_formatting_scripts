@@ -23,7 +23,8 @@ def write_array_to_group_from_dask(
         downscale_cutoff=64,
         default_chunk=64,
         axis_order=('x', 'y', 'z'),
-        storage_options=None):
+        storage_options=None,
+        n_processors=4):
     """
     Write a numpy array to an ome-zarr group
 
@@ -108,7 +109,8 @@ def write_array_to_group_from_dask(
         root_group=group,
         coordinate_transformations=coord_transform,
         axes=axes,
-        storage_options=these_storage_opts)
+        storage_options=these_storage_opts,
+        n_processors=n_processors)
 
 
 
@@ -120,7 +122,7 @@ def write_dask_image(
         coordinate_transformations,
         axes,
         storage_options,
-        n_processors=8):
+        n_processors=4):
 
     list_of_shapes = scaler._list_of_nx_ny
 
@@ -161,7 +163,7 @@ def _write_dask_image_worker(
         sub_group_idx,
         storage_options):
 
-    with h5py.File(h5_path, 'r') as in_file:
+    with h5py.File(h5_path, mode='r', swmr=True) as in_file:
         image = dask.array.from_array(in_file[h5_key])
 
         list_of_nx_ny = scaler._list_of_nx_ny
