@@ -25,7 +25,7 @@ class HighResScaler(XYZScaler):
 
     def create_empty_pyramid(
             self,
-            base_shape):
+            base):
         """
         Create a lookup table of empty arrays for an
         image/volume pyramid
@@ -52,6 +52,11 @@ class HighResScaler(XYZScaler):
             List of valid keys of results
         """
         if not hasattr(self, '_list_of_nx_ny'):
+
+            if isinstance(base, tuple):
+                base_shape = base.shape
+            else:
+                base_shape = base.shape
             nx = base_shape[0]
             ny = base_shape[1]
             nz = base_shape[2]

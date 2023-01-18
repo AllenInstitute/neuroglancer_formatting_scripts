@@ -61,7 +61,7 @@ def main():
             segmentation_path_list =[
                     pathlib.Path(p)
                     for p in config_data["ccf"]["segmentation"]],
-            label_path=pathlib.Path(config_data["ccf"]["labels"]),
+            label_path=config_data["ccf"]["labels"],
             output_dir=output_dir/"ccf_annotations",
             use_compression=True,
             compression_blocksize=32,

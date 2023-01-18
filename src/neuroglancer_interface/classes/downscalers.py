@@ -7,6 +7,9 @@ from ome_zarr.dask_utils import resize as dask_resize
 from skimage.transform import pyramid_gaussian
 from skimage.transform import resize as skimage_resize
 
+from neuroglancer_interface.utils.utils import get_prime_factors
+
+
 @dataclass
 class ScalerBase(Scaler):
 
@@ -81,9 +84,7 @@ class XYScaler(ScalerBase):
             is_dask = False
 
         list_of_nx_ny = self.create_empty_pyramid(
-                               base,
-                               downscale=self.downscale,
-                               downscale_cutoff=self.downscale_cutoff)
+                               base)
 
         print(f"downscaling to {list_of_nx_ny} -- is_dask {is_dask}")
 
@@ -114,9 +115,116 @@ class XYScaler(ScalerBase):
 
     def create_empty_pyramid(
             self,
-            base,
-            downscale=2,
-            downscale_cutoff=128):
+            base):
+        """
+        Create a lookup table of empty arrays for an
+        image/volume pyramid
+
+        Parameters
+        ----------
+        base: np.ndarray
+            The array that will be converted into an image/volume
+            pyramid
+
+        downscale: int
+            The factor by which to downscale base at each level of
+            zoom
+
+        Returns
+        -------
+        results: dict
+            A dict mapping an image shape (nx, ny) to
+            an empty array of size (nx, ny, nz)
+
+            NOTE: we are not downsampling nz in this setup
+
+        list_of_nx_ny:
+            List of valid keys of results
+        """
+
+        if not hasattr(self, '_list_of_nx_ny'):
+
+            if isinstance(base, tuple):
+                base_shape = base.shape
+            else:
+                base_shape = base.shape
+
+            nx = base_shape[0]
+            ny = base_shape[1]
+            nz = base_shape[2]
+            nx_factor_list = get_prime_facttors(nx)
+            ny_factor_list = get_priem_factors(ny)
+
+            list_of_nx_ny = []
+
+            keep_going = True
+            while keep_going:
+                keep_going = False
+                nx_factor = nx_factor_list[0]
+                ny_factor = ny_factor_list[0]
+                nz_factor = nz_factor_list[0]
+                if len(nx_factor_list) > 1:
+                    if nx // nx_factor >= self.downscale_cutoff:
+                        nx = nx // nx_factor
+                        nx_factor_list.pop(0)
+                        keep_going = True
+                if len(ny_factor_list) > 1:
+                    if ny//ny_factor >= self.downscale_cutoff:
+                        ny = ny // ny_factor
+                        ny_factor_list.pop(0)
+                        keep_going = True
+
+                if keep_going:
+                    list_of_nx_ny.append((nx, ny, nz))
+
+            self._list_of_nx_ny = list_of_nx_ny
+            self.max_layer = len(self._list_of_nx_ny)
+
+            print(f"list_of_nx_ny {self._list_of_nx_ny}")
+
+        return self._list_of_nx_ny
+
+
+class XYZScaler(ScalerBase):
+    """
+    A scaler that ignores the z dimension, since it is
+    so small relative to the other two dimensions in this initial
+    dataset
+    """
+
+    def nearest(
+            self,
+            base: Union[np.ndarray, dask.array.Array]
+    ) -> List[Union[np.ndarray, dask.array.Array]]:
+
+        assert len(base.shape) == 3
+
+        if isinstance(base, dask.array.Array):
+            resize_func = dask_resize
+        else:
+            resize_func = skimage_resize
+
+        list_of_nx_ny = self.create_empty_pyramid(
+                               base)
+
+        print(f"downscaling to {list_of_nx_ny}")
+
+        results = dict()
+        for nxyz in list_of_nx_ny:
+            img = resize_func(base[:, :, :],
+                              nxyz,
+                              preserve_range=True)
+            results[nxyz] = img
+
+        output = [base]
+        print("done downscaling")
+        return output + [results[key].astype(base.dtype)
+                         for key in list_of_nx_ny]
+
+
+    def create_empty_pyramid(
+            self,
+            base):
         """
         Create a lookup table of empty arrays for an
         image/volume pyramid
@@ -143,106 +251,49 @@ class XYScaler(ScalerBase):
             List of valid keys of results
         """
         if not hasattr(self, '_list_of_nx_ny'):
-            nx = base.shape[0]
-            ny = base.shape[1]
-            nz = base.shape[2]
+
+            if isinstance(base, tuple):
+                base_shape = base.shape
+            else:
+                base_shape = base.shape
+            nx = base_shape[0]
+            ny = base_shape[1]
+            nz = base_shape[2]
+
+            nx_factor_list = get_prime_factors(nx)
+            ny_factor_list = get_prime_factors(ny)
+            nz_factor_list = get_prime_factors(nz)
+
             list_of_nx_ny = []
 
-            cutoff = max(downscale_cutoff, base.shape[2])
+            keep_going = True
+            while keep_going:
+                keep_going = False
+                nx_factor = nx_factor_list[0]
+                ny_factor = ny_factor_list[0]
+                nz_factor = nz_factor_list[0]
+                if len(nx_factor_list) > 1:
+                    if nx // nx_factor >= self.downscale_cutoff:
+                        nx = nx // nx_factor
+                        nx_factor_list.pop(0)
+                        keep_going = True
+                if len(ny_factor_list) > 1:
+                    if ny//ny_factor >= self.downscale_cutoff:
+                        ny = ny // ny_factor
+                        ny_factor_list.pop(0)
+                        keep_going = True
+                if len(nz_factor_list) > 1:
+                    if nz // nz_factor >= self.downscale_cutoff:
+                        nz = nz // nz_factor
+                        nz_factor_list.pop(0)
+                        keep_going = True
 
-            while nx > cutoff or ny > cutoff:
-                nx = nx//downscale
-                ny = ny//downscale
-                key = (nx, ny, nz)
-                list_of_nx_ny.append(key)
+                if keep_going:
+                    list_of_nx_ny.append((nx, ny, nz))
 
             self._list_of_nx_ny = list_of_nx_ny
             self.max_layer = len(self._list_of_nx_ny)
 
-        return self._list_of_nx_ny
-
-
-class XYZScaler(ScalerBase):
-    """
-    A scaler that ignores the z dimension, since it is
-    so small relative to the other two dimensions in this initial
-    dataset
-    """
-
-    def nearest(
-            self,
-            base: Union[np.ndarray, dask.array.Array]
-    ) -> List[Union[np.ndarray, dask.array.Array]]:
-
-        assert len(base.shape) == 3
-
-        if isinstance(base, dask.array.Array):
-            resize_func = dask_resize
-        else:
-            resize_func = skimage_resize
-
-        list_of_nx_ny = self.create_empty_pyramid(
-                               base,
-                               downscale=self.downscale,
-                               downscale_cutoff=self.downscale_cutoff)
-
-        print(f"downscaling to {list_of_nx_ny}")
-
-        results = dict()
-        for nxyz in list_of_nx_ny:
-            img = resize_func(base[:, :, :],
-                              nxyz,
-                              preserve_range=True)
-            results[nxyz] = img
-
-        output = [base]
-        print("done downscaling")
-        return output + [results[key].astype(base.dtype)
-                         for key in list_of_nx_ny]
-
-
-    @classmethod
-    def create_empty_pyramid(
-            cls,
-            base,
-            downscale=2,
-            downscale_cutoff=128):
-        """
-        Create a lookup table of empty arrays for an
-        image/volume pyramid
-
-        Parameters
-        ----------
-        base: np.ndarray
-            The array that will be converted into an image/volume
-            pyramid
-
-        downscale: int
-            The factor by which to downscale base at each level of
-            zoom
-
-        Returns
-        -------
-        results: dict
-            A dict mapping an image shape (nx, ny) to
-            an empty array of size (nx, ny, nz)
-
-        list_of_nx_ny:
-            List of valid keys of results
-        """
-        if not hasattr(self, '_list_of_nx_ny'):
-            nx = base.shape[0]
-            ny = base.shape[1]
-            nz = base.shape[2]
-            list_of_nx_ny = []
-            while max(nx, ny, nz) > downscale_cutoff:
-                nx = nx//downscale
-                ny = ny//downscale
-                nz = nz//downscale
-                key = (nx, ny, nz)
-                list_of_nx_ny.append(key)
-
-            self._list_of_nx_ny = list_of_nx_ny
-            self.max_layer = len(list_of_nx_ny)
+            print(f"list_of_nx_ny {self._list_of_nx_ny}")
 
         return self._list_of_nx_ny

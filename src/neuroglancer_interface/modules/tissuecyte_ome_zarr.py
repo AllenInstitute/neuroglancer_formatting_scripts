@@ -52,6 +52,8 @@ def convert_tissuecyte_to_ome_zarr(
                 channel_color = "red"
             elif "_green" in sub_file.name:
                 channel_color = "green"
+            elif "_blue" in sub_file.name:
+                channel_color = "blue"
             else:
                 raise RuntimeError(
                     "Cannot get channel color from "
