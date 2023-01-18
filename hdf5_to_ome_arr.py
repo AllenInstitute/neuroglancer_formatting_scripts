@@ -14,6 +14,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--h5_path', type=str, default=default_h5_path)
     parser.add_argument('--output_dir', type=str, default=default_output_dir)
+    parser.add_argument('--n_processors', type=int, default=4)
     args = parser.parse_args()
 
     h5_path = pathlib.Path(args.h5_path)
@@ -29,7 +30,8 @@ def main():
         h5_path=h5_path,
         root_group=root_group,
         default_chunk=128,
-        downscale_cutoff=125)
+        downscale_cutoff=125,
+        n_processors=args.n_processors)
 
 if __name__ == "__main__":
     main()
