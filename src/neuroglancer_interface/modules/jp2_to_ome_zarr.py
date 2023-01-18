@@ -12,8 +12,10 @@ from neuroglancer_interface.utils.jp2_utils import (
     write_data_to_hdf5)
 
 from neuroglancer_interface.utils.data_utils import (
-    write_array_to_group,
     create_root_group)
+
+from neuroglancer_interface.utils.dask_utils import (
+    write_array_to_group_from_dask)
 
 from neuroglancer_interface.utils.utils import get_prime_factors
 from neuroglancer_interface.classes.downscalers import XYZScaler
@@ -23,9 +25,7 @@ class HighResScaler(XYZScaler):
 
     def create_empty_pyramid(
             self,
-            base,
-            downscale=2,
-            downscale_cutoff=128):
+            base_shape):
         """
         Create a lookup table of empty arrays for an
         image/volume pyramid
@@ -52,9 +52,9 @@ class HighResScaler(XYZScaler):
             List of valid keys of results
         """
         if not hasattr(self, '_list_of_nx_ny'):
-            nx = base.shape[0]
-            ny = base.shape[1]
-            nz = base.shape[2]
+            nx = base_shape[0]
+            ny = base_shape[1]
+            nz = base_shape[2]
 
             nx_factor_list = get_prime_factors(nx)
             ny_factor_list = get_prime_factors(ny)
@@ -145,9 +145,9 @@ def _convert_hdf5_to_ome_zarr(
         root_group: Any,
         x_scale: float = 0.0003,
         y_scale: float = 0.0003,
-        z_scale: float = 1.0,
+        z_scale: float = 0.1,
         downscale_cutoff=2501,
-        default_chunk=512,
+        default_chunk=128,
         downscaler_class=HighResScaler) -> None:
 
     storage_options = {'compressor':
@@ -156,28 +156,27 @@ def _convert_hdf5_to_ome_zarr(
                               shuffle=Blosc.SHUFFLE)}
 
 
-    with h5py.File(h5_path, 'r') as in_file:
-        for data_key in ('green', 'red'):
-            print(f"writing {data_key} channel")
-            t0 = time.time()
-            data = dask.array.from_array(in_file[data_key])
+    for data_key in ('green', 'red'):
+        print(f"writing {data_key} channel")
+        t0 = time.time()
 
-            write_array_to_group(
-                arr=data,
-                group=root_group.create_group(data_key),
-                x_scale=x_scale,
-                y_scale=y_scale,
-                z_scale=z_scale,
-                downscale=2,
-                DownscalerClass=downscaler_class,
-                downscale_cutoff=downscale_cutoff,
-                default_chunk=default_chunk,
-                axis_order=('y', 'x', 'z'),
-                storage_options=storage_options)
+        write_array_to_group_from_dask(
+            h5_path=h5_path,
+            h5_key=data_key,
+            group=root_group.create_group(data_key),
+            x_scale=x_scale,
+            y_scale=y_scale,
+            z_scale=z_scale,
+            downscale=2,
+            DownscalerClass=downscaler_class,
+            downscale_cutoff=downscale_cutoff,
+            default_chunk=default_chunk,
+            axis_order=('y', 'x', 'z'),
+            storage_options=storage_options)
 
-            duration = (time.time()-t0)/3600.0
-            print(f"{data_key} channel took "
-                  f"{duration:.2e} hours")
+        duration = (time.time()-t0)/3600.0
+        print(f"{data_key} channel took "
+              f"{duration:.2e} hours")
 
 
 
