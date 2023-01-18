@@ -1,4 +1,6 @@
 import re
+import numpy as np
+import SimpleITK
 
 def get_labels(annotation_path):
     name_lookup = {}
@@ -20,6 +22,20 @@ def get_labels(annotation_path):
             name_lookup[idx] = name
     return name_lookup
 
+
+def get_dummy_labels(segmentation_path_list):
+    """
+    construct dict from int to str(int)
+    """
+    result = dict()
+    for pth in segmentation_path_list:
+        vals = np.unique(
+                    SimpleITK.GetArrayFromImage(
+                        SimpleITK.ReadImage(pth)))
+        for v in vals:
+            result[int(v)] = f"{str(int(v))}"
+
+    return result
 
 def format_labels(labels):
     """

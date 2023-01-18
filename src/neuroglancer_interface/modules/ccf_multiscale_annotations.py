@@ -6,7 +6,8 @@ import numpy as np
 from neuroglancer_interface.utils.data_utils import get_scales_from_img
 from neuroglancer_interface.utils.ccf_utils import (
     get_labels,
-    format_labels)
+    format_labels,
+    get_dummy_labels)
 from neuroglancer_interface.compression.utils import (
     compress_ccf_data)
 
@@ -51,7 +52,12 @@ def write_out_ccf(
         do_chunking(metadata=scale_metadata,
                     parent_output_dir=output_dir)
 
-    labels = format_labels(get_labels(label_path))
+    if label_path is not None:
+        label_path = pathlib.Path(label_path)
+        labels = format_labels(get_labels(label_path))
+    else:
+        labels = get_dummy_labels(segmentation_path_list)
+
     seg_dir = output_dir / parent_info['segment_properties']
     seg_dir.mkdir(exist_ok=True)
     with open(seg_dir / 'info', 'w') as out_file:
