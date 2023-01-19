@@ -12,22 +12,19 @@ from neuroglancer_interface.utils.data_utils import (
 from neuroglancer_interface.classes.downscalers import (
     XYZScaler)
 
+from neuroglancer_interface.classes.nifti_array import (
+    get_nifti_obj)
+
 
 def convert_tissuecyte_to_ome_zarr(
-        input_dir=None,
+        input_path=None,
         output_dir=None,
         downscale=2,
         n_processors=6,
         chunk_size=128):
 
     output_dir = pathlib.Path(output_dir)
-    input_dir = pathlib.Path(input_dir)
-
-    if not input_dir.is_dir():
-        raise RuntimeError(
-            "In convert_tissuecyte_to_ome_zarr, input_dir\n"
-            f"{input_dir.resolve().absolute()}\n"
-            "is not a dir")
+    input_path = pathlib.Path(input_path)
 
     metadata_path = output_dir / 'metadata.json'
 
@@ -38,36 +35,51 @@ def convert_tissuecyte_to_ome_zarr(
     metadata_collector.set_lock(mgr.Lock())
     metadata_collector.metadata = mgr.dict()
 
-    sub_dir_list = [n for n in input_dir.iterdir()
-                    if n.is_dir()]
-
     fname_list = []
     group_name_list = []
-    for sub_dir in sub_dir_list:
-        sub_file_list = [n for n in sub_dir.iterdir()
-                         if n.is_file() and n.name.endswith('nii.gz')]
+    channel_list = []
+    sub_dir_list = None
+    if input_path.is_dir():
+        sub_dir_list = [n for n in input_dir.iterdir()
+                        if n.is_dir()]
 
-        for sub_file in sub_file_list:
-            if "_red" in sub_file.name:
-                channel_color = "red"
-            elif "_green" in sub_file.name:
-                channel_color = "green"
-            elif "_blue" in sub_file.name:
-                channel_color = "blue"
-            else:
-                raise RuntimeError(
-                    "Cannot get channel color from "
-                    f"{sub_file.name}")
-            group_name = f"{sub_dir.name}/{channel_color}"
-            fname_list.append(sub_file)
-            if group_name in group_name_list:
-                raise RuntimeError(
-                    f"Group {group_name} appears more than once")
-            group_name_list.append(group_name)
+        for sub_dir in sub_dir_list:
+            sub_file_list = [n for n in sub_dir.iterdir()
+                             if n.is_file() and n.name.endswith('nii.gz')]
+
+            for sub_file in sub_file_list:
+                if "_red" in sub_file.name:
+                    channel_color = "red"
+                elif "_green" in sub_file.name:
+                    channel_color = "green"
+                elif "_blue" in sub_file.name:
+                    channel_color = "blue"
+                else:
+                    raise RuntimeError(
+                        "Cannot get channel color from "
+                        f"{sub_file.name}")
+                group_name = f"{sub_dir.name}/{channel_color}"
+
+                # we are now only getting the channels at the level
+                # of the NiftiArrayCollection
+                fname_list.append(sub_dir)
+                if group_name in group_name_list:
+                    raise RuntimeError(
+                        f"Group {group_name} appears more than once")
+                group_name_list.append(group_name)
+                channel_list.append(color)
+    elif input_path.is_file():
+        fname_list = [input_path, input_path]
+        group_name_list = ["red", "green"]
+        channel_list = ["red", "green"]
+    else:
+        raise RuntimeError(
+            f"{input_path} is neither dir nor file")
 
     root_group = write_nii_file_list_to_ome_zarr(
         file_path_list=fname_list,
         group_name_list=group_name_list,
+        channel_list=channel_list,
         output_dir=output_dir,
         downscale=downscale,
         clobber=False,
@@ -77,15 +89,17 @@ def convert_tissuecyte_to_ome_zarr(
         default_chunk=chunk_size)
 
     print("copying image_series_information.csv over")
-    for sub_dir in sub_dir_list:
-        src_path = sub_dir / "image_series_information.csv"
-        if src_path.exists():
-            dest_path = output_dir / src_path.parent.name / src_path.name
-            shutil.copy(src_path, dest_path)
+    if sub_dir_list is not None:
+        for sub_dir in sub_dir_list:
+            src_path = sub_dir / "image_series_information.csv"
+            if src_path.exists():
+                dest_path = output_dir / src_path.parent.name / src_path.name
+                shutil.copy(src_path, dest_path)
 
-    copy_over_image_series_metadata(
-        input_dir=input_dir,
-        output_dir=output_dir)
+    if input_path.is_dir():
+        copy_over_image_series_metadata(
+            input_dir=input_path,
+            output_dir=output_dir)
 
     metadata_collector.write_to_file()
 

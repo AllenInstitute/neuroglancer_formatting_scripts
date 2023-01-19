@@ -3,13 +3,14 @@ import json
 import pathlib
 import SimpleITK
 import numpy as np
-from neuroglancer_interface.utils.data_utils import get_scales_from_img
 from neuroglancer_interface.utils.ccf_utils import (
     get_labels,
     format_labels,
     get_dummy_labels)
 from neuroglancer_interface.compression.utils import (
     compress_ccf_data)
+from neuroglancer_interface.classes.nifti_array import (
+    get_nifti_obj)
 
 
 def write_out_ccf(
@@ -102,8 +103,8 @@ def do_chunking(
     if not file_path.is_file():
         raise RuntimeError(f"{file_path} is not a file")
 
-    sitk_img = SimpleITK.ReadImage(file_path)
-    sitk_arr = SimpleITK.GetArrayFromImage(sitk_img).transpose(2, 1, 0)
+    nii_obj = get_nifti_obj(file_path)
+    sitk_arr = nii_obj.get_channel('red')['channel']
     sitk_arr = np.round(sitk_arr).astype(np.uint16)
 
     if not sitk_arr.shape == metadata['size']:
@@ -197,12 +198,15 @@ def get_scale_metadata(
 
     These need to be ordered from native resolution to zoomed out resolution
     """
-    sitk_img = SimpleITK.ReadImage(segmentation_path)
-    scale_mm = get_scales_from_img(sitk_img)
+    nii_obj = get_nifti_obj(segmentation_path)
+    nii_result = nii_obj.get_channel(channel='red')
+    scale_mm = nii_result['scales']
 
-    # use image shape, wich is the transpose(2, 1, 0) of the
-    # resulting numpy array
-    img_shape = sitk_img.GetSize()
+    img_shape = nii_result['channel'].shape
+
+    # should not be needed now that the NiftiArray objects
+    # are handling the transposition of the arrays
+    #img_shape = (img_shape[2], img_shape[1], img_shape[0])
 
     voxel_offset = (0, 0, 0)
 

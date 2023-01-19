@@ -85,7 +85,7 @@ def main():
     if "tissuecyte" in config_data:
         print_status("Formatting tissuecyte data")
         convert_tissuecyte_to_ome_zarr(
-            input_dir=config_data["tissuecyte"]["input_dir"],
+            input_path=config_data["tissuecyte"]["input_dir"],
             output_dir=output_dir/"tissuecyte",
             downscale=config_data["downscale"],
             n_processors=args.n_processors,

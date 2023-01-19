@@ -13,8 +13,12 @@ from ome_zarr.io import parse_url
 from ome_zarr.writer import write_image
 from neuroglancer_interface.utils.multiprocessing_utils import (
     _winnow_process_list)
+
 from neuroglancer_interface.classes.downscalers import (
     XYScaler)
+
+from neuroglancer_interface.classes.nifti_array import (
+    get_nifti_obj)
 
 
 blosc.use_threads = False
@@ -58,7 +62,8 @@ def write_nii_file_list_to_ome_zarr(
         DownscalerClass=XYScaler,
         downscale_cutoff=64,
         only_metadata=False,
-        default_chunk=128):
+        default_chunk=128,
+        channel_list=None):
     """
     Convert a list of nifti files into OME-zarr format
 
@@ -142,21 +147,29 @@ def write_nii_file_list_to_ome_zarr(
             DownscalerClass=DownscalerClass,
             downscale_cutoff=downscale_cutoff,
             only_metadata=only_metadata,
-            default_chunk=default_chunk)
+            default_chunk=default_chunk,
+            channel_list=channel_list)
 
     else:
         n_workers = max(1, n_processors-1)
         n_workers = min(n_workers, len(file_path_list))
         file_lists = []
         group_lists = []
+        channel_sub_lists = []
         for ii in range(n_workers):
             file_lists.append([])
             group_lists.append([])
+            if channel_list is not None:
+                channel_sub_lists.append([])
+            else:
+                channel_sub_lists.append(None)
 
         for ii in range(len(file_path_list)):
             jj = ii % n_workers
             file_lists[jj].append(file_path_list[ii])
             group_lists[jj].append(group_name_list[ii])
+            if channel_list is not None:
+                channel_sub_lists[jj].append(channel_list[ii])
 
         process_list = []
         for ii in range(n_workers):
@@ -164,13 +177,14 @@ def write_nii_file_list_to_ome_zarr(
                     target=_write_nii_file_list_worker,
                     kwargs={'file_path_list': file_lists[ii],
                             'group_name_list': group_lists[ii],
+                            'channel_list': channel_sub_lists[ii],
                             'root_group': parent_group,
                             'downscale': downscale,
                             'metadata_collector': metadata_collector,
                             'DownscalerClass': DownscalerClass,
                             'downscale_cutoff': downscale_cutoff,
                             'only_metadata': only_metadata,
-                            'default_chunk': default_chunk})
+                            'default_chunk': default_chunk,})
             p.start()
             process_list.append(p)
 
@@ -187,6 +201,7 @@ def write_nii_file_list_to_ome_zarr(
 def _write_nii_file_list_worker(
         file_path_list,
         group_name_list,
+        channel_list,
         root_group,
         downscale,
         metadata_collector=None,
@@ -215,11 +230,18 @@ def _write_nii_file_list_worker(
         level of zoom.
     """
 
-    for f_path, grp_name in zip(file_path_list,
-                                group_name_list):
+    for idx in range(len(file_path_list)):
+        f_path = file_path_list[idx]
+        grp_name = group_name_list[idx]
+        if channel_list is not None:
+            channel = channel_list=channel_list[idx]
+        else:
+            channel = None
+
         write_nii_to_group(
             root_group=root_group,
             group_name=grp_name,
+            channel=channel,
             nii_file_path=f_path,
             downscale=downscale,
             metadata_collector=metadata_collector,
@@ -240,7 +262,9 @@ def write_nii_to_group(
         DownscalerClass=XYScaler,
         downscale_cutoff=64,
         only_metadata=False,
-        default_chunk=64):
+        default_chunk=64,
+        channel='red',
+        transposition=None):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -261,24 +285,24 @@ def write_nii_to_group(
         How much to downscale the image by at each level
         of zoom.
     """
-    global_t0 = time.time()
     if group_name is not None:
         if not only_metadata:
             this_group = root_group.create_group(f"{group_name}")
     else:
         this_group = root_group
-    t0 = time.time()
-    img = SimpleITK.ReadImage(nii_file_path)
-    arr = get_array_from_img(
-                img,
-                transpose=transpose)
-    dur_read = time.time()-t0
 
-    (x_scale,
-     y_scale,
-     z_scale) = get_scales_from_img(img)
+    nii_obj = get_nifti_obj(nii_file_path)
 
-    t0 = time.time()
+    nii_results = nii_obj.get_channel(
+                    channel=channel,
+                    transposition=transposition)
+
+    x_scale = nii_results['scales'][0]
+    y_scale = nii_results['scales'][1]
+    z_scale = nii_results['scales'][2]
+
+    arr = nii_results['channel']
+
     if metadata_collector is not None:
 
         other_metadata = {
@@ -291,8 +315,6 @@ def write_nii_to_group(
             data_array=arr,
             other_metadata=other_metadata,
             metadata_key=group_name)
-    dur_meta = time.time()-t0
-
 
     if not only_metadata:
         write_array_to_group(
@@ -306,46 +328,18 @@ def write_nii_to_group(
             downscale_cutoff=downscale_cutoff,
             default_chunk=default_chunk)
 
-    dur_all = time.time()-global_t0
-    print(f"wrote {nii_file_path} to {group_name}; timing: "
-          f"read {dur_read:.2e} meta {dur_meta:.2e} "
-          f"all {dur_all:.2e}")
-
-def get_array_from_img(img, transpose=True):
-    """
-    Takes a SimpleITK img;
-    Returns numpy arry with axes transposed as we want them
-
-    """
-    arr = SimpleITK.GetArrayFromImage(img)
-    if transpose:
-        arr = arr.transpose(2, 1, 0)
-    return arr
-
-def get_scales_from_img(img):
-    """
-    Takes in a SimpleITK image;
-    returns (x_scale, y_scale, z_scale) in mm
-    """
-    if 'pixdim[1]' in img.GetMetaDataKeys():
-        x_scale = float(img.GetMetaData('pixdim[1]'))
-        y_scale = float(img.GetMetaData('pixdim[2]'))
-        z_scale = float(img.GetMetaData('pixdim[3]'))
-    else:
-        x_scale = 0.01
-        y_scale = 0.01
-        z_scale = 0.01
-    return (x_scale, y_scale, z_scale)
+    print(f"wrote {nii_file_path} to {group_name}")
 
 
 def write_summed_nii_files_to_group(
         file_path_list,
         group,
         downscale = 2,
-        transpose=True,
         DownscalerClass=XYScaler,
         downscale_cutoff=64,
-        default_chunk=64):
+        default_chunk=64,
+        channel='red',
+        transposition=None):
     """
     Sum the arrays in all of the files in file_path list
     into a single array and write that to the specified
@@ -357,15 +351,17 @@ def write_summed_nii_files_to_group(
 
     main_array = None
     for file_path in file_path_list:
-        img = SimpleITK.ReadImage(file_path)
+        nii_obj = get_nifti_obj(file_path)
 
-        this_array = get_array_from_img(
-                        img,
-                        transpose=transpose)
+        nii_results = nii_obj.get_channel(
+                        channel=channel,
+                        transposition=transposition)
+
+        this_array = nii_results['channel']
 
         (this_x_scale,
          this_y_scale,
-         this_z_scale) = get_scales_from_img(img)
+         this_z_scale) = nii_results['scales']
 
         if main_array is None:
             main_array = this_array

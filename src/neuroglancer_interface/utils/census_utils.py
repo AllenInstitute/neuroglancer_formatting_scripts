@@ -5,8 +5,8 @@ import pathlib
 import multiprocessing
 import pathlib
 
-from neuroglancer_interface.utils.data_utils import (
-    get_array_from_img)
+from neuroglancer_interface.classes.nifti_array import (
+    get_nifti_obj)
 
 from neuroglancer_interface.utils.celltypes_utils import (
     read_list_of_manifests,
@@ -199,8 +199,8 @@ def _get_mask_lookup_worker(file_path_list, output_dict, lock):
     result = dict()
     for file_path in file_path_list:
         id_val = int(file_path.name.split('_')[0])
-        mask = get_array_from_img(
-                    SimpleITK.ReadImage(file_path))
+        nii_obj = get_nifti_obj(file_path)
+        mask = nii_obj.get_channel(channel='red')['channel']
         mask_pixels = np.where(mask==1)
         result[id_val] = {'mask': mask_pixels,
                           'path': str(file_path.resolve().absolute())}
