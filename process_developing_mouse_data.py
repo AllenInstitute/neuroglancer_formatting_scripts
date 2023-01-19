@@ -54,13 +54,20 @@ def main():
     parser.add_argument('--only_metadata', default=False, action='store_true')
     args = parser.parse_args()
 
-    if args.output_dir is None:
-        raise RuntieError("must specify output_dir")
 
     with open(args.config_path, 'rb') as in_file:
         config_data = json.load(in_file)
 
-    output_dir = pathlib.Path(args.output_dir)
+    output_dir = None
+    if args.output_dir is not None:
+        output_dir = pathlib.Path(args.output_dir)
+    elif 'output_dir' in config_data:
+        output_dir = pathlib.Path(config_data['output_dir'])
+
+    if output_dir is None:
+        raise RuntimeError("must specify output_dir")
+
+
     if output_dir.exists():
         if not args.clobber:
             raise RuntimeError(

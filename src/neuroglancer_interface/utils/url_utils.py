@@ -11,7 +11,9 @@ def get_final_url(
         starting_position=None,
         x_mm=0.01,
         y_mm=0.01,
-        z_mm=0.1):
+        z_mm=0.1,
+        projection_scale=2048,
+        cross_section_scale=2.6):
     """
     Image layers with template and segmentation layer
     """
@@ -31,8 +33,8 @@ def get_final_url(
     layers["dimensions"] = {"x": [float(x_mm*0.001), "m"],
                             "y": [float(y_mm*0.001), "m"],
                             "z": [float(z_mm*0.001), "m"]}
-    layers["crossSectionScale"] = 2.6
-    layers["projectionScale"] = 2048
+    layers["crossSectionScale"] = cross_section_scale
+    layers["projectionScale"] = projection_scale
     layers["layers"] = layer_list
     layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
     layers["layout"] = "4panel"
@@ -74,7 +76,8 @@ def get_heatmap_image_layer(
         range_max,
         visible=True,
         opacity=1.0,
-        is_transparent=False):
+        is_transparent=False,
+        is_uint=False):
 
     rgb_color = get_color_lookup()[color]
     result = dict()
@@ -87,7 +90,8 @@ def get_heatmap_image_layer(
     result["shader"] = get_rgb_heat_map_shader_code(
                                        rgb_color,
                                        transparent=is_transparent,
-                                       range_max=range_max)
+                                       range_max=range_max,
+                                       is_uint=is_uint)
     result["opacity"] = opacity
     result["visible"] = visible
     return result
@@ -130,7 +134,8 @@ def get_rgb_heat_map_shader_code(
         color,
         transparent=True,
         range_max=20.0,
-        threshold=0.0):
+        threshold=0.0,
+        is_uint=False):
 
     if transparent:
         default = 'emitTransparent()'
@@ -140,7 +145,13 @@ def get_rgb_heat_map_shader_code(
     code = f"#uicontrol invlerp normalized(range=[0, {range_max}])\n"
     code += "void main()"
     code += " {\n  "
-    code += f"    if(getDataValue(0)>{threshold})"
+
+    if is_uint:
+        code += f"    if(int(getDataValue(0).value)>{int(threshold):d})"
+
+    else:
+        code += f"    if(getDataValue(0)>{threshold})"
+
     code += "{\n"
     code += "        emitRGB(normalized()*"
     code += "vec3("
