@@ -11,7 +11,9 @@ def get_final_url(
         starting_position=None,
         x_mm=0.01,
         y_mm=0.01,
-        z_mm=0.1):
+        z_mm=0.1,
+        projection_scale=2048,
+        cross_section_scale=2.6):
     """
     Image layers with template and segmentation layer
     """
@@ -31,8 +33,8 @@ def get_final_url(
     layers["dimensions"] = {"x": [float(x_mm*0.001), "m"],
                             "y": [float(y_mm*0.001), "m"],
                             "z": [float(z_mm*0.001), "m"]}
-    layers["crossSectionScale"] = 2.6
-    layers["projectionScale"] = 2048
+    layers["crossSectionScale"] = cross_section_scale
+    layers["projectionScale"] = projection_scale
     layers["layers"] = layer_list
     layers["selectedLayer"] = {"visible": True, "layer": "new layer"}
     layers["layout"] = "4panel"
