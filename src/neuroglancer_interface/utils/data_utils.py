@@ -291,11 +291,10 @@ def write_nii_to_group(
     else:
         this_group = root_group
 
-    nii_obj = get_nifti_obj(nii_file_path)
+    nii_obj = get_nifti_obj(nii_file_path, transposition=transposition)
 
     nii_results = nii_obj.get_channel(
-                    channel=channel,
-                    transposition=transposition)
+                    channel=channel)
 
     x_scale = nii_results['scales'][0]
     y_scale = nii_results['scales'][1]

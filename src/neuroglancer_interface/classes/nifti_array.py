@@ -53,6 +53,7 @@ class NiftiArray(object):
     def arr(self):
         if not hasattr(self, '_arr'):
             self._arr = self._get_arr()
+            assert self._arr.shape[:3] == self.shape
         return self._arr
 
     @property
@@ -108,12 +109,6 @@ class NiftiArray(object):
                 f"invalid channel: {channel}")
 
         channel_idx = {'red': 0, 'green': 1, 'blue': 2}[channel]
-
-        if transposition is not None:
-            if len(transposition) != 3:
-                raise RuntimeError(
-                    "Cannot handle transposition specification "
-                    f"of len {len(transposition)}")
 
         if len(self.arr.shape) == 4:
             this_channel = self.arr[:, :, :, channel_idx]
@@ -187,12 +182,12 @@ class NiftiArrayCollection(object):
                     channel=channel)
 
 
-def get_nifti_obj(nifti_path):
+def get_nifti_obj(nifti_path, transposition=None):
     nifti_path = pathlib.Path(nifti_path)
     if nifti_path.is_dir():
-        return NiftiArrayCollection(nifti_path)
+        return NiftiArrayCollection(nifti_path, transposition=transposition)
     elif nifti_path.is_file():
-        return NiftiArray(nifti_path)
+        return NiftiArray(nifti_path, transposition=transposition)
 
     raise RuntimeError(
         f"{nifti_path} is neither file nor dir")
