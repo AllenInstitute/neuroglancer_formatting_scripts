@@ -57,6 +57,9 @@ def main():
     if "ccf" in config_data:
         print_status("Formatting CCF annotations")
 
+        if not isinstance(config_data['ccf']['segmentation'], list):
+            raise RuntimeError("ccf.segmentation is not list")
+
         write_out_ccf(
             segmentation_path_list =[
                     pathlib.Path(p)

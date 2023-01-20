@@ -1,6 +1,7 @@
 import numpy as np
 import SimpleITK
 import pathlib
+import time
 
 
 class NiftiArray(object):
@@ -25,7 +26,10 @@ class NiftiArray(object):
             raise RuntimError(f"{self.nifti_path} is not a file")
 
     def _read_metadata(self):
+        t0 = time.time()
+        print('reading image')
         img = SimpleITK.ReadImage(self.nifti_path)
+        print(f'reading took {time.time()-t0:.2e} seconds')
         _raw = img.GetSize()
         self._shape = (_raw[self.img_transposition[0]],
                        _raw[self.img_transposition[1]],
@@ -112,13 +116,16 @@ class NiftiArray(object):
 class NiftiArrayCollection(object):
 
     def __init__(self, nifti_dir_path, transposition=None):
+        print("in dir path constructor")
         nifti_dir_path = pathlib.Path(nifti_dir_path)
         if not nifti_dir_path.is_dir():
             raise RuntimeError(
                 f"{nifti_dir_path} is not a dir")
 
         self.transposition = transposition
+        print(f"getting path list {nifti_dir_path}")
         path_list = [n for n in nifti_dir_path.rglob('*.nii.gz')]
+        print(path_list)
         channel_lookup = dict()
         for path in path_list:
             if 'green' in path.name:
@@ -175,8 +182,10 @@ class NiftiArrayCollection(object):
 def get_nifti_obj(nifti_path, transposition=None):
     nifti_path = pathlib.Path(nifti_path)
     if nifti_path.is_dir():
+        print("getting NiftiARrayCollection")
         return NiftiArrayCollection(nifti_path, transposition=transposition)
     elif nifti_path.is_file():
+        print("getting NiftiArray")
         return NiftiArray(nifti_path, transposition=transposition)
 
     raise RuntimeError(

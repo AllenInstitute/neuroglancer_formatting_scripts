@@ -42,7 +42,7 @@ def write_out_ccf(
     print(f"{chunk_size}")
     if not output_dir.exists():
         output_dir.mkdir()
-
+    print(segmentation_path_list)
     print("getting parent info")
     parent_info = create_info_dict(
             segmentation_path_list=segmentation_path_list,
