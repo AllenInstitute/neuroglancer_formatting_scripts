@@ -18,12 +18,14 @@ class NiftiArray(object):
 
         if transposition is None:
             self.transposition = _raw
-            self.img_transposition = (0, 1, 2)
         else:
             self.transposition = (_raw[transposition[0]],
                                   _raw[transposition[1]],
                                   _raw[transposition[2]])
-            self.img_transposition = tuple(transposition)
+
+        self.img_transposition = (self.transposition[2],
+                                  self.transposition[1],
+                                  self.transposition[0])
 
         if not self.nifti_path.is_file():
             raise RuntimError(f"{self.nifti_path} is not a file")
