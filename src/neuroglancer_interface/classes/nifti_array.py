@@ -13,7 +13,8 @@ class NiftiArray(object):
     def __init__(self, nifti_path, transposition):
         self.nifti_path = pathlib.Path(nifti_path)
 
-        _raw = self._get_raw_transposition()
+        #_raw = self._get_raw_transposition()
+        _raw = (0, 1, 2)
 
         if transposition is None:
             self.transposition = _raw
