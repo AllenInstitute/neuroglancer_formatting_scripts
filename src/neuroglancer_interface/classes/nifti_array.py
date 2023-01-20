@@ -43,17 +43,6 @@ class NiftiArray(object):
         if not self.nifti_path.is_file():
             raise RuntimError(f"{self.nifti_path} is not a file")
 
-    def _read_quatern_terms(self):
-        img = SimpleITK.ReadImage(self.nifti_path)
-        self._quatern_b = float(img.GetMetaData('quatern_b'))
-        self._quatern_c = float(img.GetMetaData('quatern_c'))
-        self._quatern_d = float(img.GetMetaData('quatern_d'))
-        qsq = self._quatern_b**2+self._quatern_c**2+self._quatern_d**2
-        if qsq > 1.0:
-            self._quatern_a = 0.0
-        else:
-            self._quatern_a = np.sqrt(1.0-qsq)
-
     def _get_raw_transposition(self):
         """
         Convert the quaternion terms from the NIFTI header into
@@ -65,13 +54,9 @@ class NiftiArray(object):
         See:
         https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/quatern.html
         """
-        self._read_quatern_terms()
 
-        rotation_matrix = get_rotation_matrix(
-            aa = self._quatern_a,
-            bb = self._quatern_b,
-            cc = self._quatern_c,
-            dd = self._quatern_d)
+        img = SimpleITK.ReadImage(self.nifti_path)
+        rotation_matrix = np.array(img.GetDirection()).reshape(3,3)
 
         bases = np.array([[1, 0, 0],
                           [0, 1, 0],
