@@ -17,12 +17,23 @@ def get_rotation_matrix(
     rot[0, 0] = aa**2+bb**2-cc**2-dd**2
     rot[1, 1] = aa**2+cc**2-bb**2-dd**2
     rot[2, 2] = aa**2+dd**2-bb**2-cc**2
-    rot[0, 1] = 2*bb*cc-2*aa*dd
-    rot[0, 2] = 2*bb*dd+2*aa*cc
-    rot[1, 0] = 2*bb*cc+2*aa*dd
-    rot[1, 2] = 2*cc*dd-2*aa*bb
-    rot[2, 0] = 2*bb*dd-2*aa*cc
-    rot[2, 1] = 2*cc*dd+2*aa*bb
+
+    #rot[0, 1] = 2*bb*cc-2*aa*dd
+    #rot[0, 2] = 2*bb*dd+2*aa*cc
+    #rot[1, 0] = 2*bb*cc+2*aa*dd
+    #rot[1, 2] = 2*cc*dd-2*aa*bb
+    #rot[2, 0] = 2*bb*dd-2*aa*cc
+    #rot[2, 1] = 2*cc*dd+2*aa*bb
+
+    # actually https://www.mathworks.com/help/aeroblks/quaternionstodirectioncosinematrix.html
+    rot[0,1] = 2*(bb*cc+aa*dd)
+    rot[0,2] = 2*(bb*dd-aa*cc)
+    rot[1,0] = 2*(bb*cc-aa*dd)
+    rot[1,2] = 2*(cc*dd+aa*bb)
+    rot[2,0] = 2*(bb*dd+aa*cc)
+    rot[2,1] = 2*(cc*dd-aa*bb)
+
+    rot = rot/rot[2,2]
 
     return rot
 
