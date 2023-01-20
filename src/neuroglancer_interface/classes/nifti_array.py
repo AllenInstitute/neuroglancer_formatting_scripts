@@ -12,7 +12,9 @@ class NiftiArray(object):
 
     def __init__(self, nifti_path, transposition):
         self.nifti_path = pathlib.Path(nifti_path)
-        _raw = (2, 1, 0)
+
+        _raw = self._get_raw_transposition()
+
         if transposition is None:
             self.transposition = _raw
             self.img_transposition = (0, 1, 2)
@@ -24,6 +26,83 @@ class NiftiArray(object):
 
         if not self.nifti_path.is_file():
             raise RuntimError(f"{self.nifti_path} is not a file")
+
+    def _read_quatern_terms(self):
+        img = SimpleITK.ReadImage(self.nifti_path)
+        self._quatern_b = float(img.GetMetaData('quatern_b'))
+        self._quatern_c = float(img.GetMetaData('quatern_c'))
+        self._quatern_d = float(img.GetMetaData('quatern_d'))
+        qsq = self._quatern_b**2+self._quatern_c**2+self._quatern_d**2
+        if qsq > 1.0:
+            self._quatern_a = 0.0
+        else:
+            self._quatern_a = np.sqrt(1.0-qsq)
+
+    def _get_raw_transposition(self):
+        """
+        Convert the quaternion terms from the NIFTI header into
+        an image matrix. Determine what this means about the
+        way to transpose x, y, z. Apply this transposition to
+        our default _raw transposition; return that _raw
+        transposition.
+
+        See:
+        https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/quatern.html
+        """
+        self._read_quatern_terms()
+
+        _raw = (2, 1, 0)  # because of difference in NIFTI and numpy conventions
+
+        aa = self._quatern_a
+        bb = self._quatern_b
+        cc = self._quatern_c
+        dd = self._quatern_d
+
+        rot = np.zeros((3,3), dtype=float)
+        rot[0, 0] = aa**2+bb**2-cc**2-dd**2
+        rot[1, 1] = aa**2+cc**2-bb**2-dd**2
+        rot[2, 2] = aa**2+dd**2-bb**2-cc**2
+        rot[0, 1] = 2*bb*cc-2*aa*dd
+        rot[0, 2] = 2*bb*dd+2*aa*cc
+        rot[1, 0] = 2*bb*cc+2*aa*dd
+        rot[1, 2] = 2*cc*dd-2*aa*bb
+        rot[2, 0] = 2*bb*dd-2*aa*cc
+        rot[2, 1] = 2*cc*dd+2*aa*bb
+
+        bases = np.array([[1, 0, 0],
+                          [0, 1, 0],
+                          [0, 0, 1]])
+
+        mapping = dict()
+        been_chosen = set()
+        for i_orig in range(3):
+            v_orig = bases[i_orig, :]
+            v_new = np.dot(rot, v_orig)
+            chosen = None
+            for i_other in range(3):
+                if np.allclose(v_new,
+                               bases[i_other, :],
+                               rtol=1.0e-5,
+                               atol=1.0e-5):
+                    chosen = i_other
+                    break
+            if chosen is None:
+                raise RuntimeError(
+                    f"quaternion terms\n{aa:.5f}\n{bb:.5f}\n"
+                    f"{cc:.5f}\n{dd:.5f}\n"
+                    f"do not neatly map bases onto each other\n"
+                    f"orig {v_orig}\n"
+                    f"new {v_new}")
+            mapping[i_orig] = chosen
+            assert chosen not in been_chosen
+            been_chosen.add(chosen)
+
+        _raw = (mapping[_raw[0]],
+                mapping[_raw[1]],
+                mapping[_raw[2]])
+
+        return _raw
+
 
     def _read_metadata(self):
         t0 = time.time()
@@ -42,7 +121,7 @@ class NiftiArray(object):
         if not hasattr(self, '_shape'):
             self._read_metadata()
         return self._shape
-            
+
     @property
     def arr(self):
         if not hasattr(self, '_arr'):
@@ -72,7 +151,7 @@ class NiftiArray(object):
                                  self.transposition[1],
                                  self.transposition[2],
                                  3)
-              
+
         else:
             raise RuntimeError(
                 f"Cannot parse array of shape {arr.shape}")
