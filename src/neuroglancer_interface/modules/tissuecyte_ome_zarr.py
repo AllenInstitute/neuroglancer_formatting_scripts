@@ -40,7 +40,7 @@ def convert_tissuecyte_to_ome_zarr(
     channel_list = []
     sub_dir_list = None
     if input_path.is_dir():
-        sub_dir_list = [n for n in input_dir.iterdir()
+        sub_dir_list = [n for n in input_path.iterdir()
                         if n.is_dir()]
 
         for sub_dir in sub_dir_list:
@@ -67,7 +67,7 @@ def convert_tissuecyte_to_ome_zarr(
                     raise RuntimeError(
                         f"Group {group_name} appears more than once")
                 group_name_list.append(group_name)
-                channel_list.append(color)
+                channel_list.append(channel_color)
     elif input_path.is_file():
         fname_list = [input_path, input_path]
         group_name_list = ["red", "green"]

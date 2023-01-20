@@ -95,14 +95,14 @@ class NiftiArray(object):
 
     def get_channel(self, channel):
 
-        if channel is None:
-            channel = 'red'
-
-        if channel not in ('green', 'red', 'blue'):
+        if channel not in ('green', 'red', 'blue', None):
             raise RuntimeError(
                 f"invalid channel: {channel}")
 
-        channel_idx = {'red': 0, 'green': 1, 'blue': 2}[channel]
+        if channel is None:
+            channel_idx = 0
+        else:
+            channel_idx = {'red': 0, 'green': 1, 'blue': 2}[channel]
 
         if len(self.arr.shape) == 4:
             this_channel = self.arr[:, :, :, channel_idx]
@@ -144,7 +144,7 @@ class NiftiArrayCollection(object):
                 raise RuntimeError(msg)
 
             channel_lookup[key] = path
-        self.channel_lookup[key] = path
+        self.channel_lookup = channel_lookup
 
     @property
     def scales(self):
@@ -172,11 +172,11 @@ class NiftiArrayCollection(object):
     def get_channel(self, channel):
         if channel is None:
             channel = 'red'
-        this_path = self.channel_lookup[key]
+        this_path = self.channel_lookup[channel]
         nifti_array = NiftiArray(this_path, transposition=self.transposition)
 
         return nifti_array.get_channel(
-                    channel=channel)
+                    channel=None)
 
 
 def get_nifti_obj(nifti_path, transposition=None):
