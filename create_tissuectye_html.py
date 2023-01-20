@@ -30,7 +30,8 @@ def create_tissuecyte_url(
 
     template_layer = get_template_layer(
         template_bucket=template_s3,
-        range_max=700)
+        range_max=700,
+        is_uint=True)
 
     segmentation_layer = get_segmentation_layer(
         segmentation_bucket=segmentation_s3,
@@ -46,7 +47,8 @@ def create_tissuecyte_url(
             range_max=red_max,
             visible=False,
             opacity=0.4,
-            is_transparent=True)
+            is_transparent=True,
+            is_uint=True)
 
     green_layer = get_heatmap_image_layer(
             bucket_name=f"{tissuecyte_s3}/green",
@@ -56,7 +58,8 @@ def create_tissuecyte_url(
             range_max=green_max,
             visible=True,
             opacity=0.4,
-            is_transparent=True)
+            is_transparent=True,
+            is_uint=True)
 
     url = get_final_url(
             image_layer_list=[green_layer, red_layer],

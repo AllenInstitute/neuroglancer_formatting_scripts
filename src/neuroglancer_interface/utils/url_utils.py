@@ -53,7 +53,8 @@ def get_base_url():
 def get_template_layer(
         template_bucket,
         range_max=700,
-        public_name="CCF template"):
+        public_name="CCF template",
+        is_uint=False):
 
     result = dict()
     result["type"] = "image"
@@ -61,7 +62,8 @@ def get_template_layer(
     result["blend"] = "default"
     result["shader"] = get_grayscale_shader_code(
                            transparent=False,
-                           range_max=range_max)
+                           range_max=range_max,
+                           is_uint=is_uint)
     result["opacity"] = 0.4
     result["visible"] = True
     result["name"] = public_name
@@ -166,7 +168,8 @@ def get_rgb_heat_map_shader_code(
 def get_grayscale_shader_code(
         transparent=True,
         range_max=20.0,
-        threshold=0.0):
+        threshold=0.0,
+        is_uint=False):
 
     if transparent:
         default = 'emitTransparent()'
@@ -177,7 +180,10 @@ def get_grayscale_shader_code(
     code += "void main()"
     code += " {\n  "
     #code += "emitGrayscale(normalized());\n}"
-    code += f"    if(getDataValue(0)>{threshold})"
+    if is_uint:
+        code += f"    if(int(getDataValue(0).value)>{int(threshold)})"
+    else:
+        code += f"    if(getDataValue(0)>{threshold})"
     code += "{\n"
     code += "        emitGrayscale(normalized())"
     code += ";\n}"
