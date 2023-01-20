@@ -3,6 +3,10 @@ import SimpleITK
 import pathlib
 import time
 
+from neuroglancer_interface.utils.rotation_utils import (
+    get_rotation_matrix,
+    rotate_matrix)
+
 
 class NiftiArray(object):
     """
@@ -11,13 +15,20 @@ class NiftiArray(object):
     """
 
     def __init__(self, nifti_path, transposition):
+        if transposition is not None:
+            raise NotImplementedError(
+                "cannot support non None transposition")
+
         self.nifti_path = pathlib.Path(nifti_path)
 
-        #_raw = self._get_raw_transposition()
-        _raw = (0, 1, 2)
+        #_raw = (0, 1, 2)
+        #_raw_rot = np.array([[1, 0, 0],[0,1,0],[0,0,1]])
+        (_raw,
+         _raw_rot) = self._get_raw_transposition()
 
         if transposition is None:
             self.transposition = _raw
+            self.rotation_matrix = _raw_rot
         else:
             self.transposition = (_raw[transposition[0]],
                                   _raw[transposition[1]],
@@ -26,6 +37,8 @@ class NiftiArray(object):
         self.img_transposition = (self.transposition[2],
                                   self.transposition[1],
                                   self.transposition[0])
+
+        #print(f"img_transposition {self.img_transposition}")
 
         if not self.nifti_path.is_file():
             raise RuntimError(f"{self.nifti_path} is not a file")
@@ -54,23 +67,11 @@ class NiftiArray(object):
         """
         self._read_quatern_terms()
 
-        _raw = (2, 1, 0)  # because of difference in NIFTI and numpy conventions
-
-        aa = self._quatern_a
-        bb = self._quatern_b
-        cc = self._quatern_c
-        dd = self._quatern_d
-
-        rot = np.zeros((3,3), dtype=float)
-        rot[0, 0] = aa**2+bb**2-cc**2-dd**2
-        rot[1, 1] = aa**2+cc**2-bb**2-dd**2
-        rot[2, 2] = aa**2+dd**2-bb**2-cc**2
-        rot[0, 1] = 2*bb*cc-2*aa*dd
-        rot[0, 2] = 2*bb*dd+2*aa*cc
-        rot[1, 0] = 2*bb*cc+2*aa*dd
-        rot[1, 2] = 2*cc*dd-2*aa*bb
-        rot[2, 0] = 2*bb*dd-2*aa*cc
-        rot[2, 1] = 2*cc*dd+2*aa*bb
+        rotation_matrix = get_rotation_matrix(
+            aa = self._quatern_a,
+            bb = self._quatern_b,
+            cc = self._quatern_c,
+            dd = self._quatern_d)
 
         bases = np.array([[1, 0, 0],
                           [0, 1, 0],
@@ -80,7 +81,7 @@ class NiftiArray(object):
         been_chosen = set()
         for i_orig in range(3):
             v_orig = bases[i_orig, :]
-            v_new = np.dot(rot, v_orig)
+            v_new = np.dot(rotation_matrix, v_orig)
             chosen = None
             for i_other in range(3):
                 if np.allclose(v_new,
@@ -89,6 +90,14 @@ class NiftiArray(object):
                                atol=1.0e-5):
                     chosen = i_other
                     break
+
+                if np.allclose(v_new,
+                               -1.0*bases[i_other, :],
+                               rtol=1.0e-5,
+                               atol=1.0e-5):
+                    chosen = i_other
+                    break
+
             if chosen is None:
                 raise RuntimeError(
                     f"quaternion terms\n{aa:.5f}\n{bb:.5f}\n"
@@ -100,11 +109,11 @@ class NiftiArray(object):
             assert chosen not in been_chosen
             been_chosen.add(chosen)
 
-        _raw = (mapping[_raw[0]],
-                mapping[_raw[1]],
-                mapping[_raw[2]])
+        _raw = (mapping[0],
+                mapping[1],
+                mapping[2])
 
-        return _raw
+        return _raw, rotation_matrix
 
 
     def _read_metadata(self):
@@ -112,10 +121,17 @@ class NiftiArray(object):
         print('reading image')
         img = SimpleITK.ReadImage(self.nifti_path)
         print(f'reading took {time.time()-t0:.2e} seconds')
-        _raw = img.GetSize()
-        self._shape = (_raw[self.img_transposition[0]],
-                       _raw[self.img_transposition[1]],
-                       _raw[self.img_transposition[2]])
+        _raw_shape = img.GetSize()
+        _raw_shape = np.array([_raw_shape[2],
+                               _raw_shape[1],
+                               _raw_shape[0]])
+        self._shape = tuple(np.abs(
+                               np.round(
+                                   np.dot(self.rotation_matrix,
+                                          _raw_shape))).astype(int))
+
+        self._shape = tuple([int(self._shape[idx]) for idx in range(3)])
+
         self._scales = self._get_scales(img)
         self._img = img
 
@@ -149,14 +165,13 @@ class NiftiArray(object):
         expected_shape = self.shape  # just to provoke metadata read
         img = self._img
         arr = SimpleITK.GetArrayFromImage(img)
+        print(f"raw arr shape {arr.shape}")
         if len(arr.shape) == 3:
-            return arr.transpose(self.transposition)
+            return rotate_matrix(arr, self.rotation_matrix)
         elif len(arr.shape) == 4:
-            return arr.transpose(self.transposition[0],
-                                 self.transposition[1],
-                                 self.transposition[2],
-                                 3)
-
+            return np.stack([rotate_matrix(arr[:, :, :, ix],
+                                            self.rotation_matrix)
+                             for ix in range(arr.shape[3])]).transpose(1,2,3,0)
         else:
             raise RuntimeError(
                 f"Cannot parse array of shape {arr.shape}")
@@ -170,12 +185,10 @@ class NiftiArray(object):
         d1_mm = img.GetMetaData('pixdim[1]')
         d2_mm = img.GetMetaData('pixdim[2]')
         d3_mm = img.GetMetaData('pixdim[3]')
-        _raw = (float(d1_mm),
-                float(d2_mm),
-                float(d3_mm))
-        return (_raw[self.transposition[0]],
-                _raw[self.transposition[1]],
-                _raw[self.transposition[2]])
+        _raw = np.array([float(d1_mm),
+                         float(d2_mm),
+                         float(d3_mm)])
+        return tuple(np.abs(np.dot(self.rotation_matrix, _raw)))
 
     def get_channel(self, channel):
 
