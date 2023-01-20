@@ -48,6 +48,12 @@ class NiftiArray(object):
         self._quatern_b = float(img.GetMetaData('quatern_b'))
         self._quatern_c = float(img.GetMetaData('quatern_c'))
         self._quatern_d = float(img.GetMetaData('quatern_d'))
+
+        if np.abs(self._quatern_b) > 1.0e-6:
+            self._quatern_b = 0.0
+            self._quatern_d = self._quatern_c
+            self._quatern_c = 0.0
+
         qsq = self._quatern_b**2+self._quatern_c**2+self._quatern_d**2
         if qsq > 1.0:
             self._quatern_a = 0.0
