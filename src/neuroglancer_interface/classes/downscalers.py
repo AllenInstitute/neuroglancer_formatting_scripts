@@ -152,8 +152,8 @@ class XYScaler(ScalerBase):
             nx = base_shape[0]
             ny = base_shape[1]
             nz = base_shape[2]
-            nx_factor_list = get_prime_facttors(nx)
-            ny_factor_list = get_priem_factors(ny)
+            nx_factor_list = get_prime_factors(nx)
+            ny_factor_list = get_prime_factors(ny)
 
             list_of_nx_ny = []
 
@@ -162,7 +162,6 @@ class XYScaler(ScalerBase):
                 keep_going = False
                 nx_factor = nx_factor_list[0]
                 ny_factor = ny_factor_list[0]
-                nz_factor = nz_factor_list[0]
                 if len(nx_factor_list) > 1:
                     if nx // nx_factor >= self.downscale_cutoff:
                         nx = nx // nx_factor

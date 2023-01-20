@@ -19,9 +19,6 @@ from neuroglancer_interface.modules.mfish_ome_zarr import (
 from neuroglancer_interface.modules.cell_types_ome_zarr import (
     convert_cell_types_to_ome_zarr)
 
-from neuroglancer_interface.utils.data_utils import (
-    get_array_from_img)
-
 from neuroglancer_interface.utils.census_utils import (
     get_structure_name_lookup,
     get_mask_lookup,
@@ -29,6 +26,9 @@ from neuroglancer_interface.utils.census_utils import (
 
 from neuroglancer_interface.utils.census_conversion import (
     convert_census_to_hdf5)
+
+from neuroglancer_interface.classes.nifti_array import (
+    get_nifti_obj)
 
 
 def print_status(msg):
@@ -38,9 +38,8 @@ def print_status(msg):
 def get_n_slices(config_data):
     eg_dir = pathlib.Path(config_data["cell_types"]["input_list"][0]["input_dir"])
     fname_list = [n for n in eg_dir.rglob("*.nii.gz")]
-    img = SimpleITK.ReadImage(fname_list[0])
-    arr = get_array_from_img(img)
-    n_slices = arr.shape[2]
+    nii_obj = get_nifti_obj(fname_list[0], transposition=None)
+    n_slices = nii_obj.shape[2]
     return n_slices
 
 
