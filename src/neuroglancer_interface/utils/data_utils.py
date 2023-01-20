@@ -15,7 +15,7 @@ from neuroglancer_interface.utils.multiprocessing_utils import (
     _winnow_process_list)
 
 from neuroglancer_interface.classes.downscalers import (
-    XYScaler)
+    XYZScaler)
 
 from neuroglancer_interface.classes.nifti_array import (
     get_nifti_obj)
@@ -59,7 +59,7 @@ def write_nii_file_list_to_ome_zarr(
         prefix=None,
         root_group=None,
         metadata_collector=None,
-        DownscalerClass=XYScaler,
+        DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         only_metadata=False,
         default_chunk=128,
@@ -205,7 +205,7 @@ def _write_nii_file_list_worker(
         root_group,
         downscale,
         metadata_collector=None,
-        DownscalerClass=XYScaler,
+        DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         only_metadata=False,
         default_chunk=64):
@@ -259,7 +259,7 @@ def write_nii_to_group(
         transpose=True,
         metadata_collector=None,
         metadata_key=None,
-        DownscalerClass=XYScaler,
+        DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         only_metadata=False,
         default_chunk=64,
@@ -296,9 +296,9 @@ def write_nii_to_group(
     nii_results = nii_obj.get_channel(
                     channel=channel)
 
-    x_scale = nii_results['scales'][2]
+    x_scale = nii_results['scales'][0]
     y_scale = nii_results['scales'][1]
-    z_scale = nii_results['scales'][0]
+    z_scale = nii_results['scales'][2]
 
     arr = nii_results['channel']
 
@@ -334,7 +334,7 @@ def write_summed_nii_files_to_group(
         file_path_list,
         group,
         downscale = 2,
-        DownscalerClass=XYScaler,
+        DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         default_chunk=64,
         channel='red',
@@ -416,7 +416,7 @@ def write_array_to_group(
         y_scale: float,
         z_scale: float,
         downscale: int = 1,
-        DownscalerClass=XYScaler,
+        DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         default_chunk=64,
         axis_order=('x', 'y', 'z'),

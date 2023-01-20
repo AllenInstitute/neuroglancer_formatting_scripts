@@ -66,6 +66,7 @@ def rotate_matrix(
         assert v in new_shape
     print(f"data shape {data.shape}")
     print(f"new shape {new_shape}")
+    print(f"rotation matrix {rotation_matrix}")
 
     new_data = np.zeros(new_shape, dtype=data.dtype)
     new_data[rotated_idx[0, :],

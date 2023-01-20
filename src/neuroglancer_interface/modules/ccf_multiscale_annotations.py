@@ -225,9 +225,9 @@ def get_scale_metadata(
             compression_blocksize]
 
     mm_to_nm = 10**6
-    x_nm = int(mm_to_nm*scale_mm[2])
+    x_nm = int(mm_to_nm*scale_mm[0])
     y_nm = int(mm_to_nm*scale_mm[1])
-    z_nm = int(mm_to_nm*scale_mm[0])
+    z_nm = int(mm_to_nm*scale_mm[2])
 
     result['key'] = f"{x_nm}_{y_nm}_{z_nm}"
 

@@ -125,6 +125,7 @@ class NiftiArray(object):
         _raw_shape = np.array([_raw_shape[2],
                                _raw_shape[1],
                                _raw_shape[0]])
+        print(f"shape before rot {_raw_shape}")
         self._shape = tuple(np.abs(
                                np.round(
                                    np.dot(self.rotation_matrix,
@@ -133,6 +134,8 @@ class NiftiArray(object):
         self._shape = tuple([int(self._shape[idx]) for idx in range(3)])
 
         self._scales = self._get_scales(img)
+        print(f"assigned shape {self._shape}")
+        print(f"assigned scales {self._scales}")
         self._img = img
 
     @property
@@ -185,9 +188,13 @@ class NiftiArray(object):
         d1_mm = img.GetMetaData('pixdim[1]')
         d2_mm = img.GetMetaData('pixdim[2]')
         d3_mm = img.GetMetaData('pixdim[3]')
-        _raw = np.array([float(d1_mm),
+        _raw = np.array([float(d3_mm),
                          float(d2_mm),
-                         float(d3_mm)])
+                         float(d1_mm)])
+
+        print(f"raws scales {_raw}")
+        print(f"raw shape {img.GetSize()}")
+        print(f"rotation {self.rotation_matrix}")
         return tuple(np.abs(np.dot(self.rotation_matrix, _raw)))
 
     def get_channel(self, channel):
