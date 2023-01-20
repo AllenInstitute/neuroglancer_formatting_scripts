@@ -296,9 +296,9 @@ def write_nii_to_group(
     nii_results = nii_obj.get_channel(
                     channel=channel)
 
-    x_scale = nii_results['scales'][0]
+    x_scale = nii_results['scales'][2]
     y_scale = nii_results['scales'][1]
-    z_scale = nii_results['scales'][2]
+    z_scale = nii_results['scales'][0]
 
     arr = nii_results['channel']
 
