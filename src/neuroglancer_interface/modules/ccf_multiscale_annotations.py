@@ -60,7 +60,7 @@ def write_out_ccf(
         label_path = pathlib.Path(label_path)
         labels = format_labels(get_labels(label_path))
     else:
-        labels = get_dummy_labels(segmentation_path_list)
+        labels = format_labels(get_dummy_labels(segmentation_path_list))
 
     seg_dir = output_dir / parent_info['segment_properties']
     seg_dir.mkdir(exist_ok=True)
