@@ -54,11 +54,15 @@ def get_template_layer(
         template_bucket,
         range_max=700,
         public_name="CCF template",
-        is_uint=False):
+        is_uint=False,
+        is_local=False):
 
     result = dict()
     result["type"] = "image"
-    result["source"] = f"zarr://s3://{template_bucket}"
+    if is_local:
+        result["source"] = f"zarr://http://127.0.0.1:9000/{template_bucket}"
+    else:
+        result["source"] = f"zarr://s3://{template_bucket}"
     result["blend"] = "default"
     result["shader"] = get_grayscale_shader_code(
                            transparent=False,
@@ -79,12 +83,16 @@ def get_heatmap_image_layer(
         visible=True,
         opacity=1.0,
         is_transparent=False,
-        is_uint=False):
+        is_uint=False,
+        is_local=False):
 
     rgb_color = get_color_lookup()[color]
     result = dict()
     result["type"] = "image"
-    result["source"] = f"zarr://s3://{bucket_name}"
+    if is_local:
+        result["source"] = f"zarr://http://127.0.0.1:9000/{bucket_name}"
+    else:
+        result["source"] = f"zarr://s3://{bucket_name}"
     if dataset_name is not None:
         result["source"] += f"/{dataset_name}"
     result["name"] = f"{public_name} ({color})"
@@ -195,10 +203,16 @@ def get_grayscale_shader_code(
 
 def get_segmentation_layer(
         segmentation_bucket,
-        segmentation_name):
+        segmentation_name,
+        is_local=False):
+
+    if is_local:
+        source = f"precomputed://http://127.0.0.1:9000/{segmentation_bucket}"
+    else:
+        source = f"precomputed://s3://{segmentation_bucket}"
 
     return {"type": "segmentation",
-            "source": f"precomputed://s3://{segmentation_bucket}",
+            "source": source,
             "tab": "source",
             "name": segmentation_name,
             "selectedAlpha": 0.25,
