@@ -129,7 +129,9 @@ class NiftiArray(object):
     def arr(self):
         if not hasattr(self, '_arr'):
             self._arr = self._get_arr()
-            assert self._arr.shape[:3] == self.shape
+            if not self._arr.shape[:3] == self.shape:
+                raise RuntimeError(f"arr shape {self._arr.shape};\n"
+                                   f"should be {self.shape}")
         return self._arr
 
     @property
