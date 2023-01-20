@@ -24,30 +24,20 @@ class NiftiArray(object):
         if not self.nifti_path.is_file():
             raise RuntimError(f"{self.nifti_path} is not a file")
 
+    def _read_metadata(self):
+        img = SimpleITK.ReadImage(self.nifti_path)
+        _raw = img.GetSize()
+        self._shape = (_raw[self.img_transposition[0]],
+                       _raw[self.img_transposition[1]],
+                       _raw[self.img_transposition[2]])
+        self._scales = self._get_scales(img)
+        self._img = img
+
     @property
     def shape(self):
         if not hasattr(self, '_shape'):
-            img = SimpleITK.ReadImage(self.nifti_path)
-            _raw = img.GetSize()
-            self._shape = (_raw[self.img_transposition[0]],
-                           _raw[self.img_transposition[1]],
-                           _raw[self.img_transposition[2]])
+            self._read_metadata()
         return self._shape
-
-    @property
-    def n_raw_dim(self):
-        if not hasattr(self, '_n_raw_dim'):
-            self._n_raw_dim = len(self.arr.shape)
-        return self._n_raw_dim
-            
-    @property
-    def n_channels(self):
-        if not hasattr(self, '_n_channels'):
-            if self.n_raw_dim == 3:
-                self._n_channels = 1
-            else:
-                self._n_channels = self.arr.shape[-1]
-        return self._n_channels
             
     @property
     def arr(self):
@@ -59,7 +49,7 @@ class NiftiArray(object):
     @property
     def scales(self):
         if not hasattr(self, '_scales'):
-            self._scales = self._get_scales()
+            self._read_metadata()
         return self._scales
 
 
@@ -68,7 +58,8 @@ class NiftiArray(object):
         Will be cast so that arr.shape matches img.GetSize()
         """
         print("getting array")
-        img = SimpleITK.ReadImage(self.nifti_path)
+        expected_shape = self.shape  # just to provoke metadata read
+        img = self._img
         arr = SimpleITK.GetArrayFromImage(img)
         if len(arr.shape) == 3:
             return arr.transpose(self.transposition)
@@ -82,13 +73,12 @@ class NiftiArray(object):
             raise RuntimeError(
                 f"Cannot parse array of shape {arr.shape}")
 
-    def _get_scales(self) -> tuple:
+    def _get_scales(self, img) -> tuple:
         """
         Returns dimensions in (1, 2, 3) order as they appear
         in the NIFTI file
         """
         print("reading scales")
-        img = SimpleITK.ReadImage(self.nifti_path)
         d1_mm = img.GetMetaData('pixdim[1]')
         d2_mm = img.GetMetaData('pixdim[2]')
         d3_mm = img.GetMetaData('pixdim[3]')
