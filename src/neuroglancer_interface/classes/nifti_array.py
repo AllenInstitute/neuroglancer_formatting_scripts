@@ -73,6 +73,28 @@ class NiftiArray(object):
             cc = self._quatern_c,
             dd = self._quatern_d)
 
+        img = SimpleITK.ReadImage(self.nifti_path)
+        dmat = np.array(img.GetDirection()).reshape(3,3)
+        np.testing.assert_allclose(rotation_matrix, dmat, atol=1.0e-5)
+
+        theta = np.pi*0.5
+        around_z = np.array([[np.cos(theta), np.sin(theta), 0],
+                             [-np.sin(theta), np.cos(theta), 0],
+                             [0, 0, 1]])
+
+        around_x = np.array([[1, 0, 0],
+                             [0, np.cos(theta), np.sin(theta)],
+                             [0, -np.sin(theta), np.cos(theta)]])
+
+        around_y = np.array([[np.cos(theta), 0, np.sin(theta)],
+                             [0, 1,0],
+                             [-np.sin(theta), 0, np.cos(theta)]])
+
+
+        rotation_matrix = np.dot(around_x, np.dot(around_x, rotation_matrix))
+        rotation_matrix = np.dot(around_y, np.dot(around_y, rotation_matrix))
+
+
         bases = np.array([[1, 0, 0],
                           [0, 1, 0],
                           [0, 0, 1]])
@@ -100,8 +122,7 @@ class NiftiArray(object):
 
             if chosen is None:
                 raise RuntimeError(
-                    f"quaternion terms\n{aa:.5f}\n{bb:.5f}\n"
-                    f"{cc:.5f}\n{dd:.5f}\n"
+                    f"quaternion terms"
                     f"do not neatly map bases onto each other\n"
                     f"orig {v_orig}\n"
                     f"new {v_new}")
