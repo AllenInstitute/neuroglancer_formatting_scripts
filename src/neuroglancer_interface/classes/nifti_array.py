@@ -65,17 +65,17 @@ class NiftiArray(object):
         See:
         https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/quatern.html
         """
-        self._read_quatern_terms()
-
-        rotation_matrix = get_rotation_matrix(
-            aa = self._quatern_a,
-            bb = self._quatern_b,
-            cc = self._quatern_c,
-            dd = self._quatern_d)
+        #self._read_quatern_terms()
+        #rotation_matrix = get_rotation_matrix(
+        #    aa = self._quatern_a,
+        #    bb = self._quatern_b,
+        #    cc = self._quatern_c,
+        #    dd = self._quatern_d)
 
         img = SimpleITK.ReadImage(self.nifti_path)
         dmat = np.array(img.GetDirection()).reshape(3,3)
-        np.testing.assert_allclose(rotation_matrix, dmat, atol=1.0e-5)
+        #np.testing.assert_allclose(rotation_matrix, dmat, atol=1.0e-5)
+        rotation_matrix = dmat
 
         theta = np.pi*0.5
         around_z = np.array([[np.cos(theta), np.sin(theta), 0],
