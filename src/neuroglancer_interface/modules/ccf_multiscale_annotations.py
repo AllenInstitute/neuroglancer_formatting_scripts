@@ -34,6 +34,14 @@ def write_out_ccf(
     output_dir:
         The directory where output will be written.
 
+    compression_blocksize:
+        The data will be compressed into blocks of size
+        (compression_blocksize, compression_blocksize). These blocks
+        are internal to individual compressed files.
+
+    chunk_size:
+        Individual files on disk will contain voxel chunks of this size
+
     Returns
     -------
     None
