@@ -26,13 +26,6 @@ def main():
     else:
         nz_slice = None
 
-    h5_path = pathlib.Path('/allen/aibs/technology/danielsf/highres_test_file.h5')
-    _write_data_to_hdf5(
-        config_list=config_list,
-        h5_path=h5_path,
-        clobber=False)
-    exit()
-
     convert_jp2_to_ome_zarr(
         config_list=config_list,
         output_dir=pathlib.Path(args.output_dir),

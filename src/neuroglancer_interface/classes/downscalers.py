@@ -58,7 +58,7 @@ class ScalerBase(Scaler):
         raise RuntimeError("gaussian")
 
     @classmethod
-    def create_empty_pyramid(cls, base, downscale=2, donwscale_cutoff=128):
+    def create_empty_pyramid(cls, base):
         raise NotImplementedError("base create_empty_pyramid")
 
 
@@ -117,29 +117,21 @@ class XYScaler(ScalerBase):
             self,
             base):
         """
-        Create a lookup table of empty arrays for an
-        image/volume pyramid
+        Create a list of (nx, ny, nz) tuples representing
+        the shapes of the downsamplings of the data that
+        need to be computed.
 
         Parameters
         ----------
-        base: np.ndarray
-            The array that will be converted into an image/volume
-            pyramid
-
-        downscale: int
-            The factor by which to downscale base at each level of
-            zoom
+        base:
+            Either an array representing the base image or
+            a tuple representing its shape.
 
         Returns
         -------
-        results: dict
-            A dict mapping an image shape (nx, ny) to
-            an empty array of size (nx, ny, nz)
-
-            NOTE: we are not downsampling nz in this setup
-
-        list_of_nx_ny:
-            List of valid keys of results
+        list_of_nx_ny
+            A list of (nx, ny, nz) tuples representing the shapes
+            of the downscalings that will be written to OME-zarr
         """
 
         if not hasattr(self, '_list_of_nx_ny'):
@@ -225,29 +217,21 @@ class XYZScaler(ScalerBase):
             self,
             base):
         """
-        Create a lookup table of empty arrays for an
-        image/volume pyramid
+        Create a list of (nx, ny, nz) tuples representing
+        the shapes of the downsamplings of the data that
+        need to be computed.
 
         Parameters
         ----------
-        base: np.ndarray
-            The array that will be converted into an image/volume
-            pyramid
-
-        downscale: int
-            The factor by which to downscale base at each level of
-            zoom
+        base:
+            Either an array representing the base image or
+            a tuple representing its shape.
 
         Returns
         -------
-        results: dict
-            A dict mapping an image shape (nx, ny) to
-            an empty array of size (nx, ny, nz)
-
-            NOTE: we are not downsampling nz in this setup
-
-        list_of_nx_ny:
-            List of valid keys of results
+        list_of_nx_ny
+            A list of (nx, ny, nz) tuples representing the shapes
+            of the downscalings that will be written to OME-zarr
         """
         if not hasattr(self, '_list_of_nx_ny'):
 

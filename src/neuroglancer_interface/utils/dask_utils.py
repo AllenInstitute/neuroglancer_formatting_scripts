@@ -123,7 +123,52 @@ def write_dask_image(
         axes,
         storage_options,
         n_processors=4):
+    """
+    Write data from an HDF5 file to an OME-zarr
+    group using a dask array for parallelization.
 
+    Parameters
+    ----------
+    h5_path:
+        the path to the HDF5 containing the data
+        to be written.
+
+    h5_key:
+        The name of the dataset in the HDF5 file
+
+    scaler:
+        The instance of a subclass of ome-zarr-py's
+        Scaler class that is used to downsample the data
+
+    root_group:
+        The ome-zarr-py group where the data will be
+        written
+
+    coordinate_transformations:
+        The dict of coordinate transformations that will
+        be written out to the .zattrs file in
+        root_group
+
+    axes:
+        The dict of axis metadata that will be written
+        out to the .zattrs file in root_group
+
+    storage_options:
+        The dict of storage options to be passed along
+        to dask.array.Array.to_zarr
+
+    n_processors:
+        the number of independent processes to start up
+        (ome-zarr-py's dask utils never seemed to use more
+        than one core, so I had to implement a by-hand
+        parallelization using python's multiprocessing module).
+
+    Returns
+    -------
+    None
+        the data from the HDF5 file is writt out in OME-zarr
+        format to root_group.
+    """
     list_of_shapes = scaler._list_of_nx_ny
 
     mgr = multiprocessing.Manager()
@@ -162,6 +207,47 @@ def _write_dask_image_worker(
         root_group,
         sub_group_idx,
         storage_options):
+    """
+    Worker function for one process writing data
+    from an HDF5 file to an OME-Zarr group.
+
+    This function writes a particular downsampling of
+    the data to root_group.path / sub_group_idx
+
+    Parameters
+    ----------
+    h5_path:
+        the path to the HDF5 containing the data
+        to be written.
+
+    h5_key:
+        The name of the dataset in the HDF5 file
+
+    scaler:
+        The instance of asubclass of ome-zarr-py's
+        Scaler class that is used to downsample the data
+
+    root_group:
+        The ome-zarr-py group where the data will be
+        written
+
+    sub_group_idx:
+        An integer used to find the array shape for this
+        particular downsampling in scaler._list_of_nx_ny.
+        Also the name of the OME-zarr sub group where this
+        downsampling of the data is to be written.
+
+    storage_options:
+        The dict of storage options to be passed along
+        to dask.array.Array.to_zarr
+
+    Returns
+    -------
+    None
+        the data from the HDF5 file is writt out in OME-zarr
+        format to root_group.
+
+    """
 
     with h5py.File(h5_path, mode='r', swmr=True) as in_file:
         image = dask.array.from_array(in_file[h5_key])

@@ -27,29 +27,21 @@ class HighResScaler(XYZScaler):
             self,
             base):
         """
-        Create a lookup table of empty arrays for an
-        image/volume pyramid
+        Create a list of (nx, ny, nz) tuples representing
+        the shapes of the downsamplings of the data that
+        need to be computed.
 
         Parameters
         ----------
-        base: np.ndarray
-            The array that will be converted into an image/volume
-            pyramid
-
-        downscale: int
-            The factor by which to downscale base at each level of
-            zoom
+        base:
+            Either an array representing the base image or
+            a tuple representing its shape.
 
         Returns
         -------
-        results: dict
-            A dict mapping an image shape (nx, ny) to
-            an empty array of size (nx, ny, nz)
-
-            NOTE: we are not downsampling nz in this setup
-
-        list_of_nx_ny:
-            List of valid keys of results
+        list_of_nx_ny
+            A list of (nx, ny, nz) tuples representing the shapes
+            of the downscalings that will be written to OME-zarr
         """
         if not hasattr(self, '_list_of_nx_ny'):
 
@@ -113,7 +105,62 @@ def convert_jp2_to_ome_zarr(
         downscale_cutoff: int = 2501,
         default_chunk: int = 512) -> None:
     """
-    Result is just written to the specified group.
+    Write an image stack represented by a series of JP2 files
+    into an OME-zarr group.
+
+    Data is first gathered into a single HDF5 file in a temporary directory
+    and then written to OME-zarr. Both of these steps are time-consuming.
+    A (30000, 40000, 140) volume took 8 hours to write to HDF5 and
+    10 hours to write from HDF5 to OME-zarr (this was using 32 cores
+    and 200 GB of memory).
+
+    Parameters
+    ----------
+    config_list:
+        The list of dicts pointing to the jp2 files to be stacked.
+        Each dict should have a 'specimen_tissue_index' indicating
+        it's z position in the stack and an 'image_path'
+
+    output_dir:
+        The OME-zarr group to be written out
+
+    clobber:
+        boolean indicating whether or not to overwrite an existing
+        output_dir
+
+    x_scale:
+        Size in mm of the voxels in the x direction
+
+    y_scale:
+        Size in mm of the voxels in the y direction
+
+    z_scale:
+        Size in mm of the voxels in the z direction
+
+    tmp_dir:
+        Directory where temporary HDF5 file will be written.
+
+    nz_slice:
+        For testing. A tuple (z_min, z_max) indicating the config
+        files in config_list to use. Set to None if you want to
+        write the whole stack.
+
+    downscaler_class:
+        Subclass of ome-zarr-py's Scaler to use to downsample the
+        data to different scales.
+
+    downscale_cutoff:
+        Do not write downsamplings in which one dimension has fewer
+        voxels than downscale_cutoff.
+
+    default_chunk:
+        Data will be written out in chunks of size
+        (default_chunk, default_chunk, default_chunk)
+
+    Returns
+    -------
+    None
+        Data is written out to an OME-zarr group in output_dir.
     """
 
     root_group = create_root_group(
@@ -127,10 +174,13 @@ def convert_jp2_to_ome_zarr(
     if nz_slice is not None:
         config_list = config_list[nz_slice[0]:nz_slice[1]]
 
+    # write the data to a temporary HDF5 file so that it can
+    # be manipulated as a dask array.
     h5_path = write_data_to_hdf5(
                 config_list=config_list,
                 tmp_dir=tmp_dir)
 
+    # write the data from HDF5 to OME-zarr
     try:
         _convert_hdf5_to_ome_zarr(
             h5_path=h5_path,
@@ -145,16 +195,63 @@ def convert_jp2_to_ome_zarr(
         if h5_path.exists():
             h5_path.unlink()
 
+
 def _convert_hdf5_to_ome_zarr(
         h5_path: pathlib.Path,
         root_group: Any,
         x_scale: float = 0.0003,
         y_scale: float = 0.0003,
         z_scale: float = 0.1,
+        downscaler_class=HighResScaler,
         downscale_cutoff=2501,
         default_chunk=128,
-        downscaler_class=HighResScaler,
         n_processors=4) -> None:
+    """
+    Write data from an HDF5 file to an OME-zarr group.
+
+    Parameters
+    ----------
+    h5_path:
+        Path to the HDF5 file containing the data to be
+        written out.
+
+    root_group:
+        The OME-zarr group to which the data will be written
+
+
+    x_scale: float
+        The physical scale of one x pixel in millimeters
+
+    y_scale: float
+        The physical scale of one y pixel in millimeters
+
+    z_scale: float
+        The physical scale of one z pixel in millimeters
+
+
+    downscaler_class:
+        Subclass of ome-zarr-py's Scaler to use to downsample the
+        data to different scales.
+
+    downscale_cutoff:
+        Do not write downsamplings in which one dimension has fewer
+        voxels than downscale_cutoff.
+
+    default_chunk:
+        Data will be written out in chunks of size
+        (default_chunk, default_chunk, default_chunk)
+
+    n_processors:
+        the number of independent processes to start up
+        (ome-zarr-py's dask utils never seemed to use more
+        than one core, so I had to implement a by-hand
+        parallelization using python's multiprocessing module).
+
+    Returns
+    -------
+    None
+        Data is written out to an OME-zarr group in output_dir.
+    """
 
     storage_options = {'compressor':
                         Blosc(cname='lz4',
