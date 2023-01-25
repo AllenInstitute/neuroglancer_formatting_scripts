@@ -311,6 +311,7 @@ def write_nii_to_group(
 
         metadata_collector.collect_metadata(
             data_array=arr,
+            rotation_matrix=nii_obj.rotation_matrix,
             other_metadata=other_metadata,
             metadata_key=group_name)
 

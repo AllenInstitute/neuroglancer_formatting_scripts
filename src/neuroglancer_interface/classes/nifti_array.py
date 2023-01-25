@@ -75,6 +75,7 @@ class NiftiArray(object):
         rotation_matrix = np.dot(around_x, np.dot(around_x, rotation_matrix))
         rotation_matrix = np.dot(around_y, np.dot(around_y, rotation_matrix))
 
+        rotation_matrix = np.abs(rotation_matrix)
 
         bases = np.array([[1, 0, 0],
                           [0, 1, 0],
