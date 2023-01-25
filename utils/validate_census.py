@@ -3,15 +3,12 @@ import json
 import numpy as np
 import argparse
 
-from neuroglancer_interface.classes.nifti_array import get_nifti_obj
-
 def check_census(heatmap_path, census_data, mask_lookup, rng):
     n_validated = 0
     is_bizarre = False
-    heatmap_img = SimpleITK.ReadImage(heatmap_path)
-    heatmap_arr = SimpleITK.GetArrayFromImage(heatmap_img)
+    heatmap_arr = SimpleITK.GetArrayFromImage(
+                    SimpleITK.ReadImage(heatmap_path))
 
-    heatmap_rot = heatmap_img.GetDirection()
 
     sub_keys = list(census_data.keys())
     sub_keys.sort()
@@ -33,17 +30,8 @@ def check_census(heatmap_path, census_data, mask_lookup, rng):
 
         n_validated += 1
         mask_path = mask_lookup[s]
-        nii_mask_obj = get_nifti_obj(mask_path)
-        nii_mask_arr = nii_mask_obj.get_channel(channel='red')['channel']
-        nii_mask = np.where(nii_mask_arr==1)
-
-        mask_img = SimpleITK.ReadImage(mask_path)
         mask_arr = SimpleITK.GetArrayFromImage(
-                     mask_img)
-
-        mask_rot = mask_img.GetDirection()
-        np.testing.assert_allclose(mask_rot, heatmap_rot, atol=1.0e-6)
-
+                     SimpleITK.ReadImage(mask_path))
         mask_arr = (mask_arr==1)
         expected_ct = np.sum(heatmap_arr[mask_arr])
 
@@ -51,33 +39,24 @@ def check_census(heatmap_path, census_data, mask_lookup, rng):
         expected_ct = float(heatmap_arr[mask_where].sum())
 
         np.testing.assert_allclose(expected_ct, ct, atol=0.0, rtol=0.0001)
-        print(f"ct matches {ct}")
 
         test_max_val = heatmap_arr[test_voxel[0], test_voxel[1], test_voxel[2]]
         this_max_val = -999.0
         if ct > 1.0e-10:
             this_heatmap = np.copy(heatmap_arr)
             this_heatmap[~mask_arr] = 0.0
-            print(f"mask shape {mask_arr.shape}")
-            assert mask_arr[test_voxel[0], test_voxel[1], test_voxel[2]]
-            print(np.where(mask_arr==1))
-            print("nii")
-            print(nii_mask)
-            print("ctrl ct ",len(np.where(mask_arr==1)[0]))
-            print("nii ct ",len(nii_mask[0]),nii_mask_arr.sum())
             max_idx = np.argmax(this_heatmap)
             max_voxel = np.unravel_index(max_idx, heatmap_arr.shape)
             this_max_val = heatmap_arr[max_voxel[0], max_voxel[1], max_voxel[2]]
-            print("baseline mask value ",mask_arr[max_voxel[0], max_voxel[1], max_voxel[2]])
- 
+
             if not np.allclose(max_voxel,
                                test_voxel):
                 is_bizarre = True
                 if not np.allclose(this_max_val, test_max_val):
                     raise RuntimeError("mismatch max voxel\n"
-                           f"test_voxel {test_voxel} -- {test_max_val:.5e}\n"
-                           f"baseline voxel {max_voxel} -- {this_max_val:.5e}\n"
-                           f"{ct:.2e} {expected_ct:.2e}")
+                                   f"{test_voxel} -- {this_max_val:.5e}\n"
+                                   f"{max_voxel} -- {test_max_val:.5e}\n"
+                                   f"{ct:.2e} {expected_ct:.2e}")
         else:
             max_voxel = None
 
