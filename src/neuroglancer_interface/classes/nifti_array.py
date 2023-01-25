@@ -14,34 +14,18 @@ class NiftiArray(object):
     the image data from a NiftiArray and its geometric metadata
     """
 
-    def __init__(self, nifti_path, transposition):
-        if transposition is not None:
-            raise NotImplementedError(
-                "cannot support non None transposition")
+    def __init__(self, nifti_path):
 
         self.nifti_path = pathlib.Path(nifti_path)
 
-        #_raw = (0, 1, 2)
-        #_raw_rot = np.array([[1, 0, 0],[0,1,0],[0,0,1]])
-        (_raw,
-         _raw_rot) = self._get_raw_transposition()
-
-        if transposition is None:
-            self.transposition = _raw
-            self.rotation_matrix = _raw_rot
-        else:
-            self.transposition = (_raw[transposition[0]],
-                                  _raw[transposition[1]],
-                                  _raw[transposition[2]])
-
-        self.img_transposition = (self.transposition[2],
-                                  self.transposition[1],
-                                  self.transposition[0])
-
-        #print(f"img_transposition {self.img_transposition}")
-
         if not self.nifti_path.is_file():
             raise RuntimError(f"{self.nifti_path} is not a file")
+
+    @property
+    def rotation_matrix(self):
+        if not hasattr(self, '_rotation_matrix'):
+            self._rotation_matrix = self._get_rotation_matrix()
+        return self._rotation_matrix
 
     def _read_quatern_terms(self):
         img = SimpleITK.ReadImage(self.nifti_path)
@@ -54,13 +38,10 @@ class NiftiArray(object):
         else:
             self._quatern_a = np.sqrt(1.0-qsq)
 
-    def _get_raw_transposition(self):
+    def _get_rotation_matrix(self):
         """
         Convert the quaternion terms from the NIFTI header into
-        an image matrix. Determine what this means about the
-        way to transpose x, y, z. Apply this transposition to
-        our default _raw transposition; return that _raw
-        transposition.
+        a rotation  matrix.
 
         See:
         https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/quatern.html
@@ -130,11 +111,7 @@ class NiftiArray(object):
             assert chosen not in been_chosen
             been_chosen.add(chosen)
 
-        _raw = (mapping[0],
-                mapping[1],
-                mapping[2])
-
-        return _raw, rotation_matrix
+        return rotation_matrix
 
 
     def _read_metadata(self):
@@ -240,14 +217,13 @@ class NiftiArray(object):
 
 class NiftiArrayCollection(object):
 
-    def __init__(self, nifti_dir_path, transposition=None):
+    def __init__(self, nifti_dir_path):
         print("in dir path constructor")
         nifti_dir_path = pathlib.Path(nifti_dir_path)
         if not nifti_dir_path.is_dir():
             raise RuntimeError(
                 f"{nifti_dir_path} is not a dir")
 
-        self.transposition = transposition
         print(f"getting path list {nifti_dir_path}")
         path_list = [n for n in nifti_dir_path.rglob('*.nii.gz')]
         print(path_list)
@@ -275,8 +251,7 @@ class NiftiArrayCollection(object):
     def scales(self):
         if not hasattr(self, '_scales'):
             k = list(self.channel_lookup.keys())[0]
-            this = NiftiArray(self.channel_lookup[k],
-                              transposition=self.transposition)
+            this = NiftiArray(self.channel_lookup[k])
             self._scales = this.scales
         return self._scales
 
@@ -286,8 +261,7 @@ class NiftiArrayCollection(object):
             print("reading shape")
             self._shape = None
             for k in self.channel_lookup:
-                this = NiftiArray(self.channel_lookup[k],
-                                  transposition=self.transposition)
+                this = NiftiArray(self.channel_lookup[k])
                 if self._shape is None:
                     self._shape = this.shape
                 else:
@@ -298,20 +272,20 @@ class NiftiArrayCollection(object):
         if channel is None:
             channel = 'red'
         this_path = self.channel_lookup[channel]
-        nifti_array = NiftiArray(this_path, transposition=self.transposition)
+        nifti_array = NiftiArray(this_path)
 
         return nifti_array.get_channel(
                     channel=None)
 
 
-def get_nifti_obj(nifti_path, transposition=None):
+def get_nifti_obj(nifti_path):
     nifti_path = pathlib.Path(nifti_path)
     if nifti_path.is_dir():
         print("getting NiftiARrayCollection")
-        return NiftiArrayCollection(nifti_path, transposition=transposition)
+        return NiftiArrayCollection(nifti_path)
     elif nifti_path.is_file():
         print("getting NiftiArray")
-        return NiftiArray(nifti_path, transposition=transposition)
+        return NiftiArray(nifti_path)
 
     raise RuntimeError(
         f"{nifti_path} is neither file nor dir")

@@ -263,8 +263,7 @@ def write_nii_to_group(
         downscale_cutoff=64,
         only_metadata=False,
         default_chunk=64,
-        channel='red',
-        transposition=None):
+        channel='red'):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -291,7 +290,7 @@ def write_nii_to_group(
     else:
         this_group = root_group
 
-    nii_obj = get_nifti_obj(nii_file_path, transposition=transposition)
+    nii_obj = get_nifti_obj(nii_file_path)
 
     nii_results = nii_obj.get_channel(
                     channel=channel)
@@ -337,8 +336,7 @@ def write_summed_nii_files_to_group(
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         default_chunk=64,
-        channel='red',
-        transposition=None):
+        channel='red'):
     """
     Sum the arrays in all of the files in file_path list
     into a single array and write that to the specified
@@ -353,8 +351,7 @@ def write_summed_nii_files_to_group(
         nii_obj = get_nifti_obj(file_path)
 
         nii_results = nii_obj.get_channel(
-                        channel=channel,
-                        transposition=transposition)
+                        channel=channel)
 
         this_array = nii_results['channel']
 
