@@ -17,17 +17,55 @@ def _compare_census_files(
     structure_names = list(json_census['structures'].keys())
     structure_names.sort()
 
-    chosen_structures = rng.choice(structure_names, 20, replace=False)
-    for structure in chosen_structures:
-        structure_idx = structure_lookup[f'structures/{structure}']
-        gene_names = list(json_census['structures'][structure]['genes'].keys())
-        chosen_genes = rng.choice(gene_names, 5, replace=False)
-        for gene in chosen_genes:
-            gene_idx = gene_lookup[gene]
-            h5_count = h5_census['counts'][gene_idx, structure_idx]
-            json_count = json_census['structures'][structure]['genes'][gene]['counts']
-            print(h5_count, json_count)
-            np.testing.assert_allclose(h5_count, json_count)
+    for k in cell_types_lookup:
+        print(k)
+
+    for super_structure in ('structures', 'structure_sets'):
+        structure_names = list(json_census[super_structure].keys())
+        structure_names.sort()
+
+        if len(structure_names) > 20:
+            chosen_structures = rng.choice(structure_names, 20, replace=False)
+        else:
+            chosen_structures = structure_names
+
+        for structure in chosen_structures:
+            structure_idx = structure_lookup[f'{super_structure}/{structure}']
+            for obj_key, obj_lookup in zip(('genes', 'celltypes'),
+                                             (gene_lookup, cell_types_lookup)):
+
+                obj_names = list(
+                    obj_lookup.keys())
+
+                if len(obj_names) > 5:
+                    chosen_obj = rng.choice(obj_names, 5, replace=False)
+                else:
+                    chosen_obj = obj_names
+
+                for obj in chosen_obj:
+                    obj_idx = obj_lookup[obj]
+                    h5_count = h5_census['counts'][obj_idx, structure_idx]
+                    h5_max_voxel = h5_census['max_voxel'][obj_idx, structure_idx, :]
+
+                    if '/' not in obj:
+                        this_json_obj = json_census[super_structure][structure][obj_key][obj]
+                    else:
+                        super_obj = obj.split('/')[0]
+                        sub_obj = obj.replace(f'{super_obj}/','')
+                        this_json_obj = json_census[super_structure][structure][obj_key][super_obj][sub_obj]
+
+                    json_count = this_json_obj['counts']
+                    json_max_voxel = this_json_obj['max_voxel']
+                    print(super_structure, structure, h5_count, h5_max_voxel)
+                    np.testing.assert_allclose(h5_count, json_count)
+                    np.testing.assert_allclose(h5_max_voxel, json_max_voxel)
+
+                    json_slices = this_json_obj['per_slice']
+                    h5_slices = h5_census['per_slice'][obj_idx, structure_idx, :]
+                    json_slice_vec = np.zeros(len(h5_slices), dtype=float)
+                    for idx in json_slices:
+                        json_slice_vec[int(idx)] = json_slices[idx]
+                    np.testing.assert_allclose(h5_slices, json_slice_vec)
 
 
 def compare_census_files(
