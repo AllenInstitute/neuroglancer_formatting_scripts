@@ -10,6 +10,7 @@ class MetadataCollectorABC(object):
     def collect_metadata(
             self,
             data_array,
+            rotation_matrix,
             metadata_key,
             other_metadata=None):
         raise NotImplementedError("this is the base.collect_metadata")
@@ -57,6 +58,7 @@ class BasicMetadataCollector(MetadataCollectorABC):
     def collect_metadata(
             self,
             data_array,
+            rotation_matrix,
             metadata_key,
             other_metadata=None):
 
@@ -88,6 +90,7 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
     def collect_metadata(
             self,
             data_array,
+            rotation_matrix,
             metadata_key,
             other_metadata=None):
         plane_sums = np.sum(data_array, axis=(0, 1))
@@ -107,7 +110,8 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
                 if self.masks[mask_key] is not None:
                     sub_census = census_from_mask_lookup_and_arr(
                                 mask_lookup=self.masks[mask_key],
-                                data_arr=data_array)
+                                data_arr=data_array,
+                                rotation_matrix=rotation_matrix)
                 this_census[mask_key] = sub_census
 
         if len(this_census) > 0:

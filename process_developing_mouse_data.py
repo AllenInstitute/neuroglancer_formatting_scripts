@@ -38,7 +38,7 @@ def print_status(msg):
 def get_n_slices(config_data):
     eg_dir = pathlib.Path(config_data["cell_types"]["input_list"][0]["input_dir"])
     fname_list = [n for n in eg_dir.rglob("*.nii.gz")]
-    nii_obj = get_nifti_obj(fname_list[0], transposition=None)
+    nii_obj = get_nifti_obj(fname_list[0])
     n_slices = nii_obj.shape[2]
     return n_slices
 

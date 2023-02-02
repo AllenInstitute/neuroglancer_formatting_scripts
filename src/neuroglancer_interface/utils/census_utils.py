@@ -14,7 +14,8 @@ from neuroglancer_interface.utils.celltypes_utils import (
 
 def census_from_mask_lookup_and_arr(
         mask_lookup,
-        data_arr):
+        data_arr,
+        rotation_matrix):
     """
     Parameters
     ----------
@@ -25,11 +26,42 @@ def census_from_mask_lookup_and_arr(
     data_arr: np.ndarray
         array that is the count data for this structure
 
+    rotation_matrix:
+        the rotation matrix that has been applied to the data
+        upon reading it in from SimpleITK (used to identify which
+        axis is actually our "z" axis for slicing purposes)
+
     Returns
     -------
     Dict mapping 'counts' and 'max_voxel' to the total
     number of counts and the "brightest" voxel
     """
+
+    i_vec = [1, 0, 0]
+    j_vec = [0, 1, 0]
+    k_vec = [0, 0, 1]
+
+    i_idx = None
+    j_idx = None
+    k_idx = None
+
+    for i_row in range(3):
+        this = np.abs(rotation_matrix[i_row, :])
+        if np.allclose(this, i_vec):
+            i_idx = i_row
+        elif np.allclose(this, j_vec):
+            j_idx = i_row
+        elif np.allclose(this, k_vec):
+            k_idx = i_row
+        else:
+            raise RuntimeError(f"no idx for rotation matrix row {this}")
+
+    if i_idx is None or j_idx is None or k_idx is None:
+        raise RuntimeError(
+            "could not find all idx for rotation_matrix\n"
+            f"{rotation_matrix}")
+
+    slice_idx = i_idx
 
     result = dict()
     for mask_key in mask_lookup:
@@ -39,11 +71,22 @@ def census_from_mask_lookup_and_arr(
             data_arr=data_arr,
             mask_pixels=mask_pixels)
 
-        unq_slice = np.unique(mask_pixels[2])
+        dummy = np.zeros(data_arr.shape, dtype=bool)
+        dummy[mask_pixels] = True
+        assert dummy[voxel[0], voxel[1], voxel[2]]
+
+        print("")
+        print("raw voxel ",voxel)
+        voxel = [voxel[i_idx],
+                 voxel[j_idx],
+                 voxel[k_idx]]
+        print("new voxel ",voxel)
+        print("mask_pixels ", mask_pixels)
+        unq_slice = np.unique(mask_pixels[slice_idx])
         per_slice_lookup = dict()
         total = 0.0
         for idx_value in unq_slice:
-            valid = (mask_pixels[2] == idx_value)
+            valid = (mask_pixels[slice_idx] == idx_value)
             this_val =  float(
                             data_arr[
                                 mask_pixels[0][valid],
@@ -68,12 +111,6 @@ def _get_max_voxel(
     idx = np.argmax(data_arr[mask_pixels])
     voxel = [int(mask_pixels[ii][idx])
              for ii in range(len(mask_pixels))]
-
-    # need to transpose because of the way we
-    # are transposing the data for display
-    # in neuroglancer (see data_utils.get_array_from_img)
-    voxel = [voxel[2], voxel[1], voxel[0]]
-
     return voxel
 
 
