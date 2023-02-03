@@ -94,9 +94,12 @@ def _get_tissuecyte_metadata(
 
 def create_tissuecyte_lookup(
         bucket_name,
-        data_prefix):
+        data_prefix,
+        vector_id_lookup):
     """
     Data prefix is the directory under bucket_name/data/
+
+    vector_id_lookup is optional mapping from labtracks ID to vector ID
     """
 
     metadata = _get_tissuecyte_metadata(
@@ -153,8 +156,18 @@ def create_tissuecyte_lookup(
 
         key_to_link[series_id] = url
         key_order.append(series_id)
-        key_to_other_cols[series_id] = {'names': ['image_series_id', 'labtracks ID'],
-                                        'values': [str(series_id), int(mouse_id)]}
+        names = ['image_series_id', 'labtracks ID']
+        values = [str(series_id), int(mouse_id)]
+        if vector_id_lookup is not None:
+            names.append('vector ID')
+            vector = 'Unknown'
+            if int(mouse_id) in vector_id_lookup:
+                vector = str(vector_id_lookup[int(mouse_id)])
+            else:
+                print(f"could not find vector ID for labtracks ID {mouse_id}")
+            values.append(vector)
+        key_to_other_cols[series_id] = {'names': names,
+                                        'values': values}
 
     return {'key_to_link': key_to_link,
             'key_order': key_order,
@@ -165,7 +178,8 @@ def create_tissuecyte_html(
         bucket_name,
         data_prefix_list,
         table_title,
-        output_path):
+        output_path,
+        vector_id_lookup=None):
 
     key_to_link = dict()
     key_to_other_cols = dict()
@@ -174,7 +188,8 @@ def create_tissuecyte_html(
     for data_prefix in data_prefix_list:
         result = create_tissuecyte_lookup(
                 bucket_name=bucket_name,
-                data_prefix=data_prefix)
+                data_prefix=data_prefix,
+                vector_id_lookup=vector_id_lookup)
 
         for k in result['key_to_link']:
             key_to_link[k] = result['key_to_link'][k]
@@ -190,6 +205,8 @@ def create_tissuecyte_html(
     #    f"template src: {template_s3}",
     #    f"segmentation src: {segmentation_s3}"]
 
+    eg_k = list(key_to_other_cols.keys())[0]
+
     write_basic_table(
         output_path=output_path,
         title=table_title,
@@ -197,7 +214,7 @@ def create_tissuecyte_html(
         key_to_other_cols=key_to_other_cols,
         key_order=key_order,
         div_name="tissuecyte",
-        search_by=['image_series_id', 'labtracks ID'],
+        search_by=key_to_other_cols[eg_k]['names'],
         metadata_lines=None)
 
     print(f"wrote {output_path}")
@@ -211,7 +228,19 @@ def main():
     parser.add_argument("--data_prefix", type=str, default=None, nargs='+')
     parser.add_argument("--output_path", type=str, default=None)
     parser.add_argument("--table_title", type=str, default=None)
+    parser.add_argument("--dataset_path", type=str, default=None,
+                        help=("table where we can get mapping from "
+                              "labtracks ID to vector ID"))
     args = parser.parse_args()
+
+    vector_id_lookup = None
+    if args.dataset_path is not None:
+        vector_id_lookup = dict()
+        with open(args.dataset_path, 'r') as in_file:
+            header = in_file.readline()
+            for line in in_file:
+                params = line.strip().split(',')
+                vector_id_lookup[int(params[1])] = str(params[2])
 
     if not isinstance(args.data_prefix, list):
         data_prefix = [args.data_prefix]
@@ -222,7 +251,8 @@ def main():
         bucket_name=args.bucket_name,
         data_prefix_list=data_prefix,
         table_title=args.table_title,
-        output_path=args.output_path)
+        output_path=args.output_path,
+        vector_id_lookup=vector_id_lookup)
 
 
 if __name__ == "__main__":
