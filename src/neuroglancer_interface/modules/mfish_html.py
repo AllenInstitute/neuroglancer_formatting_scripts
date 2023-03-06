@@ -30,7 +30,6 @@ def write_mfish_html(
 
     gene_to_link = dict()
     gene_to_cols = dict()
-    print(full_metadata)
     for gene_name in gene_list:
         starting_position = [550, 550, full_metadata[gene_name]["max_plane"]]
         gene_url = create_mfish_url(
