@@ -24,7 +24,7 @@ class NiftiArray(object):
     def rotation_matrix(self):
         if not hasattr(self, '_rotation_matrix'):
             #self._rotation_matrix = self._get_rotation_matrix()
-            self._rotation_matrx = np.array(
+            self._rotation_matrix = np.array(
                             [[1.0, 0.0, 0.0],
                              [0.0, 1.0, 0.0],
                              [0.0, 0.0, 1.0]])
