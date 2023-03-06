@@ -4,7 +4,6 @@ import pathlib
 import time
 
 from neuroglancer_interface.utils.rotation_utils import (
-    get_rotation_matrix,
     rotate_matrix)
 
 
@@ -24,7 +23,11 @@ class NiftiArray(object):
     @property
     def rotation_matrix(self):
         if not hasattr(self, '_rotation_matrix'):
-            self._rotation_matrix = self._get_rotation_matrix()
+            #self._rotation_matrix = self._get_rotation_matrix()
+            self._rotation_matrx = np.array(
+                            [[1.0, 0.0, 0.0],
+                             [0.0, 1.0, 0.0],
+                             [0.0, 0.0, 1.0]])
         return self._rotation_matrix
 
     def _read_quatern_terms(self):
@@ -46,6 +49,7 @@ class NiftiArray(object):
         See:
         https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/quatern.html
         """
+        raise RuntimeError("Should probably not be using this")
         #self._read_quatern_terms()
         #rotation_matrix = get_rotation_matrix(
         #    aa = self._quatern_a,
