@@ -21,6 +21,10 @@ def main():
                         help='bucket_name/parent_dir_for_dataset')
     parser.add_argument('--table_title', type=str, default=None)
     parser.add_argument('--output_path', type=str, default=None)
+    parser.add_argument('--projection_scale', type=int, default=2048)
+    parser.add_argument('--cross_section_scale', type=float, default=2.6)
+    parser.add_argument('--range_max', type=float, default=0.05,
+                        help='fraction of max_val for gene data')
     args = parser.parse_args()
 
     mfish_bucket = f"{args.s3_location}/mfish_heatmaps"
@@ -33,7 +37,10 @@ def main():
         segmentation_bucket=segmentation_bucket,
         template_bucket=template_bucket,
         html_title=args.table_title,
-        data_dir=pathlib.Path(args.data_dir))
+        data_dir=pathlib.Path(args.data_dir),
+        projection_scale=args.projection_scale,
+        cross_section_scale=args.cross_section_scale,
+        range_max=args.range_max)
 
 
 if __name__ == "__main__":
