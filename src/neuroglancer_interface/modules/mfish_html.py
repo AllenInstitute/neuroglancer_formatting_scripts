@@ -31,7 +31,13 @@ def write_mfish_html(
     gene_to_link = dict()
     gene_to_cols = dict()
     for gene_name in gene_list:
-        starting_position = [550, 550, full_metadata[gene_name]["max_plane"]]
+
+        start_x = full_metadata[gene_name]["volume_shape"][0]//2
+        start_y = full_metadata[gene_name]["volume_shape"][1]//2
+
+        starting_position = [start_x,
+                             start_y,
+                             full_metadata[gene_name]["max_plane"]]
         gene_url = create_mfish_url(
                         mfish_bucket=mfish_bucket,
                         genes=[gene_name,],
