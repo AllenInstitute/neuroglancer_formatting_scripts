@@ -5,6 +5,19 @@ from neuroglancer_interface.utils.census_utils import (
     census_from_mask_lookup_and_arr)
 
 
+class DummyLock(object):
+
+    def __enter__(self):
+        pass
+
+    def __exit__(
+            self,
+            exception_type,
+            exception_value,
+            exception_traceback):
+        pass
+
+
 class MetadataCollectorABC(object):
 
     def collect_metadata(
@@ -97,11 +110,10 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
         total_cts = plane_sums.sum()
         max_plane = np.argmax(plane_sums)
         valid = (data_array > 0.0)
-        q75 = np.quantile(data_array[valid], 0.75)
 
         this = {'total_cts': float(total_cts),
                 'max_plane': int(max_plane),
-                'q75': q75,
+                'max_val': float(data_array.max()),
                 'volume_shape': [int(data_array.shape[0]),
                                  int(data_array.shape[1]),
                                  int(data_array.shape[2])]}
@@ -123,7 +135,12 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
         if len(this_census) > 0:
             this['census'] = this_census
 
-        with self._lock:
+        if self._lock is None:
+            this_lock = DummyLock()
+        else:
+            this_lock = self._lock
+
+        with this_lock:
             if metadata_key in self.metadata:
                 raise RuntimeError(
                     f"Trying to write {metadata_key} more than once")

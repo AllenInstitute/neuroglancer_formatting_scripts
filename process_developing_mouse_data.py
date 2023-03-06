@@ -30,6 +30,9 @@ from neuroglancer_interface.utils.census_conversion import (
 from neuroglancer_interface.classes.nifti_array import (
     get_nifti_obj)
 
+from neuroglancer_interface.classes.metadata_collectors import (
+    CellTypeMetadataCollector)
+
 
 def print_status(msg):
     print(f"===={msg}====")
@@ -89,13 +92,21 @@ def main():
 
     if "template" in config_data and not args.only_metadata:
         print_status("Formatting avg template image")
+        template_dir = output_dir/"avg_template"
+
+        template_collector = CellTypeMetadataCollector(
+                metadata_output_path=template_dir / "metadata.json")
+        template_collector.metadata = dict()
+
         write_nii_file_list_to_ome_zarr(
             file_path_list=[pathlib.Path(config_data["template"]["template"])],
             group_name_list=[None],
-            output_dir=output_dir/"avg_template",
+            output_dir=template_dir,
             downscale=config_data["downscale"],
             n_processors=1,
-            clobber=False)
+            clobber=False,
+            metadata_collector=template_collector)
+        template_collector.write_to_file()
         print_status("Done formatting avg template image")
 
     if "max_counts" in config_data and not args.only_metadata:
