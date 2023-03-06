@@ -67,6 +67,7 @@ def convert_mfish_to_ome_zarr(
             msg += f"{fname}\n"
             raise RuntimeError(msg)
         gene_list.append(gene)
+        genes_loaded.add(gene)
 
     root_group = write_nii_file_list_to_ome_zarr(
         file_path_list=fname_list,

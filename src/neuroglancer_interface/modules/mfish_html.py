@@ -22,13 +22,15 @@ def write_mfish_html(
     metadata_path = data_dir / "mfish_heatmaps/metadata.json"
     with open(metadata_path, "rb") as in_file:
         full_metadata = json.load(in_file)
-    full_metadata.pop("masks")
+    if "masks" in full_metadata:
+        full_metadata.pop("masks")
 
     gene_list = list(full_metadata.keys())
     gene_list.sort()
 
     gene_to_link = dict()
     gene_to_cols = dict()
+    print(full_metadata)
     for gene_name in gene_list:
         starting_position = [550, 550, full_metadata[gene_name]["max_plane"]]
         gene_url = create_mfish_url(
