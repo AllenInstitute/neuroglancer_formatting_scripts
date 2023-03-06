@@ -17,7 +17,9 @@ def write_mfish_html(
         template_bucket="mouse1-template-prototype/template",
         range_max=0.9,
         html_title="Mouse1 MFISH transcript count maps",
-        data_dir=None):
+        data_dir=None,
+        projection_scale=2048,
+        cross_section_scale=2.6):
     """
     range_max is a fraction of that gene's max value
     """
@@ -58,7 +60,9 @@ def write_mfish_html(
                         y_mm=full_metadata[gene_name]["y_mm"],
                         z_mm=full_metadata[gene_name]["z_mm"],
                         starting_position=starting_position,
-                        template_range_max=template_range_max)
+                        template_range_max=template_range_max,
+                        projection_scale=projection_scale,
+                        cross_section_scale=cross_section_scale)
 
         gene_to_link[gene_name] = gene_url
 

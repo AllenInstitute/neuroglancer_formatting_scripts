@@ -19,7 +19,9 @@ def create_mfish_url(
        y_mm=0.01,
        z_mm=0.1,
        starting_position=None,
-       template_range_max=700):
+       template_range_max=700,
+       projection_scale=2048,
+       cross_section_scale=2.6):
 
     if len(colors) != len(genes) or len(range_max) != len(genes):
         raise RuntimeError(
@@ -46,7 +48,9 @@ def create_mfish_url(
             x_mm=x_mm,
             y_mm=y_mm,
             z_mm=z_mm,
-            starting_position=starting_position)
+            starting_position=starting_position,
+            projection_scale=projection_scale,
+            cross_section_scale=cross_section_scale)
 
     return url
 
