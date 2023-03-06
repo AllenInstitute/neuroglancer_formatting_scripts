@@ -18,7 +18,8 @@ def create_mfish_url(
        x_mm=0.01,
        y_mm=0.01,
        z_mm=0.1,
-       starting_position=None):
+       starting_position=None,
+       template_range_max=700):
 
     if len(colors) != len(genes) or len(range_max) != len(genes):
         raise RuntimeError(
@@ -32,7 +33,7 @@ def create_mfish_url(
 
     template_layer = get_template_layer(
             template_bucket=template_bucket,
-            range_max=700)
+            range_max=template_range_max)
 
     segmentation_layer = get_segmentation_layer(
             segmentation_bucket=segmentation_bucket,
