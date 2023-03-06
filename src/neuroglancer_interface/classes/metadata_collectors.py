@@ -96,9 +96,15 @@ class CellTypeMetadataCollector(MetadataCollectorABC):
         plane_sums = np.sum(data_array, axis=(0, 1))
         total_cts = plane_sums.sum()
         max_plane = np.argmax(plane_sums)
+        valid = (data_array > 0.0)
+        q75 = np.quantile(data_array[valid], 0.75)
 
         this = {'total_cts': float(total_cts),
-                'max_plane': int(max_plane)}
+                'max_plane': int(max_plane),
+                'q75': q75,
+                'volume_shape': [int(data_array.shape[0]),
+                                 int(data_array.shape[1]),
+                                 int(data_array.shape[2])]}
 
         if other_metadata is not None:
             this.update(other_metadata)
