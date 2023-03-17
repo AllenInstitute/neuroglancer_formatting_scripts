@@ -35,7 +35,8 @@ def create_mfish_url(
 
     template_layer = get_template_layer(
             template_bucket=template_bucket,
-            range_max=template_range_max)
+            range_max=template_range_max,
+            is_uint=True)
 
     segmentation_layer = get_segmentation_layer(
             segmentation_bucket=segmentation_bucket,
