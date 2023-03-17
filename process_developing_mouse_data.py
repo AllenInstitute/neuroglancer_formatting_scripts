@@ -7,8 +7,8 @@ import pathlib
 import shutil
 import SimpleITK
 
-from neuroglancer_interface.modules.ccf_annotation_formatting import (
-    format_ccf_annotations)
+from neuroglancer_interface.modules.ccf_multiscale_annotations import (
+    write_out_ccf)
 
 from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr)
@@ -83,11 +83,20 @@ def main():
 
     if "ccf" in config_data and not args.only_metadata:
         print_status("Formatting CCF annotations")
-        format_ccf_annotations(
-            annotation_path=config_data["ccf"]["labels"],
-            segmentation_path=config_data["ccf"]["segmentation"],
+
+        if not isinstance(config_data['ccf']['segmentation'], list):
+            raise RuntimeError("ccf.segmentation is not list")
+
+        write_out_ccf(
+            segmentation_path_list =[
+                    pathlib.Path(p)
+                    for p in config_data["ccf"]["segmentation"]],
+            label_path=config_data["ccf"]["labels"],
             output_dir=output_dir/"ccf_annotations",
-            clobber=False)
+            use_compression=True,
+            compression_blocksize=32,
+            chunk_size=(64, 64, 64))
+
         print_status("Done formatting CCF annotations")
 
     if "template" in config_data and not args.only_metadata:
