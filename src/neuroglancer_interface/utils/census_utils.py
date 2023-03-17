@@ -47,11 +47,11 @@ def census_from_mask_lookup_and_arr(
 
     for i_row in range(3):
         this = np.abs(rotation_matrix[i_row, :])
-        if np.allclose(this, i_vec):
+        if np.allclose(this, i_vec, atol=1.0e-5):
             i_idx = i_row
-        elif np.allclose(this, j_vec):
+        elif np.allclose(this, j_vec, atol=1.0e-5):
             j_idx = i_row
-        elif np.allclose(this, k_vec):
+        elif np.allclose(this, k_vec, atol=1.0e-5):
             k_idx = i_row
         else:
             raise RuntimeError(f"no idx for rotation matrix row {this}")

@@ -4,7 +4,8 @@ import pathlib
 import time
 
 from neuroglancer_interface.utils.rotation_utils import (
-    rotate_matrix)
+    rotate_matrix,
+    get_rotation_matrix)
 
 
 class NiftiArray(object):
@@ -23,11 +24,11 @@ class NiftiArray(object):
     @property
     def rotation_matrix(self):
         if not hasattr(self, '_rotation_matrix'):
-            #self._rotation_matrix = self._get_rotation_matrix()
-            self._rotation_matrix = np.array(
-                            [[1.0, 0.0, 0.0],
-                             [0.0, 1.0, 0.0],
-                             [0.0, 0.0, 1.0]])
+            self._rotation_matrix = self._get_rotation_matrix()
+            #self._rotation_matrix = np.array(
+            #                [[1.0, 0.0, 0.0],
+            #                 [0.0, 1.0, 0.0],
+            #                 [0.0, 0.0, 1.0]])
         return self._rotation_matrix
 
     def _read_quatern_terms(self):
@@ -49,72 +50,12 @@ class NiftiArray(object):
         See:
         https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/quatern.html
         """
-        raise RuntimeError("Should probably not be using this")
-        #self._read_quatern_terms()
-        #rotation_matrix = get_rotation_matrix(
-        #    aa = self._quatern_a,
-        #    bb = self._quatern_b,
-        #    cc = self._quatern_c,
-        #    dd = self._quatern_d)
-
-        img = SimpleITK.ReadImage(self.nifti_path)
-        dmat = np.array(img.GetDirection()).reshape(3,3)
-        #np.testing.assert_allclose(rotation_matrix, dmat, atol=1.0e-5)
-        rotation_matrix = dmat
-
-        theta = np.pi*0.5
-        around_z = np.array([[np.cos(theta), np.sin(theta), 0],
-                             [-np.sin(theta), np.cos(theta), 0],
-                             [0, 0, 1]])
-
-        around_x = np.array([[1, 0, 0],
-                             [0, np.cos(theta), np.sin(theta)],
-                             [0, -np.sin(theta), np.cos(theta)]])
-
-        around_y = np.array([[np.cos(theta), 0, np.sin(theta)],
-                             [0, 1,0],
-                             [-np.sin(theta), 0, np.cos(theta)]])
-
-
-        rotation_matrix = np.dot(around_x, np.dot(around_x, rotation_matrix))
-        rotation_matrix = np.dot(around_y, np.dot(around_y, rotation_matrix))
-
-        rotation_matrix = np.abs(rotation_matrix)
-
-        bases = np.array([[1, 0, 0],
-                          [0, 1, 0],
-                          [0, 0, 1]])
-
-        mapping = dict()
-        been_chosen = set()
-        for i_orig in range(3):
-            v_orig = bases[i_orig, :]
-            v_new = np.dot(rotation_matrix, v_orig)
-            chosen = None
-            for i_other in range(3):
-                if np.allclose(v_new,
-                               bases[i_other, :],
-                               rtol=1.0e-5,
-                               atol=1.0e-5):
-                    chosen = i_other
-                    break
-
-                if np.allclose(v_new,
-                               -1.0*bases[i_other, :],
-                               rtol=1.0e-5,
-                               atol=1.0e-5):
-                    chosen = i_other
-                    break
-
-            if chosen is None:
-                raise RuntimeError(
-                    f"quaternion terms"
-                    f"do not neatly map bases onto each other\n"
-                    f"orig {v_orig}\n"
-                    f"new {v_new}")
-            mapping[i_orig] = chosen
-            assert chosen not in been_chosen
-            been_chosen.add(chosen)
+        self._read_quatern_terms()
+        rotation_matrix = get_rotation_matrix(
+            aa = self._quatern_a,
+            bb = self._quatern_b,
+            cc = self._quatern_c,
+            dd = self._quatern_d)
 
         return rotation_matrix
 

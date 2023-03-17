@@ -33,8 +33,6 @@ def get_rotation_matrix(
     rot[2,0] = 2*(bb*dd+aa*cc)
     rot[2,1] = 2*(cc*dd-aa*bb)
 
-    rot = rot/rot[2,2]
-
     return rot
 
 def get_coord_mesh(data_shape):
