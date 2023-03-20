@@ -19,7 +19,8 @@ def write_out_ccf(
         output_dir: pathlib.Path,
         use_compression=False,
         compression_blocksize=64,
-        chunk_size=(256, 256, 256)) -> None:
+        chunk_size=(256, 256, 256),
+        do_transposition=False) -> None:
     """
     Write CCF annotations to disk in neuroglancer-friendly format
 
@@ -42,6 +43,10 @@ def write_out_ccf(
     chunk_size:
         Individual files on disk will contain voxel chunks of this size
 
+    do_transposition:
+        If True, transpose the NIFTI volumes so that
+        (x, y, z) -> (z, y, x)
+
     Returns
     -------
     None
@@ -56,13 +61,15 @@ def write_out_ccf(
             segmentation_path_list=segmentation_path_list,
             use_compression=use_compression,
             compression_blocksize=compression_blocksize,
-            chunk_size=chunk_size)
+            chunk_size=chunk_size,
+            do_transposition=do_transposition)
     print("got parent info")
 
     for scale_metadata in parent_info['scales']:
         print("chunking ", scale_metadata)
         do_chunking(metadata=scale_metadata,
-                    parent_output_dir=output_dir)
+                    parent_output_dir=output_dir,
+                    do_transposition=do_transposition)
 
     if label_path is not None:
         label_path = pathlib.Path(label_path)
@@ -80,7 +87,8 @@ def write_out_ccf(
 
 def do_chunking(
         metadata: dict,
-        parent_output_dir: pathlib.Path) -> None:
+        parent_output_dir: pathlib.Path,
+        do_transposition: bool = False) -> None:
     """
     Take the metadata created by get_scale_metadata and actually
     do the chunking of the CCF annotation file.
@@ -95,6 +103,10 @@ def do_chunking(
         The output dir for the entire CCF annotation. A sub-directory
         will be created where the chunked version of this annotation
         will be written.
+
+    do_transposition:
+        If True, transpose the NIFTI volumes so that
+        (x, y, z) -> (z, y, x)
 
     Returns
     -------
@@ -114,7 +126,8 @@ def do_chunking(
     if not file_path.is_file():
         raise RuntimeError(f"{file_path} is not a file")
 
-    nii_obj = get_nifti_obj(file_path)
+    nii_obj = get_nifti_obj(file_path,
+                            do_transposition=do_transposition)
     sitk_arr = nii_obj.get_channel('red')['channel']
     sitk_arr = np.round(sitk_arr).astype(np.uint16)
 
@@ -163,10 +176,17 @@ def create_info_dict(
         segmentation_path_list: List[pathlib.Path],
         use_compression=False,
         compression_blocksize=64,
-        chunk_size=(256, 256, 256)) -> dict:
+        chunk_size=(256, 256, 256),
+        do_transposition=False) -> dict:
     """
     Create the dict that will be JSONized to make the info file.
     Return that dict.
+
+    Note:
+    -----
+    do_transposition:
+        If True, transpose the NIFTI volumes so that
+        (x, y, z) -> (z, y, x)
     """
 
     scale_list = []
@@ -176,7 +196,8 @@ def create_info_dict(
                     segmentation_path=pth,
                     use_compression=use_compression,
                     compression_blocksize=compression_blocksize,
-                    chunk_size=chunk_size)
+                    chunk_size=chunk_size,
+                    do_transposition=do_transposition)
         scale_list.append(this)
         size_list.append(this['size'][0]*this['size'][1]*this['size'][2])
 
@@ -203,14 +224,16 @@ def get_scale_metadata(
         segmentation_path,
         chunk_size=(256, 256, 256),
         use_compression=False,
-        compression_blocksize=64) -> dict:
+        compression_blocksize=64,
+        do_transposition=False) -> dict:
     """
     Get the dict representing a single scale of a segmentation volume
 
     These need to be ordered from native resolution to zoomed out resolution
     """
     print("in get_scale_metadata")
-    nii_obj = get_nifti_obj(segmentation_path)
+    nii_obj = get_nifti_obj(segmentation_path,
+                            do_transposition=do_transposition)
     scale_mm = nii_obj.scales
     img_shape = nii_obj.shape
     print(f"got {segmentation_path} -- {scale_mm} {img_shape}")

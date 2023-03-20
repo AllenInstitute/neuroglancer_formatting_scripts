@@ -63,7 +63,8 @@ def write_nii_file_list_to_ome_zarr(
         downscale_cutoff=64,
         only_metadata=False,
         default_chunk=128,
-        channel_list=None):
+        channel_list=None,
+        do_transposition=False):
     """
     Convert a list of nifti files into OME-zarr format
 
@@ -103,6 +104,10 @@ def write_nii_file_list_to_ome_zarr(
     default_chunk: int
         default size for single dimension of chunk when writing
         data to disk
+
+    do_transposition:
+        If True, transpose the NIFTI volumes so that
+        (x, y, z) -> (z, y, x)
 
     Returns
     -------
@@ -148,7 +153,8 @@ def write_nii_file_list_to_ome_zarr(
             downscale_cutoff=downscale_cutoff,
             only_metadata=only_metadata,
             default_chunk=default_chunk,
-            channel_list=channel_list)
+            channel_list=channel_list,
+            do_transposition=do_transposition)
 
     else:
         n_workers = max(1, n_processors-1)
@@ -184,7 +190,8 @@ def write_nii_file_list_to_ome_zarr(
                             'DownscalerClass': DownscalerClass,
                             'downscale_cutoff': downscale_cutoff,
                             'only_metadata': only_metadata,
-                            'default_chunk': default_chunk,})
+                            'default_chunk': default_chunk,
+                            'do_transposition': do_transposition})
             p.start()
             process_list.append(p)
 
@@ -208,7 +215,8 @@ def _write_nii_file_list_worker(
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         only_metadata=False,
-        default_chunk=64):
+        default_chunk=64,
+        do_transposition=False):
     """
     Worker function to actually convert a subset of nifti
     files to OME-zarr
@@ -228,6 +236,10 @@ def _write_nii_file_list_worker(
     downscale: int
         The factor by which to downscale the images at each
         level of zoom.
+
+    do_transposition:
+        If True, transpose the NIFTI volumes so that
+        (x, y, z) -> (z, y, x)
     """
 
     for idx in range(len(file_path_list)):
@@ -248,7 +260,8 @@ def _write_nii_file_list_worker(
             DownscalerClass=DownscalerClass,
             downscale_cutoff=downscale_cutoff,
             only_metadata=only_metadata,
-            default_chunk=default_chunk)
+            default_chunk=default_chunk,
+            do_transposition=do_transposition)
 
 
 def write_nii_to_group(
@@ -263,7 +276,8 @@ def write_nii_to_group(
         downscale_cutoff=64,
         only_metadata=False,
         default_chunk=64,
-        channel='red'):
+        channel='red',
+        do_transposition=False):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -283,6 +297,10 @@ def write_nii_to_group(
     downscale: int
         How much to downscale the image by at each level
         of zoom.
+
+    do_transposition:
+        If True, transpose the NIFTI volumes so that
+        (x, y, z) -> (z, y, x)
     """
     if group_name is not None:
         if not only_metadata:
@@ -290,7 +308,8 @@ def write_nii_to_group(
     else:
         this_group = root_group
 
-    nii_obj = get_nifti_obj(nii_file_path)
+    nii_obj = get_nifti_obj(nii_file_path,
+                            do_transposition=do_transposition)
 
     nii_results = nii_obj.get_channel(
                     channel=channel)
@@ -337,7 +356,8 @@ def write_summed_nii_files_to_group(
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         default_chunk=64,
-        channel='red'):
+        channel='red',
+        do_transposition=False):
     """
     Sum the arrays in all of the files in file_path list
     into a single array and write that to the specified
@@ -349,7 +369,8 @@ def write_summed_nii_files_to_group(
 
     main_array = None
     for file_path in file_path_list:
-        nii_obj = get_nifti_obj(file_path)
+        nii_obj = get_nifti_obj(file_path,
+                                do_transposition=do_transposition)
 
         nii_results = nii_obj.get_channel(
                         channel=channel)
