@@ -237,7 +237,7 @@ def bits_to_bytes(bit_stream):
     # get converted to bytes and stored in the output byte
     # stream.
     bit_grid = np.array(bit_stream).reshape(n_bits//32, 32)
-    values = np.zeros(bit_grid.shape[0], dtype=int)
+    values = np.zeros(bit_grid.shape[0], dtype=np.uint32)
     pwr = 1
     for icol in range(bit_grid.shape[1]):
         these_bits = bit_grid[:, icol]
@@ -249,7 +249,7 @@ def bits_to_bytes(bit_stream):
 
     # transcribe values in byte stream
     for i_val, val in enumerate(values):
-        byte_stream[i_val*4:(i_val+1)*4] = int(val).to_bytes(4, byteorder='little')
+        byte_stream[i_val*4:(i_val+1)*4] = int(val).to_bytes(4, byteorder='little', signed=False)
 
     return bytes(byte_stream)
 
