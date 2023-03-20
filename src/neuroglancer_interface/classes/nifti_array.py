@@ -36,7 +36,7 @@ class NiftiArray(object):
             #self._rotation_matrix = self._get_rotation_matrix()
             if self.do_transposition:
                 self._rotation_matrix = np.array(
-                    [[0.0, 0.0, 1.0],
+                    [[0.0, 0.0, -1.0],
                      [0.0, 1.0, 0.0],
                      [1.0, 0.0, 0.0]])
             else:
