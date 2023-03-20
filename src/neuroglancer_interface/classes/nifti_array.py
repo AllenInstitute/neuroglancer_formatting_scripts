@@ -24,11 +24,11 @@ class NiftiArray(object):
     @property
     def rotation_matrix(self):
         if not hasattr(self, '_rotation_matrix'):
-            self._rotation_matrix = self._get_rotation_matrix()
-            #self._rotation_matrix = np.array(
-            #                [[1.0, 0.0, 0.0],
-            #                 [0.0, 1.0, 0.0],
-            #                 [0.0, 0.0, 1.0]])
+            #self._rotation_matrix = self._get_rotation_matrix()
+            self._rotation_matrix = np.array(
+                            [[1.0, 0.0, 0.0],
+                             [0.0, 1.0, 0.0],
+                             [0.0, 0.0, 1.0]])
         return self._rotation_matrix
 
     def _read_quatern_terms(self):
@@ -50,6 +50,7 @@ class NiftiArray(object):
         See:
         https://nifti.nimh.nih.gov/nifti-1/documentation/nifti1fields/nifti1fields_pages/quatern.html
         """
+        raise RuntimeError("should not be here")
         self._read_quatern_terms()
         rotation_matrix = get_rotation_matrix(
             aa = self._quatern_a,
