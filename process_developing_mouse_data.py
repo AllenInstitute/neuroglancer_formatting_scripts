@@ -54,6 +54,7 @@ def main():
     parser.add_argument('--n_test', type=int, default=None)
     parser.add_argument('--output_dir', type=str, default=None)
     parser.add_argument('--only_metadata', default=False, action='store_true')
+    parser.add_argument('--transpose_ccf', default=False, action='store_true')
     args = parser.parse_args()
 
 
@@ -95,7 +96,8 @@ def main():
             output_dir=output_dir/"ccf_annotations",
             use_compression=True,
             compression_blocksize=32,
-            chunk_size=(64, 64, 64))
+            chunk_size=(64, 64, 64),
+            do_transposition=args.transpose_ccf)
 
         print_status("Done formatting CCF annotations")
 
@@ -114,7 +116,8 @@ def main():
             downscale=config_data["downscale"],
             n_processors=1,
             clobber=False,
-            metadata_collector=template_collector)
+            metadata_collector=template_collector,
+            do_transposition=args.transpose_ccf)
         template_collector.write_to_file()
         print_status("Done formatting avg template image")
 
