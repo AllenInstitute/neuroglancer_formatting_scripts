@@ -4,11 +4,8 @@ from logans_code import binarize_swc
 
 
 def convert_swc(
-        swc_path,
+        swc_path_list,
         output_dir):
-    swc_path = pathlib.Path(swc_path)
-    if not swc_path.is_file():
-        raise RuntimeError(f"{swc_file} is not file")
 
     output_dir = pathlib.Path(output_dir)
     properties_dir = output_dir / 'segment_properties'
@@ -23,10 +20,6 @@ def convert_swc(
         properties_dir.mkdir()
     assert properties_dir.is_dir()
 
-    output_id = 1
-    data = binarize_swc(swc_path)
-    with open(output_dir / str(output_id), 'wb') as out_file:
-        out_file.write(data)
 
     params = dict()
     params['@type'] = 'neuroglancer_skeletons'
@@ -36,9 +29,37 @@ def convert_swc(
     params['transform'] = transform
 
     vertex_attributes = []
-    vertex_attributes.append({'id': str(output_id),
-                              'data_type': 'float32',
-                              'num_components': 1})
+    n_good = 0
+    n_bad = 0
+    id_to_label = dict()
+    for output_id, swc_path in enumerate(swc_path_list):
+
+        swc_path = pathlib.Path(swc_path)
+
+        if not swc_path.is_file():
+            raise RuntimeError(f"{swc_file} is not file")
+
+        try:
+            data = binarize_swc(swc_path)
+            with open(output_dir / str(output_id), 'wb') as out_file:
+                out_file.write(data)
+
+            vertex_attributes.append({'id': str(output_id),
+                                      'data_type': 'float32',
+                                      'num_components': 1})
+
+            id_to_label[str(output_id)] = str(output_id)
+
+            n_good += 1
+        except:
+            n_bad += 1
+
+            print(f"problem with {swc_path} -- {n_good} {n_bad}")
+
+        continue
+
+    print(f"n_good {n_good} n_bad {n_bad}")
+
     params['vertex_attributes'] = [] #vertex_attributes
     params['segment_properties'] = properties_dir.name
 
@@ -48,9 +69,16 @@ def convert_swc(
 
     # write properties
     properties = dict()
+
+    id_list = []
+    label_list = []
+    for k in id_to_label:
+        id_list.append(k)
+        label_list.append(id_to_label[k])
+
     properties['properties'] = [{'id': 'label', 'type': 'label',
-                                 'values': ['dummy']}]
-    properties['ids'] = ['1']
+                                 'values': label_list}]
+    properties['ids'] = id_list
     params = dict()
     params['inline'] = properties
     params['@type'] = 'neuroglancer_segment_properties'
@@ -59,8 +87,11 @@ def convert_swc(
         out_file.write(json.dumps(params, indent=2))    
 
 def main():
-    swc_path = 'data/202206241143_upload_resampled_reconstructions_16124_1/16124_5220-X13868-Y7456_reg.swc'
-    convert_swc(swc_path,
+
+    data_dir = pathlib.Path('data')
+    swc_path_list = [n for n in data_dir.rglob('**/*.swc')]
+
+    convert_swc(swc_path_list,
                 output_dir='scratch/swc')
 
 
