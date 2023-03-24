@@ -61,7 +61,7 @@ def convert_swc(
 def main():
     swc_path = 'data/202206241143_upload_resampled_reconstructions_16124_1/16124_5220-X13868-Y7456_reg.swc'
     convert_swc(swc_path,
-                output_dir='scratch')
+                output_dir='scratch/swc')
 
 
 if __name__ == "__main__":
