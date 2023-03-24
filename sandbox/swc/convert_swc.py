@@ -30,9 +30,9 @@ def convert_swc(
 
     params = dict()
     params['@type'] = 'neuroglancer_skeletons'
-    transform = [1, 0, 0, 0,
-                 0, 1, 0, 0,
-                 0, 0, 1, 0]
+    transform = [1000, 0, 0, 0,
+                 0, 1000, 0, 0,
+                 0, 0, 1000, 0]
     params['transform'] = transform
 
     vertex_attributes = []
