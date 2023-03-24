@@ -34,6 +34,9 @@ def convert_swc(
     id_to_label = dict()
     for output_id, swc_path in enumerate(swc_path_list):
 
+        parent_dir = swc_path.parent.name
+        this_label = f'{parent_dir}/{swc_path.name}'
+
         swc_path = pathlib.Path(swc_path)
 
         if not swc_path.is_file():
@@ -48,7 +51,7 @@ def convert_swc(
                                       'data_type': 'float32',
                                       'num_components': 1})
 
-            id_to_label[str(output_id)] = str(output_id)
+            id_to_label[str(output_id)] = this_label
 
             n_good += 1
         except:
