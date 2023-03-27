@@ -1,3 +1,6 @@
+import pathlib
+
+
 def get_prime_factors(value):
 
     result = []
@@ -27,3 +30,13 @@ def _next_prime_factor(
         if factor**2 > current_value:
             return None
     return factor
+
+
+def _clean_up(target_path):
+    target_path = pathlib.Path(target_path)
+    if target_path.is_file():
+        target_path.unlink()
+    elif target_path.is_dir():
+        for sub_path in target_path.iterdir():
+            _clean_up(sub_path)
+        target_path.rmdir()
