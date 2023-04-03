@@ -217,11 +217,21 @@ def census_worker(
 
     n_structures = len(mask_lookup)
 
-    counts_arr = np.zeros(n_structures, dtype=census_dtype)
-    max_voxel_arr = np.zeros((n_structures, 3), dtype=np.uint)
+    # make sure we have loaded a contiguous block of row values
+    row_vals = np.array([nifti_to_row[n['tag']] for n in nifti_config_list])
+    delta = np.diff(row_vals)
+    assert delta.min() == 1
+    assert delta.max() == 1
+
+    row_min = row_vals.min()
+    row_max = row_vals.max()+1
+    n_rows = len(row_vals)
+
+    counts_arr = np.zeros((n_rows, n_structures), dtype=census_dtype)
+    max_voxel_arr = np.zeros((n_rows, n_structures, 3), dtype=np.uint)
     s = list(mask_lookup.keys())[0]
     n_planes = mask_lookup[s]['shape'][0]
-    per_plane_arr = np.zeros((n_structures, n_planes), dtype=census_dtype)
+    per_plane_arr = np.zeros((n_rows, n_structures, n_planes), dtype=census_dtype)
 
     ct = 0
     n_tot = len(nifti_config_list)
@@ -232,20 +242,12 @@ def census_worker(
             nifti_path=nifti_config['path'],
             mask_lookup=mask_lookup)
 
+        row = nifti_to_row[nifti_config["tag"]]-row_min
         for structure in this_census:
             col = structure_to_col[structure]
-            counts_arr[col] = this_census[structure]['counts']
-            max_voxel_arr[col] = this_census[structure]['max_voxel']
-            per_plane_arr[col] = this_census[structure]['per_plane']
-
-        row = nifti_to_row[nifti_config["tag"]]
-        with output_lock:
-            with h5py.File(h5_path, 'a') as out_file:
-                for structure in this_census:
-                    col = structure_to_col[structure]
-                    out_file['counts'][row, :] = counts_arr
-                    out_file['max_voxel'][row, :, :] = max_voxel_arr
-                    out_file['per_slice'][row, :, :] = per_plane_arr
+            counts_arr[row, col] = this_census[structure]['counts']
+            max_voxel_arr[row, col] = this_census[structure]['max_voxel']
+            per_plane_arr[row, col] = this_census[structure]['per_plane']
 
         ct += 1
         if ct % print_every == 0:
@@ -254,3 +256,10 @@ def census_worker(
                 i_chunk=ct,
                 tot_chunks=n_tot,
                 unit='min')
+
+    print("writing census to output")
+    with output_lock:
+        with h5py.File(h5_path, 'a') as out_file:
+            out_file['counts'][row_min:row_max, :] = counts_arr
+            out_file['max_voxel'][row_min:row_max, :, :] = max_voxel_arr
+            out_file['per_slice'][row_min:row_max, :, :] = per_plane_arr
