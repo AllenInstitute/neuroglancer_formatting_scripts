@@ -1,7 +1,8 @@
-from typing import Optional, Union
+from typing import Optional, Union, Any
 import os
 import pathlib
 import tempfile
+import time
 
 
 def get_prime_factors(value):
@@ -84,4 +85,37 @@ def mkstemp_clean(
                      suffix=suffix)
 
     os.close(descriptor)
+    p = pathlib.Path(file_path)
+    if p.exists():
+        p.unlink()
     return file_path
+
+
+def print_timing(
+        t0: float,
+        i_chunk: int,
+        tot_chunks: int,
+        unit: str = 'min',
+        nametag: Optional[Any] = None,
+        msg: Optional[str] = None):
+
+    if unit not in ('sec', 'min', 'hr'):
+        raise RuntimeError(f"timing unit {unit} nonsensical")
+
+    denom = {'min': 60.0,
+             'hr': 3600.0,
+             'sec': 1.0}[unit]
+
+    duration = (time.time()-t0)/denom
+    per = duration/max(1, i_chunk)
+    pred = per*tot_chunks
+    remain = pred-duration
+    this_msg = f"{i_chunk} of {tot_chunks} in {duration:.2e} {unit}; "
+    this_msg += f"predict {remain:.2e} of {pred:.2e} left"
+    if nametag is not None:
+        this_msg = f"{nametag} -- {msg}"
+
+    if msg is not None:
+        this_msg = f"{this_msg} -- {msg}"
+
+    print(this_msg)

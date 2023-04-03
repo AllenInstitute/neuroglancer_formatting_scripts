@@ -80,7 +80,9 @@ def mask_list_fixture(shape_fixture):
     for ii in range(17):
         name = f"structure_{ii}"
         mask = np.zeros(n_voxels, dtype=int)
-        chosen = rng.choice(len(mask), rng.integers(10, n_voxels//2))
+        chosen = rng.choice(len(mask),
+                            rng.integers(10, n_voxels//2),
+                            replace=False)
         mask[chosen] = 1
         mask = mask.reshape(shape_fixture)
         result.append({'structure': name, 'mask': mask})
