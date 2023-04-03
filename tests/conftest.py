@@ -78,8 +78,6 @@ def template_path_fixture(
     img.SetMetaData('pixdim[3]', str(pixdim_fixture[0]))
     SimpleITK.WriteImage(
         image=img,
-        fileName=template_path,
-        compression='gzip',
-        compressionLevle=4)
+        fileName=template_path)
 
     yield template_path
