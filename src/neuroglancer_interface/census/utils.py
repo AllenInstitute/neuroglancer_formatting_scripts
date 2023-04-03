@@ -130,9 +130,6 @@ def census_from_NIFTI_and_mask(
     base_data = SimpleITK.GetArrayFromImage(
         SimpleITK.ReadImage(nifti_path))
 
-    masked_data = np.zeros(base_data.shape, dtype=base_data.dtype)
-    negative_mask = np.ones(base_data.shape, dtype=bool)
-
     structure_list = list(mask_lookup.keys())
     structure_list.sort()
 
@@ -145,20 +142,22 @@ def census_from_NIFTI_and_mask(
                 f"{mask_config['shape']}\n"
                 f"{nifti_path} has shape {base_data.shape}")
 
-        # create a volume of data that is only non-zero
-        # inside the mask
-        negative_mask[:, :, :] = True
-        masked_data[:, :, :] = base_data[:, :, :]
-        negative_mask[mask_config['pixels']] = False
-        masked_data[negative_mask] = 0
+        masked_data = base_data[mask_config['pixels']]
 
         # find max voxel
-        max_voxel_idx = np.argmax(masked_data)
-        max_voxel = np.unravel_index(max_voxel_idx, base_data.shape)
+        max_idx = np.argmax(masked_data)
+        max_voxel = (mask_config['pixels'][0][max_idx],
+                     mask_config['pixels'][1][max_idx],
+                     mask_config['pixels'][2][max_idx])
         this_result['max_voxel'] = max_voxel
 
         # find per plane sums
-        per_plane = np.sum(masked_data, axis=(1, 2))
+        per_plane = np.zeros(base_data.shape[0], dtype=base_data.dtype)
+        unq_planes = np.unique(mask_config['pixels'][0])
+        for plane in unq_planes:
+            this_mask = (mask_config['pixels'][0]==plane)
+            this_sum = masked_data[this_mask].sum()
+            per_plane[plane] = this_sum
         this_result['per_plane'] = per_plane
 
         # find total counts
