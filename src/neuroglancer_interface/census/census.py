@@ -250,12 +250,11 @@ def census_worker(
             per_plane_arr[row, col] = this_census[structure]['per_plane']
 
         ct += 1
-        if ct % print_every == 0:
-            print_timing(
-                t0=t0,
-                i_chunk=ct,
-                tot_chunks=n_tot,
-                unit='min')
+        print_timing(
+            t0=t0,
+            i_chunk=ct,
+            tot_chunks=n_tot,
+            unit='min')
 
     print("writing census to output")
     with output_lock:
