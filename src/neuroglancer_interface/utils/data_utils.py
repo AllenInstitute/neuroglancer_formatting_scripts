@@ -285,13 +285,9 @@ def write_nii_to_group(
         root_group,
         group_name,
         nii_file_path,
-        downscale,
         transpose=True,
-        metadata_collector=None,
-        metadata_key=None,
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
-        only_metadata=False,
         default_chunk=64,
         channel='red',
         do_transposition=False):
@@ -311,17 +307,12 @@ def write_nii_to_group(
     nii_file_path: Pathlib.path
         is the path to the nii file being written
 
-    downscale: int
-        How much to downscale the image by at each level
-        of zoom.
-
     do_transposition:
         If True, transpose the NIFTI volumes so that
         (x, y, z) -> (z, y, x)
     """
     if group_name is not None:
-        if not only_metadata:
-            this_group = root_group.create_group(f"{group_name}")
+        this_group = root_group.create_group(f"{group_name}")
     else:
         this_group = root_group
 
@@ -337,31 +328,15 @@ def write_nii_to_group(
 
     arr = nii_results['channel']
 
-    if metadata_collector is not None:
-
-        other_metadata = {
-            'x_mm': x_scale,
-            'y_mm': y_scale,
-            'z_mm': z_scale,
-            'path': str(nii_file_path.resolve().absolute())}
-
-        metadata_collector.collect_metadata(
-            data_array=arr,
-            rotation_matrix=nii_obj.rotation_matrix,
-            other_metadata=other_metadata,
-            metadata_key=group_name)
-
-    if not only_metadata:
-        write_array_to_group(
-            arr=arr,
-            group=this_group,
-            x_scale=x_scale,
-            y_scale=y_scale,
-            z_scale=z_scale,
-            downscale=downscale,
-            DownscalerClass=DownscalerClass,
-            downscale_cutoff=downscale_cutoff,
-            default_chunk=default_chunk)
+    write_array_to_group(
+        arr=arr,
+        group=this_group,
+        x_scale=x_scale,
+        y_scale=y_scale,
+        z_scale=z_scale,
+        DownscalerClass=DownscalerClass,
+        downscale_cutoff=downscale_cutoff,
+        default_chunk=default_chunk)
 
     print(f"wrote {nii_file_path} to {group_name}")
 

@@ -78,14 +78,11 @@ class NiftiArray(object):
 
     def _read_metadata(self):
         t0 = time.time()
-        print('reading image')
         img = SimpleITK.ReadImage(self.nifti_path)
-        print(f'reading took {time.time()-t0:.2e} seconds')
         _raw_shape = img.GetSize()
         _raw_shape = np.array([_raw_shape[2],
                                _raw_shape[1],
                                _raw_shape[0]])
-        print(f"shape before rot {_raw_shape}")
         self._shape = tuple(np.abs(
                                np.round(
                                    np.dot(self.rotation_matrix,
@@ -94,8 +91,6 @@ class NiftiArray(object):
         self._shape = tuple([int(self._shape[idx]) for idx in range(3)])
 
         self._scales = self._get_scales(img)
-        print(f"assigned shape {self._shape}")
-        print(f"assigned scales {self._scales}")
         self._img = img
 
     @property
@@ -124,11 +119,9 @@ class NiftiArray(object):
         """
         Will be cast so that arr.shape matches img.GetSize()
         """
-        print("getting array")
         expected_shape = self.shape  # just to provoke metadata read
         img = self._img
         arr = SimpleITK.GetArrayFromImage(img)
-        print(f"raw arr shape {arr.shape}")
         if len(arr.shape) == 3:
             return rotate_matrix(arr, self.rotation_matrix)
         elif len(arr.shape) == 4:
@@ -144,7 +137,6 @@ class NiftiArray(object):
         Returns dimensions in (1, 2, 3) order as they appear
         in the NIFTI file
         """
-        print("reading scales")
         d1_mm = img.GetMetaData('pixdim[1]')
         d2_mm = img.GetMetaData('pixdim[2]')
         d3_mm = img.GetMetaData('pixdim[3]')
@@ -152,9 +144,6 @@ class NiftiArray(object):
                          float(d2_mm),
                          float(d1_mm)])
 
-        print(f"raws scales {_raw}")
-        print(f"raw shape {img.GetSize()}")
-        print(f"rotation {self.rotation_matrix}")
         return tuple(np.abs(np.dot(self.rotation_matrix, _raw)))
 
     def get_channel(self, channel):
@@ -180,16 +169,13 @@ class NiftiArray(object):
 class NiftiArrayCollection(object):
 
     def __init__(self, nifti_dir_path, do_transposition=False):
-        print("in dir path constructor")
         self._do_transposition = do_transposition
         nifti_dir_path = pathlib.Path(nifti_dir_path)
         if not nifti_dir_path.is_dir():
             raise RuntimeError(
                 f"{nifti_dir_path} is not a dir")
 
-        print(f"getting path list {nifti_dir_path}")
         path_list = [n for n in nifti_dir_path.rglob('*.nii.gz')]
-        print(path_list)
         channel_lookup = dict()
         for path in path_list:
             if 'green' in path.name:
@@ -226,7 +212,6 @@ class NiftiArrayCollection(object):
     @property
     def shape(self):
         if not hasattr(self, '_shape'):
-            print("reading shape")
             self._shape = None
             for k in self.channel_lookup:
                 this = NiftiArray(self.channel_lookup[k],
@@ -252,11 +237,9 @@ class NiftiArrayCollection(object):
 def get_nifti_obj(nifti_path, do_transposition=False):
     nifti_path = pathlib.Path(nifti_path)
     if nifti_path.is_dir():
-        print("getting NiftiARrayCollection")
         return NiftiArrayCollection(nifti_path,
                                     do_transposition=do_transposition)
     elif nifti_path.is_file():
-        print("getting NiftiArray")
         return NiftiArray(nifti_path,
                           do_transposition=do_transposition)
 
