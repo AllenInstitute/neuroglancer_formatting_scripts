@@ -12,7 +12,7 @@ def main():
         if not pth.name.endswith('.nii.gz'):
             print(f"skipping {pth}")
             continue
-        tag = pth.name
+        tag = pth.name.split('.')[0]
         this = {'tag': tag, 'path': str(pth.resolve().absolute())}
         config_list.append(this)
 
