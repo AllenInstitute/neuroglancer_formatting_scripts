@@ -27,6 +27,23 @@ blosc.use_threads = False
 def create_root_group(
         output_dir,
         clobber=False):
+    """
+    Create an OME-ZARR group at output_dir
+
+    Parameters
+    ----------
+    output_dir:
+        The path at twhich to create the OME-ZARR group
+
+    clobber:
+        If True, delete whatever is at output_dir before
+        proceeding. If False and  output_dir exists,
+        raise a RuntimeError
+
+    Returns
+    -------
+    An OME-ZARR group object pointing to output_dir
+    """
 
     if not isinstance(output_dir, pathlib.Path):
         output_dir = pathlib.Path(output_dir)
