@@ -46,24 +46,21 @@ def get_n_slices(config_data):
     return n_slices
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config_path', type=str, default=None)
-    parser.add_argument('--n_processors', type=int, default=6)
-    parser.add_argument('--clobber', default=False, action='store_true')
-    parser.add_argument('--n_test', type=int, default=None)
-    parser.add_argument('--output_dir', type=str, default=None)
-    parser.add_argument('--only_metadata', default=False, action='store_true')
-    parser.add_argument('--transpose_ccf', default=False, action='store_true')
-    args = parser.parse_args()
+def  process_developing_mouse(
+        config_path,
+        n_processors,
+        clobber,
+        n_test,
+        output_dir,
+        only_metadata=False,
+        transpose_ccf=False)
 
-
-    with open(args.config_path, 'rb') as in_file:
+    with open(config_path, 'rb') as in_file:
         config_data = json.load(in_file)
 
     output_dir = None
-    if args.output_dir is not None:
-        output_dir = pathlib.Path(args.output_dir)
+    if output_dir is not None:
+        output_dir = pathlib.Path(output_dir)
     elif 'output_dir' in config_data:
         output_dir = pathlib.Path(config_data['output_dir'])
 
@@ -72,7 +69,7 @@ def main():
 
 
     if output_dir.exists():
-        if not args.clobber:
+        if not clobber:
             raise RuntimeError(
                 f"{output_dir.resolve().absolute()} exists")
         else:
@@ -82,7 +79,7 @@ def main():
 
     output_dir.mkdir()
 
-    if "ccf" in config_data and not args.only_metadata:
+    if "ccf" in config_data and not only_metadata:
         print_status("Formatting CCF annotations")
 
         if not isinstance(config_data['ccf']['segmentation'], list):
@@ -97,11 +94,11 @@ def main():
             use_compression=True,
             compression_blocksize=32,
             chunk_size=(64, 64, 64),
-            do_transposition=args.transpose_ccf)
+            do_transposition=transpose_ccf)
 
         print_status("Done formatting CCF annotations")
 
-    if "template" in config_data and not args.only_metadata:
+    if "template" in config_data and not only_metadata:
         print_status("Formatting avg template image")
         template_dir = output_dir/"avg_template"
 
@@ -117,11 +114,11 @@ def main():
             n_processors=1,
             clobber=False,
             metadata_collector=template_collector,
-            do_transposition=args.transpose_ccf)
+            do_transposition=transpose_ccf)
         template_collector.write_to_file()
         print_status("Done formatting avg template image")
 
-    if "max_counts" in config_data and not args.only_metadata:
+    if "max_counts" in config_data and not only_metadata:
         print_status("Formatting max count image")
         write_nii_file_list_to_ome_zarr(
             file_path_list=[pathlib.Path(config_data["max_counts"]["path"])],
@@ -147,13 +144,13 @@ def main():
 
         structure_set_masks = get_mask_lookup(
                 mask_dir=config_data["census"]["structure_set_masks"],
-                n_processors=args.n_processors,
-                n_test=args.n_test)
+                n_processors=n_processors,
+                n_test=n_test)
 
         structure_masks = get_mask_lookup(
                 mask_dir=config_data["census"]["structure_masks"],
-                n_processors=args.n_processors,
-                n_test=args.n_test)
+                n_processors=n_processors,
+                n_test=n_test)
 
         print_status("Done reading structure masks for census")
     else:
@@ -168,11 +165,11 @@ def main():
             output_dir=output_dir/"mfish_heatmaps",
             clobber=False,
             downscale=config_data["downscale"],
-            n_processors=args.n_processors,
+            n_processors=n_processors,
             structure_set_masks=structure_set_masks,
             structure_masks=structure_masks,
-            n_test=args.n_test,
-            only_metadata=args.only_metadata)
+            n_test=n_test,
+            only_metadata=only_metadata)
         print_status("Done formatting mfish data")
 
     if "cell_types" in config_data:
@@ -182,11 +179,11 @@ def main():
             input_list=config_data["cell_types"]["input_list"],
             downscale=config_data["downscale"],
             clobber=False,
-            n_processors=args.n_processors,
+            n_processors=n_processors,
             structure_set_masks=structure_set_masks,
             structure_masks=structure_masks,
-            n_test=args.n_test,
-            only_metadata=args.only_metadata)
+            n_test=n_test,
+            only_metadata=only_metadata)
         print_status("Done formatting cell types data")
 
     if do_census:
@@ -229,10 +226,32 @@ def main():
     print_status("Copying over config")
     dest_path = output_dir / 'config.json'
     assert not dest_path.exists()
-    shutil.copy(args.config_path, dest_path)
+    shutil.copy(config_path, dest_path)
 
     print_status("Done formatting all data")
     print(f"written to\n{output_dir}")
+
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config_path', type=str, default=None)
+    parser.add_argument('--n_processors', type=int, default=6)
+    parser.add_argument('--clobber', default=False, action='store_true')
+    parser.add_argument('--n_test', type=int, default=None)
+    parser.add_argument('--output_dir', type=str, default=None)
+    parser.add_argument('--only_metadata', default=False, action='store_true')
+    parser.add_argument('--transpose_ccf', default=False, action='store_true')
+    args = parser.parse_args()
+
+    process_developing_mouse(
+        config_path=args.config_path,
+        n_processors=args.n_processors,
+        clobber=args.clobber,
+        n_test=args.n_test,
+        output_dir=args.output_dir,
+        only_metadata=args.only_metadata,
+        transpose_ccf=args.transpose_ccf)
 
 if __name__ == "__main__":
     main()
