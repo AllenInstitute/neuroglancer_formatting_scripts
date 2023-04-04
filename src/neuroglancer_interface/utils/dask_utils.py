@@ -7,7 +7,6 @@ from ome_zarr.writer import write_multiscales_metadata
 from ome_zarr.format import CurrentFormat
 import pathlib
 import multiprocessing
-from neuroglancer_interface.utils.data_utils import _get_nx_ny
 from neuroglancer_interface.classes.downscalers import XYScaler
 
 
