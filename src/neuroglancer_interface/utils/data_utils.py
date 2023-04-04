@@ -435,33 +435,25 @@ def write_summed_nii_files_to_group(
         default_chunk=default_chunk)
 
 
-def _get_nx_ny(
-        arr,
-        downscaler):
-
-    list_of_nx_ny = downscaler.create_empty_pyramid(
-                          base=arr)
-
-    return list_of_nx_ny
-
-
 def write_array_to_group(
         arr: np.ndarray,
         group: Any,
         x_scale: float,
         y_scale: float,
         z_scale: float,
-        downscale: int = 1,
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         default_chunk=64,
-        axis_order=('x', 'y', 'z'),
         storage_options=None):
     """
     Write a numpy array to an ome-zarr group
 
     Parameters
     ----------
+    arr:
+        the 3D numpy array of data to be converted to
+        OME-ZARR
+
     group:
         The ome_zarr group object to which the data will
         be written
@@ -475,15 +467,16 @@ def write_array_to_group(
     z_scale: float
         The physical scale of one z pixel in millimeters
 
-    downscale: int
-        The amount by which to downscale the image at each
-        level of zoom
+    DownscalerClass:
+        The class to be used for downscaling the image
+        (if None, there will be no downscaling)
 
-    axis_order:
-        controls the order in which axes are written out to .zattrs
-        (note x_scale, y_scale, z_scale will correspond to the 0th,
-        1st, and 2nd dimensions in the data, without regard to what
-        the axis names are; this needs to be fixed later)
+    downscale_cutoff:
+        Stop downscaling a dimension before it ends up smaller
+        than this.
+
+    default_chunk:
+        Attempt to guess chunk size of data
     """
 
     # neuroglancer does not support 64 bit floats
@@ -498,15 +491,13 @@ def write_array_to_group(
                    z_scale],
          'type': 'scale'}]]
 
-    if downscale > 1:
+    if DownscalerClass is not None:
         scaler = DownscalerClass(
                    method='gaussian',
-                   downscale=downscale,
+                   downscale=1,
                    downscale_cutoff=downscale_cutoff)
 
-        list_of_nx_ny = _get_nx_ny(
-                            arr=arr,
-                            downscaler=scaler)
+        list_of_nx_ny = scaler.create_empty_pyramid(base=arr)
 
         for nxny in list_of_nx_ny:
             this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
@@ -518,13 +509,13 @@ def write_array_to_group(
         scaler = None
 
     axes = [
-        {"name": axis_order[0],
+        {"name": "x",
          "type": "space",
          "unit": "millimeter"},
-        {"name": axis_order[1],
+        {"name": "y",
          "type": "space",
          "unit": "millimeter"},
-        {"name": axis_order[2],
+        {"name": "z",
          "type": "space",
          "unit": "millimeter"}]
 
