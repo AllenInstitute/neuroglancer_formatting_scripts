@@ -313,6 +313,8 @@ def write_nii_to_group(
         If True, transpose the NIFTI volumes so that
         (x, y, z) -> (z, y, x)
     """
+    nii_file_path = pathlib.Path(nii_file_path)
+
     if group_name is not None:
         this_group = root_group.create_group(f"{group_name}")
         zattr_path = root_group.absolute_path / this_group.path
@@ -351,6 +353,8 @@ def write_nii_to_group(
     zattr_data = json.load(open(zattr_path, 'rb'))
     assert 'max_planes' not in zattr_data
     zattr_data['max_planes'] = [int(max_x), int(max_y), int(max_z)]
+    assert 'nii_file_path' not in zattr_data
+    zattr_data['nii_file_path'] = str(nii_file_path.resolve().absolute())
     with open(zattr_path, 'w') as out_file:
         out_file.write(json.dumps(zattr_data, indent=2))
 
