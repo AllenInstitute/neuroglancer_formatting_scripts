@@ -1,4 +1,5 @@
 from typing import List, Any
+import json
 import pandas as pd
 import numpy as np
 import SimpleITK
@@ -62,6 +63,7 @@ def create_root_group(
 
     store = parse_url(output_dir, mode="w").store
     root_group = zarr.group(store=store)
+    root_group.absolute_path = output_dir
 
     return root_group
 
@@ -313,8 +315,11 @@ def write_nii_to_group(
     """
     if group_name is not None:
         this_group = root_group.create_group(f"{group_name}")
+        zattr_path = root_group.absolute_path / this_group.path
     else:
         this_group = root_group
+        zattr_path = root_group.absolute_path
+    zattr_path = zattr_path / '.zattrs'
 
     nii_obj = get_nifti_obj(nii_file_path,
                             do_transposition=do_transposition)
@@ -328,6 +333,10 @@ def write_nii_to_group(
 
     arr = nii_results['channel']
 
+    max_x = np.argmax(np.sum(arr, axis=(1, 2)))
+    max_y = np.argmax(np.sum(arr, axis=(0, 2)))
+    max_z = np.argmax(np.sum(arr, axis=(0, 1)))
+
     write_array_to_group(
         arr=arr,
         group=this_group,
@@ -337,6 +346,13 @@ def write_nii_to_group(
         DownscalerClass=DownscalerClass,
         downscale_cutoff=downscale_cutoff,
         default_chunk=default_chunk)
+
+    # add max plane data to .zattrs
+    zattr_data = json.load(open(zattr_path, 'rb'))
+    assert 'max_planes' not in zattr_data
+    zattr_data['max_planes'] = [int(max_x), int(max_y), int(max_z)]
+    with open(zattr_path, 'w') as out_file:
+        out_file.write(json.dumps(zattr_data, indent=2))
 
     print(f"wrote {nii_file_path} to {group_name}")
 

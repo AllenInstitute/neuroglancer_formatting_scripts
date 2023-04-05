@@ -175,9 +175,14 @@ def test_write_nii_to_group(
 
     this_zarr = sub_dir / group_name
 
+    zattrs_path = this_zarr / '.zattrs'
+    zattrs = json.load(open(zattrs_path, 'rb'))
+
     # check that base array is identical to the input
     # array
     with zarr.open(this_zarr, 'r') as test_file:
+
+        # test the native resolution
         base_arr = test_file['0'][()]
         if do_transposition:
             expected_array = rotate_matrix(
@@ -194,6 +199,7 @@ def test_write_nii_to_group(
             rtol=1.0e-6,
             atol=0.0)
 
+        # test the first downscaled array
         if do_transposition:
             first_scale = skimage_resize(
                  expected_array,
@@ -209,9 +215,37 @@ def test_write_nii_to_group(
             rtol=1.0e-6,
             atol=0.0)
 
+        # test the max planes
+        max_idx = None
+        max_val = None
+        for ix in range(expected_array.shape[0]):
+            v = expected_array[ix, :, :].sum()
+            if max_idx is None or v > max_val:
+                max_val = v
+                max_idx = ix
+        max_x = max_idx
+
+        max_idx = None
+        max_val = None
+        for iy in range(expected_array.shape[1]):
+            v = expected_array[:, iy, :].sum()
+            if max_idx is None or v > max_val:
+                max_val = v
+                max_idx = iy
+        max_y = max_idx
+
+        max_idx = None
+        max_val = None
+        for iz in range(expected_array.shape[2]):
+            v = expected_array[:, :, iz].sum()
+            if max_idx is None or v > max_val:
+                max_val = v
+                max_idx = iz
+        max_z = max_idx
+        expected = [max_x, max_y, max_z]
+        np.testing.assert_array_equal(zattrs['max_planes'], expected)
+
     # test that scale in .zattrs is as expected
-    zattrs_path = this_zarr / '.zattrs'
-    zattrs = json.load(open(zattrs_path, 'rb'))
 
     datasets = zattrs['multiscales'][0]['datasets']
     for d in datasets:
