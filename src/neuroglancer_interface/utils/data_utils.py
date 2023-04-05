@@ -223,7 +223,7 @@ def write_nii_to_group(
         downscale_cutoff=downscale_cutoff,
         default_chunk=default_chunk)
 
-    # add max plane data to .zattrs
+    # write additional metadata to zattrs
     zattr_data = json.load(open(zattr_path, 'rb'))
     assert 'max_planes' not in zattr_data
     zattr_data['max_planes'] = [int(max_x), int(max_y), int(max_z)]
@@ -231,13 +231,16 @@ def write_nii_to_group(
     zattr_data['nii_file_path'] = str(nii_file_path.resolve().absolute())
     assert 'dtype' not in zattr_data
     zattr_data['dtype'] = str(arr.dtype)
-    assert 'quantiles' not in zattr_data
+    assert 'sum' not in zattr_data
+    zattr_data['sum'] = float(arr.sum())
 
+    assert 'quantiles' not in zattr_data
     valid = (arr>0.0)
     q_values = ('0.25', '0.50', '0.75', '0.80', '0.90')
     q = np.quantile(arr[valid], [float(v) for v in q_values])
     quantiles = {
-        k:v for k, v in zip(q_values, q)}
+        k:float(v) for k, v in zip(q_values, q)}
+    quantiles['1.0'] = float(arr.max())
     zattr_data['quantiles'] = quantiles
 
     with open(zattr_path, 'w') as out_file:
