@@ -121,7 +121,7 @@ class NiftiArray(object):
         """
         expected_shape = self.shape  # just to provoke metadata read
         img = self._img
-        arr = SimpleITK.GetArrayFromImage(img)
+        arr = SimpleITK.GetArrayFromImage(img).astype(np.float32)
         if len(arr.shape) == 3:
             return rotate_matrix(arr, self.rotation_matrix)
         elif len(arr.shape) == 4:
