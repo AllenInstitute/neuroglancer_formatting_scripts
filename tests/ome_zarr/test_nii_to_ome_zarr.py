@@ -19,7 +19,8 @@ from neuroglancer_interface.utils.rotation_utils import (
 from neuroglancer_interface.utils.data_utils import (
     create_root_group,
     write_array_to_group,
-    write_nii_to_group)
+    write_nii_to_group,
+    write_nii_file_list_to_ome_zarr)
 
 
 @pytest.fixture
@@ -57,10 +58,6 @@ def img_nii_fixture(
     img = SimpleITK.GetImageFromArray(
         img_array_fixture)
 
-    img.SetMetaData('pixdim[1]', pixdim_fixture[0])
-    img.SetMetaData('pixdim[2]', pixdim_fixture[1])
-    img.SetMetaData('pixdim[3]', pixdim_fixture[2])
-
     SimpleITK.WriteImage(
         image=img,
         fileName=tmp_path)
@@ -80,7 +77,7 @@ def test_write_array_to_group(
     root_group = create_root_group(output_dir=sub_dir, clobber=False)
 
     group_name = 'test_array'
-    this_group = root_group.create_group(group_name)
+    this_group = root_group["group"].create_group(group_name)
 
     write_array_to_group(
         arr=img_array_fixture,
@@ -137,61 +134,29 @@ def test_write_array_to_group(
                 rtol=1.0e-6,
                 atol=0.0)
 
-
-@pytest.mark.parametrize('do_transposition', [True, False])
-def test_write_nii_to_group(
-        img_array_fixture,
-        img_nii_fixture,
-        pixdim_fixture,
-        temp_dir_fixture,
+def compare_zarr_to_array(
+        zarr_path,
+        img_array,
+        pixdim,
         do_transposition):
 
-
-    sub_dir = pathlib.Path(tempfile.mkdtemp(dir=temp_dir_fixture))
-    if sub_dir.exists():
-        sub_dir.rmdir()
-
-    root_group = create_root_group(output_dir=sub_dir, clobber=False)
-
-    group_name = 'test_array'
-
-
-    # because SimpleITK.WriteImage does not write out metadata
-    def mock_get_metadata(self, value):
-        lookup = dict()
-        lookup['pixdim[1]'] = pixdim_fixture[0]
-        lookup['pixdim[2]'] = pixdim_fixture[1]
-        lookup['pixdim[3]'] = pixdim_fixture[2]
-        return lookup[value]
-
-    with patch('SimpleITK.Image.GetMetaData', new=mock_get_metadata):
-        write_nii_to_group(
-            root_group=root_group,
-            group_name=group_name,
-            nii_file_path=img_nii_fixture,
-            downscale_cutoff=10,
-            channel='red',
-            do_transposition=do_transposition)
-
-    this_zarr = sub_dir / group_name
-
-    zattrs_path = this_zarr / '.zattrs'
+    zattrs_path = zarr_path / '.zattrs'
     zattrs = json.load(open(zattrs_path, 'rb'))
 
     # check that base array is identical to the input
     # array
-    with zarr.open(this_zarr, 'r') as test_file:
+    with zarr.open(zarr_path, 'r') as test_file:
 
         # test the native resolution
         base_arr = test_file['0'][()]
         if do_transposition:
             expected_array = rotate_matrix(
-                data=img_array_fixture,
+                data=img_array,
                 rotation_matrix = [[0, 0, -1],
                                    [0, 1, 0],
                                    [1, 0, 0]])
         else:
-            expected_array = img_array_fixture
+            expected_array = img_array
 
         np.testing.assert_allclose(
             base_arr,
@@ -246,38 +211,155 @@ def test_write_nii_to_group(
         np.testing.assert_array_equal(zattrs['max_planes'], expected)
 
     # test that scale in .zattrs is as expected
+    if pixdim is not None:
+        datasets = zattrs['multiscales'][0]['datasets']
+        for d in datasets:
+            scale = d['coordinateTransformations'][0]['scale']
+            if d['path'] == '0':
+                if do_transposition:
+                    expected = (float(pixdim[0]),
+                     float(pixdim[1]),
+                     float(pixdim[2]))
+                else:
+                    expected = (float(pixdim[2]),
+                     float(pixdim[1]),
+                     float(pixdim[0]))
 
-    datasets = zattrs['multiscales'][0]['datasets']
-    for d in datasets:
-        scale = d['coordinateTransformations'][0]['scale']
-        if d['path'] == '0':
-            if do_transposition:
-                expected = (float(pixdim_fixture[0]),
-                 float(pixdim_fixture[1]),
-                 float(pixdim_fixture[2]))
-            else:
-                expected = (float(pixdim_fixture[2]),
-                 float(pixdim_fixture[1]),
-                 float(pixdim_fixture[0]))
+                np.testing.assert_allclose(
+                    scale,
+                    expected,
+                    rtol=1.0e-6,
+                    atol=0.0)
+            if d['path'] == '1':
 
-            np.testing.assert_allclose(
-                scale,
-                expected,
-                rtol=1.0e-6,
-                atol=0.0)
-        if d['path'] == '1':
+                if do_transposition:
+                    expected = (float(pixdim[0])*5,
+                     float(pixdim[1])*3,
+                     float(pixdim[2])*2)
+                else:
+                    expected = (float(pixdim[2])*2,
+                     float(pixdim[1])*3,
+                     float(pixdim[0])*5)
 
-            if do_transposition:
-                expected = (float(pixdim_fixture[0])*5,
-                 float(pixdim_fixture[1])*3,
-                 float(pixdim_fixture[2])*2)
-            else:
-                expected = (float(pixdim_fixture[2])*2,
-                 float(pixdim_fixture[1])*3,
-                 float(pixdim_fixture[0])*5)
+                np.testing.assert_allclose(
+                    scale,
+                    expected,
+                    rtol=1.0e-6,
+                    atol=0.0)
 
-            np.testing.assert_allclose(
-                scale,
-                expected,
-                rtol=1.0e-6,
-                atol=0.0)
+
+
+@pytest.mark.parametrize('do_transposition', [True, False])
+def test_write_nii_to_group(
+        img_array_fixture,
+        img_nii_fixture,
+        pixdim_fixture,
+        temp_dir_fixture,
+        do_transposition):
+
+
+    sub_dir = pathlib.Path(tempfile.mkdtemp(dir=temp_dir_fixture))
+    if sub_dir.exists():
+        sub_dir.rmdir()
+
+    root_group = create_root_group(output_dir=sub_dir, clobber=False)
+
+    group_name = 'test_array'
+
+
+    # because SimpleITK.WriteImage does not write out metadata
+    def mock_get_metadata(self, value):
+        lookup = dict()
+        lookup['pixdim[1]'] = pixdim_fixture[0]
+        lookup['pixdim[2]'] = pixdim_fixture[1]
+        lookup['pixdim[3]'] = pixdim_fixture[2]
+        return lookup[value]
+
+    with patch('SimpleITK.Image.GetMetaData', new=mock_get_metadata):
+        write_nii_to_group(
+            root_group=root_group,
+            group_name=group_name,
+            nii_file_path=img_nii_fixture,
+            downscale_cutoff=10,
+            channel='red',
+            do_transposition=do_transposition)
+
+    this_zarr = sub_dir / group_name
+
+    compare_zarr_to_array(
+        zarr_path=this_zarr,
+        img_array=img_array_fixture,
+        pixdim=pixdim_fixture,
+        do_transposition=do_transposition)
+
+
+@pytest.fixture
+def img_array_list_fixture(
+        shape_fixture):
+    results = []
+    rng = np.random.default_rng(98765)
+    for ii in range(8):
+        results.append(rng.random(shape_fixture))
+    return results
+
+
+@pytest.fixture
+def img_nii_list_fixture(
+        img_array_list_fixture,
+        pixdim_fixture,
+        temp_dir_fixture):
+    sub_dir = temp_dir_fixture / 'nii_list'
+    sub_dir.mkdir()
+
+    results = []
+    for arr in img_array_list_fixture:
+        tmp_path = mkstemp_clean(
+                dir=sub_dir,
+                suffix='.nii')
+
+        img = SimpleITK.GetImageFromArray(
+            arr)
+
+        SimpleITK.WriteImage(
+            image=img,
+            fileName=tmp_path)
+        results.append(tmp_path)
+
+    return results
+
+
+@pytest.mark.parametrize('do_transposition', [True, False])
+def test_write_nii_list_to_group(
+        img_array_list_fixture,
+        img_nii_list_fixture,
+        pixdim_fixture,
+        temp_dir_fixture,
+        do_transposition):
+
+
+    sub_dir = pathlib.Path(tempfile.mkdtemp(dir=temp_dir_fixture))
+    if sub_dir.exists():
+        sub_dir.rmdir()
+
+    root_group = create_root_group(output_dir=sub_dir, clobber=False)
+
+    config_list = []
+    for ii, img_path in enumerate(img_nii_list_fixture):
+        config_list.append(
+            {'path': img_path,
+             'group': f'g_{ii}'})
+
+    write_nii_file_list_to_ome_zarr(
+        root_group=root_group,
+        config_list=config_list,
+        n_processors=3,
+        downscale_cutoff=10,
+        do_transposition=do_transposition)
+
+    for config, arr in zip(config_list, img_array_list_fixture):
+        this_zarr = sub_dir / config['group']
+        compare_zarr_to_array(
+            zarr_path=this_zarr,
+            img_array=arr,
+            pixdim=None,  # because mock.patch doesn't pass through mulitprocessing
+            do_transposition=do_transposition)

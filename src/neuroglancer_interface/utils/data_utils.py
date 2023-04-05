@@ -43,7 +43,9 @@ def create_root_group(
 
     Returns
     -------
-    An OME-ZARR group object pointing to output_dir
+    A dict
+        "group": An OME-ZARR group object pointing to output_dir
+        "path": path to that parent directory
     """
 
     if not isinstance(output_dir, pathlib.Path):
@@ -63,223 +65,98 @@ def create_root_group(
 
     store = parse_url(output_dir, mode="w").store
     root_group = zarr.group(store=store)
-    root_group.absolute_path = output_dir
-
-    return root_group
+    obj = {"group": root_group, "path": output_dir}
+    return obj
 
 
 def write_nii_file_list_to_ome_zarr(
-        file_path_list,
-        group_name_list,
-        output_dir,
-        downscale=2,
-        n_processors=4,
-        clobber=False,
-        prefix=None,
-        root_group=None,
-        metadata_collector=None,
+        config_list,
+        root_group,
+        n_processors,
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
-        only_metadata=False,
-        default_chunk=128,
-        channel_list=None,
+        default_chunk=64,
         do_transposition=False):
     """
-    Convert a list of nifti files into OME-zarr format
-
     Parameters
-    -----------
-    file_path_list: List[pathlib.Path]
-        list of paths to files to be written
-
-    group_name_list: List[str]
-        list of the names of the OME-zarr groups to be written
-        (same order as file_path_list)
-
-    output_dir: pathlib.Path
-        The directory where the parent OME-zarr group will be
-        written
-
-    downscale: int
-        Factor by which to downscale images as you are writing
-        them (i.e. when you zoom out one level, by how much
-        are you downsampling the pixels)
-
-    n_processors: int
-        Number of independent processes to use.
-
-    clobber: bool
-        If False, do not overwrite an existing group (throw
-        an exception instead)
-
-    prefix: str
-        optional sub-group in which all data is written
-        (i.e. option to write groups to output_dir/prefix/)
-
+    ----------
+    config_list:
+        List of dicts like
+             "path": -> path to .nii file
+             "group": -> group under root_group where data will be written
+             "channel": -> optional channel to choose
     root_group:
-        Optional root group into which to write ome-zarr
-        group. If None, will be created.
-
-    default_chunk: int
-        default size for single dimension of chunk when writing
-        data to disk
-
+        Dict created by create_root_group
+    n_processors:
+        Number of independent workers to spin up
+    DownscalerClass:
+        Class that will handle downsampling the images
+    downscale_cutoff:
+        Stop downscaling a dimension when it gets this large
+    default_chunk:
+        Guess at ome-zarr data chunk size
     do_transposition:
-        If True, transpose the NIFTI volumes so that
-        (x, y, z) -> (z, y, x)
-
-    Returns
-    -------
-    the root group
-
-    Notes
-    -----
-    Importing zarr causes multiprocessing to emit a warning about
-    leaked semaphore objects. *Probably* this is fine. It's just
-    scary. The zarr developers are working on this
-
-    https://github.com/zarr-developers/numcodecs/issues/230
+        If true, swap X, Z axes and map Z -> -X
     """
-    t0 = time.time()
-    if not isinstance(file_path_list, list):
-        file_path_list = [file_path_list,]
-    if not isinstance(group_name_list, list):
-        group_name_list = [group_name_list,]
+    # check uniqueness of group
+    group_set = set()
+    for config in config_list:
+        g = config['group']
+        if g in group_set:
+            raise RuntimeError(
+                f"group {g} occurs more than once in config_list")
+        group_set.add(g)
 
-    if len(file_path_list) != len(group_name_list):
-        msg = f"\ngave {len(file_path_list)} file paths but\n"
-        msg += f"{len(group_name_list)} group names"
+    batches = []
+    for i_batch in range(n_processors):
+        batches.append([])
+    for i_config, config in enumerate(config_list):
+        i_batch = i_config % n_processors
+        batches[i_batch].append(config)
 
-    if root_group is None:
-        root_group = create_root_group(
-                        output_dir=output_dir,
-                        clobber=clobber)
+    process_list = []
+    for i_batch in range(n_processors):
+        p = multiprocessing.Process(
+                target=_write_nii_file_list_worker,
+                kwargs={
+                    'config_list': batches[i_batch],
+                    'root_group': root_group,
+                    'downscale_cutoff': downscale_cutoff,
+                    'default_chunk': default_chunk,
+                    'DownscalerClass': DownscalerClass,
+                    'do_transposition': do_transposition})
+        p.start()
+        process_list.append(p)
 
-    if prefix is not None:
-        parent_group = root_group.create_group(prefix)
-    else:
-        parent_group = root_group
-
-    if len(file_path_list) == 1:
-
-        _write_nii_file_list_worker(
-            file_path_list=file_path_list,
-            group_name_list=group_name_list,
-            root_group=parent_group,
-            downscale=downscale,
-            metadata_collector=metadata_collector,
-            DownscalerClass=DownscalerClass,
-            downscale_cutoff=downscale_cutoff,
-            only_metadata=only_metadata,
-            default_chunk=default_chunk,
-            channel_list=channel_list,
-            do_transposition=do_transposition)
-
-    else:
-        n_workers = max(1, n_processors-1)
-        n_workers = min(n_workers, len(file_path_list))
-        file_lists = []
-        group_lists = []
-        channel_sub_lists = []
-        for ii in range(n_workers):
-            file_lists.append([])
-            group_lists.append([])
-            if channel_list is not None:
-                channel_sub_lists.append([])
-            else:
-                channel_sub_lists.append(None)
-
-        for ii in range(len(file_path_list)):
-            jj = ii % n_workers
-            file_lists[jj].append(file_path_list[ii])
-            group_lists[jj].append(group_name_list[ii])
-            if channel_list is not None:
-                channel_sub_lists[jj].append(channel_list[ii])
-
-        process_list = []
-        for ii in range(n_workers):
-            p = multiprocessing.Process(
-                    target=_write_nii_file_list_worker,
-                    kwargs={'file_path_list': file_lists[ii],
-                            'group_name_list': group_lists[ii],
-                            'channel_list': channel_sub_lists[ii],
-                            'root_group': parent_group,
-                            'downscale': downscale,
-                            'metadata_collector': metadata_collector,
-                            'DownscalerClass': DownscalerClass,
-                            'downscale_cutoff': downscale_cutoff,
-                            'only_metadata': only_metadata,
-                            'default_chunk': default_chunk,
-                            'do_transposition': do_transposition})
-            p.start()
-            process_list.append(p)
-
-        for p in process_list:
-            p.join()
-
-    duration = time.time() - t0
-    if prefix is not None:
-        print(f"{prefix} took {duration:.2e} seconds")
+    for p in process_list:
+        p.join()
 
     return root_group
 
 
 def _write_nii_file_list_worker(
-        file_path_list,
-        group_name_list,
-        channel_list,
+        config_list,
         root_group,
-        downscale,
-        metadata_collector=None,
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
-        only_metadata=False,
         default_chunk=64,
         do_transposition=False):
-    """
-    Worker function to actually convert a subset of nifti
-    files to OME-zarr
 
-    Parameters
-    ----------
-    file_path_list: List[pathlib.Path]
-        List of paths to nifti files to convert
+    for config in config_list:
 
-    group_name_list: List[str]
-        List of the names of the OME-zarr groups to
-        write the nifti files to
-
-    root_group:
-        The parent group object as created by ome_zarr
-
-    downscale: int
-        The factor by which to downscale the images at each
-        level of zoom.
-
-    do_transposition:
-        If True, transpose the NIFTI volumes so that
-        (x, y, z) -> (z, y, x)
-    """
-
-    for idx in range(len(file_path_list)):
-        f_path = file_path_list[idx]
-        grp_name = group_name_list[idx]
-        if channel_list is not None:
-            channel = channel_list=channel_list[idx]
+        if 'channel' in config:
+            channel = config['channel']
         else:
-            channel = None
+            channel = 'red'
 
         write_nii_to_group(
             root_group=root_group,
-            group_name=grp_name,
-            channel=channel,
-            nii_file_path=f_path,
-            downscale=downscale,
-            metadata_collector=metadata_collector,
+            group_name=config['group'],
+            nii_file_path=config['path'],
             DownscalerClass=DownscalerClass,
             downscale_cutoff=downscale_cutoff,
-            only_metadata=only_metadata,
             default_chunk=default_chunk,
+            channel=channel,
             do_transposition=do_transposition)
 
 
@@ -287,7 +164,6 @@ def write_nii_to_group(
         root_group,
         group_name,
         nii_file_path,
-        transpose=True,
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         default_chunk=64,
@@ -299,9 +175,7 @@ def write_nii_to_group(
     Parameters
     ----------
     root_group:
-        the ome_zarr group that the new group will
-        be a child of (an object created using the ome_zarr
-        library)
+        dict created by create_root_group
 
     group_name: str
         is the name of the group being created for this data
@@ -316,11 +190,11 @@ def write_nii_to_group(
     nii_file_path = pathlib.Path(nii_file_path)
 
     if group_name is not None:
-        this_group = root_group.create_group(f"{group_name}")
-        zattr_path = root_group.absolute_path / this_group.path
+        this_group = root_group["group"].create_group(f"{group_name}")
+        zattr_path = root_group["path"] / this_group.path
     else:
-        this_group = root_group
-        zattr_path = root_group.absolute_path
+        this_group = root_group["group"]
+        zattr_path = root_group["path"]
     zattr_path = zattr_path / '.zattrs'
 
     nii_obj = get_nifti_obj(nii_file_path,
