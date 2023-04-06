@@ -11,7 +11,9 @@ from neuroglancer_interface.utils.utils import (
     mkstemp_clean)
 
 from neuroglancer_interface.modules.ccf_multiscale_annotations import (
-    write_out_ccf)
+    write_out_ccf,
+    get_scale_metadata,
+    get_scale_metadata_with_downsampling)
 
 
 @pytest.fixture
@@ -99,3 +101,48 @@ def test_ccf_smoketest(
     expected += f"{int(float(pixdim_fixture[0])*1000000)}"
     expected = sub_dir / expected
     assert expected.is_dir()
+
+
+def test_get_scale_downsampling_smoketest(
+        ccf_nii_fixture,
+        pixdim_fixture,
+        temp_dir_fixture):
+
+    sub_dir = tempfile.mkdtemp(dir=temp_dir_fixture)
+    sub_dir = pathlib.Path(sub_dir)
+
+    # because SimpleITK.WriteImage does not write out metadata
+    def mock_get_metadata(self, value):
+        lookup = dict()
+        lookup['pixdim[1]'] = pixdim_fixture[0]
+        lookup['pixdim[2]'] = pixdim_fixture[1]
+        lookup['pixdim[3]'] = pixdim_fixture[2]
+        return lookup[value]
+
+    with patch('SimpleITK.Image.GetMetaData', new=mock_get_metadata):
+        baseline_metadata = get_scale_metadata(
+            segmentation_path=ccf_nii_fixture,
+            chunk_size=(32, 32, 32),
+            use_compression=True,
+            compression_blocksize=32,
+            do_transposition=False)
+
+        downsampled_metadata = get_scale_metadata_with_downsampling(
+            segmentation_path=ccf_nii_fixture,
+            tmp_dir=sub_dir,
+            downsample_min=0,
+            chunk_size=(32, 32, 32),
+            use_compression=True,
+            compression_blocksize=32,
+            do_transposition=False)
+
+    assert len(downsampled_metadata) > 0
+    baseline_keys = set(baseline_metadata.keys())
+    unq_files = set()
+    for actual in downsampled_metadata:
+        actual_keys = set(actual.keys())
+        assert actual_keys == baseline_keys
+        fpath = pathlib.Path(actual['local_file_path'])
+        assert fpath.is_file()
+        unq_files.add(fpath.name)
+    assert len(unq_files) == len(downsampled_metadata)
