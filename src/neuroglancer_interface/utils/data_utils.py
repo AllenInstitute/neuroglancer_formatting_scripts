@@ -209,10 +209,6 @@ def write_nii_to_group(
 
     arr = nii_results['channel']
 
-    max_x = np.argmax(np.sum(arr, axis=(1, 2)))
-    max_y = np.argmax(np.sum(arr, axis=(0, 2)))
-    max_z = np.argmax(np.sum(arr, axis=(0, 1)))
-
     write_array_to_group(
         arr=arr,
         group=this_group,
@@ -221,27 +217,12 @@ def write_nii_to_group(
         z_scale=z_scale,
         DownscalerClass=DownscalerClass,
         downscale_cutoff=downscale_cutoff,
-        default_chunk=default_chunk)
+        default_chunk=default_chunk,
+        zattr_path=zattr_path)
 
-    # write additional metadata to zattrs
     zattr_data = json.load(open(zattr_path, 'rb'))
-    assert 'max_planes' not in zattr_data
-    zattr_data['max_planes'] = [int(max_x), int(max_y), int(max_z)]
     assert 'nii_file_path' not in zattr_data
     zattr_data['nii_file_path'] = str(nii_file_path.resolve().absolute())
-    assert 'dtype' not in zattr_data
-    zattr_data['dtype'] = str(arr.dtype)
-    assert 'sum' not in zattr_data
-    zattr_data['sum'] = float(arr.sum())
-
-    assert 'quantiles' not in zattr_data
-    valid = (arr>0.0)
-    q_values = ('0.25', '0.50', '0.75', '0.80', '0.90')
-    q = np.quantile(arr[valid], [float(v) for v in q_values])
-    quantiles = {
-        k:float(v) for k, v in zip(q_values, q)}
-    quantiles['1.0'] = float(arr.max())
-    zattr_data['quantiles'] = quantiles
 
     with open(zattr_path, 'w') as out_file:
         out_file.write(json.dumps(zattr_data, indent=2))
@@ -258,7 +239,8 @@ def write_array_to_group(
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         default_chunk=64,
-        storage_options=None):
+        storage_options=None,
+        zattr_path=None):
     """
     Write a numpy array to an ome-zarr group
 
@@ -291,6 +273,11 @@ def write_array_to_group(
 
     default_chunk:
         Attempt to guess chunk size of data
+
+    zattr_path:
+       Path where we expect .zattrs to be written.
+       This is provided so that additional metadata
+       can be recorded in that file.
     """
 
     # neuroglancer does not support 64 bit floats
@@ -351,6 +338,33 @@ def write_array_to_group(
         coordinate_transformations=coord_transform,
         axes=axes,
         storage_options=these_storage_opts)
+
+    if zattr_path is not None:
+
+        max_x = np.argmax(np.sum(arr, axis=(1, 2)))
+        max_y = np.argmax(np.sum(arr, axis=(0, 2)))
+        max_z = np.argmax(np.sum(arr, axis=(0, 1)))
+
+        # write additional metadata to zattrs
+        zattr_data = json.load(open(zattr_path, 'rb'))
+        assert 'max_planes' not in zattr_data
+        zattr_data['max_planes'] = [int(max_x), int(max_y), int(max_z)]
+        assert 'dtype' not in zattr_data
+        zattr_data['dtype'] = str(arr.dtype)
+        assert 'sum' not in zattr_data
+        zattr_data['sum'] = float(arr.sum())
+
+        assert 'quantiles' not in zattr_data
+        valid = (arr>0.0)
+        q_values = ('0.25', '0.50', '0.75', '0.80', '0.90')
+        q = np.quantile(arr[valid], [float(v) for v in q_values])
+        quantiles = {
+            k:float(v) for k, v in zip(q_values, q)}
+        quantiles['1.0'] = float(arr.max())
+        zattr_data['quantiles'] = quantiles
+
+        with open(zattr_path, 'w') as out_file:
+            out_file.write(json.dumps(zattr_data, indent=2))
 
 
 def get_celltype_lookups_from_rda_df(
