@@ -180,8 +180,11 @@ def write_nii_to_group(
     group_name: str
         is the name of the group being created for this data
 
-    nii_file_path: Pathlib.path
+    nii_file_path: Pathlib.path or a list of Pathlib.paths
         is the path to the nii file being written
+
+        If a list, the nii files will be written in and summed
+        to create a single OME-ZARR object
 
     do_transposition:
         If True, transpose the NIFTI volumes so that
@@ -195,19 +198,40 @@ def write_nii_to_group(
     else:
         this_group = root_group["group"]
         zattr_path = root_group["path"]
+
     zattr_path = zattr_path / '.zattrs'
 
-    nii_obj = get_nifti_obj(nii_file_path,
-                            do_transposition=do_transposition)
+    arr = None
+    x_scale = None
+    y_scale = None
+    z_scale = None
+    if not isinstance(nii_file_path, list):
+        nii_file_path = [nii_file_path]
 
-    nii_results = nii_obj.get_channel(
-                    channel=channel)
+    serialized_path = []
+    for this_path in nii_file_path:
+        nii_obj = get_nifti_obj(
+            this_path,
+            do_transposition=do_transposition)
 
-    x_scale = nii_results['scales'][0]
-    y_scale = nii_results['scales'][1]
-    z_scale = nii_results['scales'][2]
+        nii_results = nii_obj.get_channel(
+                        channel=channel)
 
-    arr = nii_results['channel']
+        if arr is None:
+            x_scale = nii_results['scales'][0]
+            y_scale = nii_results['scales'][1]
+            z_scale = nii_results['scales'][2]
+            arr = nii_results['channel']
+        else:
+            assert np.allclose(
+                (x_scale, y_scale, z_scale),
+                (nii_results['scales'][0],
+                 nii_results['scales'][1],
+                 nii_results['scales'][2]))
+            assert arr.shape == nii_results['channel'].shape
+            arr += nii_results['channel']
+
+        serialized_path.append(str(this_path.resolve().absolute()))
 
     write_array_to_group(
         arr=arr,
@@ -222,7 +246,7 @@ def write_nii_to_group(
 
     zattr_data = json.load(open(zattr_path, 'rb'))
     assert 'nii_file_path' not in zattr_data
-    zattr_data['nii_file_path'] = str(nii_file_path.resolve().absolute())
+    zattr_data['nii_file_path'] = serialized_path
 
     with open(zattr_path, 'w') as out_file:
         out_file.write(json.dumps(zattr_data, indent=2))
