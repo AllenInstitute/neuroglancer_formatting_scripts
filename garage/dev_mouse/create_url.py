@@ -6,7 +6,7 @@ from neuroglancer_interface.utils.url_utils import (
 
 
 def main():
-    bucket_name = "neuroglancer-vis-prototype/mouse3/230405_1301_test"
+    bucket_name = "neuroglancer-vis-prototype/mouse3/230406_1152"
     
     template_layer = get_template_layer(
         template_bucket=f"{bucket_name}/avg_template",
@@ -18,8 +18,8 @@ def main():
         
     img_layer = get_heatmap_image_layer(
         bucket_name=f"{bucket_name}/cell_types",
-        dataset_name="5178",
-        public_name="cell_type_5178",
+        dataset_name="cl.137",
+        public_name="cell_type_137",
         color="green",
         is_uint=False,
         range_max=0.1)
