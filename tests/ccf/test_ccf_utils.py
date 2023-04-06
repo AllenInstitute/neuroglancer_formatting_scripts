@@ -5,6 +5,9 @@ import numpy as np
 from neuroglancer_interface.utils.ccf_utils import (
     downsample_segmentation_array)
 
+from neuroglancer_interface.modules.ccf_multiscale_annotations import (
+    _create_pyramid_of_ccf_downsamples)
+
 
 def test_downsample_segmentation_array():
 
@@ -76,3 +79,45 @@ def test_downsample_segmentation_array():
         downsample_segmentation_array(
             arr=baseline,
             downsample_by=(3, 0, 7))
+
+
+def test_create_ccf_downsample_pyramid():
+
+    baseline_shape = (2*2*3*5*11,
+                      2*2*2*5*13*19,
+                      2*2*2*2*2*2)
+
+    actual = _create_pyramid_of_ccf_downsamples(
+        baseline_shape=baseline_shape,
+        downsample_cutoff=0)
+
+    expected = [(3, 5, 1),
+                (15, 65, 1),
+                (15*11, 65*19, 1)]
+
+    assert actual == expected
+
+    # add a cutoff
+    actual = _create_pyramid_of_ccf_downsamples(
+        baseline_shape=baseline_shape,
+        downsample_cutoff=64)
+
+    expected = [(3, 5, 1),
+                (3, 65, 1)]
+
+    assert actual == expected
+
+    # make second dimension the one that is only even
+    baseline_shape = (2*2*3*5*11,
+                      2**16,
+                      2*2*2*5*13*19)
+
+    actual = _create_pyramid_of_ccf_downsamples(
+        baseline_shape=baseline_shape,
+        downsample_cutoff=0)
+
+    expected = [(3, 1, 5),
+                (15, 1, 65),
+                (15*11, 1, 65*19)]
+
+    assert actual == expected

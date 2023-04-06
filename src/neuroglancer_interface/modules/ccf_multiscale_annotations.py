@@ -3,12 +3,20 @@ import json
 import pathlib
 import SimpleITK
 import numpy as np
+
+from neuroglancer_interface.utils.utils import (
+    mkstemp_clean,
+    get_prime_factors)
+
 from neuroglancer_interface.utils.ccf_utils import (
     get_labels,
     format_labels,
-    get_dummy_labels)
+    get_dummy_labels,
+    downsample_segmentation_array)
+
 from neuroglancer_interface.compression.utils import (
     compress_ccf_data)
+
 from neuroglancer_interface.classes.nifti_array import (
     get_nifti_obj)
 
@@ -274,3 +282,43 @@ def get_scale_metadata(
     result['local_file_path'] = str(segmentation_path.resolve().absolute())
 
     return result
+
+
+def _create_pyramid_of_ccf_downsamples(
+        baseline_shape,
+        downsample_cutoff):
+    """
+    Create list of downsample_by tuples provided that no dimension
+    goes below downsample_cutoff
+    """
+    # grab odd prime factors of the dimensions of the array
+    factors = []
+    for ii in range(3):
+        these = [n for n in get_prime_factors(baseline_shape[ii])
+                 if n%2==1]
+        factors.append(these)
+
+    current_downsample = [1, 1, 1]
+    keep_going = True
+    pyramid = []
+    while keep_going:
+        keep_going = False
+
+        this = []
+
+        for ii in range(3):
+            if len(factors[ii]) == 0:
+                this.append(1)
+                continue
+
+            candidate = current_downsample[ii]*factors[ii][0]
+            if baseline_shape[ii] // candidate >= downsample_cutoff:
+                factors[ii].pop(0)
+                current_downsample[ii] = candidate
+                keep_going = True
+            else:
+                candidate = current_downsample[ii]
+            this.append(candidate)
+        if keep_going:
+            pyramid.append(tuple(this))
+    return pyramid
