@@ -4,9 +4,11 @@ import json
 import pathlib
 import SimpleITK
 import numpy as np
+import tempfile
 
 from neuroglancer_interface.utils.utils import (
     mkstemp_clean,
+    _clean_up,
     get_prime_factors)
 
 from neuroglancer_interface.utils.ccf_utils import (
@@ -62,6 +64,8 @@ def write_out_ccf(
     None
         Data is written to output_dir in correct format
     """
+    tmp_dir = tempfile.mkdtemp(dir=tmp_dir)
+
     label_path = pathlib.Path(label_path)
     segmentation_path_list = [
         pathlib.Path(s) for s in segmentation_path_list]
@@ -96,6 +100,7 @@ def write_out_ccf(
     with open(output_dir / 'info', 'w') as out_file:
         out_file.write(json.dumps(parent_info, indent=2))
 
+    _clean_up(tmp_dir)
 
 def do_chunking(
         metadata: dict,
