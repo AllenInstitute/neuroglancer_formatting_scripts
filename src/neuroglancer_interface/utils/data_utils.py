@@ -190,7 +190,6 @@ def write_nii_to_group(
         If True, transpose the NIFTI volumes so that
         (x, y, z) -> (z, y, x)
     """
-    nii_file_path = pathlib.Path(nii_file_path)
 
     if group_name is not None:
         this_group = root_group["group"].create_group(f"{group_name}")
@@ -210,6 +209,7 @@ def write_nii_to_group(
 
     serialized_path = []
     for this_path in nii_file_path:
+        this_path = pathlib.Path(this_path)
         nii_obj = get_nifti_obj(
             this_path,
             do_transposition=do_transposition)
@@ -221,14 +221,24 @@ def write_nii_to_group(
             x_scale = nii_results['scales'][0]
             y_scale = nii_results['scales'][1]
             z_scale = nii_results['scales'][2]
+            baseline_scales = (x_scale, y_scale, z_scale)
             arr = nii_results['channel']
         else:
-            assert np.allclose(
-                (x_scale, y_scale, z_scale),
-                (nii_results['scales'][0],
+            these_scales = (nii_results['scales'][0],
                  nii_results['scales'][1],
-                 nii_results['scales'][2]))
-            assert arr.shape == nii_results['channel'].shape
+                 nii_results['scales'][2])
+            if not np.allclose(these_scales, baseline_scales):
+                raise RuntimeError(
+                    f"scale mismatch\n{this_path}\n"
+                    f"{these_scales}\n"
+                    f"should be {baseline_scales}")
+
+            if arr.shape != nii_results['channel'].shape:
+                raise RuntimeError(
+                    f"shape mismatch\n{this_path}\n"
+                    f"{nii_results['channel'].shape}\n"
+                    f"should be {arr.shape}")
+
             arr += nii_results['channel']
 
         serialized_path.append(str(this_path.resolve().absolute()))

@@ -327,6 +327,54 @@ def img_nii_list_fixture(
 
     return results
 
+@pytest.mark.parametrize('do_transposition', [True, False])
+def test_write_summed_nii_to_group(
+        img_array_list_fixture,
+        img_nii_list_fixture,
+        pixdim_fixture,
+        temp_dir_fixture,
+        do_transposition):
+    """
+    Test case where we re summing several NIFTI files
+    together into one OME-ZARR group
+    """
+    sub_dir = pathlib.Path(tempfile.mkdtemp(dir=temp_dir_fixture))
+    if sub_dir.exists():
+        sub_dir.rmdir()
+
+    root_group = create_root_group(output_dir=sub_dir, clobber=False)
+
+    group_name = 'test_array'
+
+    # because SimpleITK.WriteImage does not write out metadata
+    def mock_get_metadata(self, value):
+        lookup = dict()
+        lookup['pixdim[1]'] = pixdim_fixture[0]
+        lookup['pixdim[2]'] = pixdim_fixture[1]
+        lookup['pixdim[3]'] = pixdim_fixture[2]
+        return lookup[value]
+
+    with patch('SimpleITK.Image.GetMetaData', new=mock_get_metadata):
+        write_nii_to_group(
+            root_group=root_group,
+            group_name=group_name,
+            nii_file_path=img_nii_list_fixture,
+            downscale_cutoff=10,
+            channel='red',
+            do_transposition=do_transposition)
+
+    this_zarr = sub_dir / group_name
+
+    baseline_arr = np.copy(img_array_list_fixture[0])
+    for ii in range(1, len(img_array_list_fixture), 1):
+        baseline_arr += img_array_list_fixture[ii]
+
+    compare_zarr_to_array(
+        zarr_path=this_zarr,
+        img_array=baseline_arr,
+        pixdim=pixdim_fixture,
+        do_transposition=do_transposition)
+
 
 @pytest.mark.parametrize('do_transposition', [True, False])
 def test_write_nii_list_to_group(
@@ -335,7 +383,6 @@ def test_write_nii_list_to_group(
         pixdim_fixture,
         temp_dir_fixture,
         do_transposition):
-
 
     sub_dir = pathlib.Path(tempfile.mkdtemp(dir=temp_dir_fixture))
     if sub_dir.exists():
