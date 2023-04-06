@@ -98,5 +98,4 @@ def test_ccf_smoketest(
     expected += f"{int(float(pixdim_fixture[1])*1000000)}_"
     expected += f"{int(float(pixdim_fixture[0])*1000000)}"
     expected = sub_dir / expected
-    print([n for n in sub_dir.iterdir()])
     assert expected.is_dir()

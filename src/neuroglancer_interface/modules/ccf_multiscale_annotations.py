@@ -56,21 +56,17 @@ def write_out_ccf(
     segmentation_path_list = [
         pathlib.Path(s) for s in segmentation_path_list]
 
-    print(f"{chunk_size}")
     if not output_dir.exists():
         output_dir.mkdir()
-    print(segmentation_path_list)
-    print("getting parent info")
+
     parent_info = create_info_dict(
             segmentation_path_list=segmentation_path_list,
             use_compression=use_compression,
             compression_blocksize=compression_blocksize,
             chunk_size=chunk_size,
             do_transposition=do_transposition)
-    print("got parent info")
 
     for scale_metadata in parent_info['scales']:
-        print("chunking ", scale_metadata)
         do_chunking(metadata=scale_metadata,
                     parent_output_dir=output_dir,
                     do_transposition=do_transposition)
@@ -167,8 +163,6 @@ def do_chunking(
                             file_path=this_file,
                             data=this_data)
 
-    print(f"chunked {file_path}")             
-
 
 def _write_chunk_uncompressed(file_path, data):
     with open(file_path, "wb") as out_file:
@@ -220,7 +214,6 @@ def create_info_dict(
     result['num_channels'] = 1
     result['scales'] = scale_list
 
-    print("created info dict")
     return result
 
 
@@ -235,12 +228,10 @@ def get_scale_metadata(
 
     These need to be ordered from native resolution to zoomed out resolution
     """
-    print("in get_scale_metadata")
     nii_obj = get_nifti_obj(segmentation_path,
                             do_transposition=do_transposition)
     scale_mm = nii_obj.scales
     img_shape = nii_obj.shape
-    print(f"got {segmentation_path} -- {scale_mm} {img_shape}")
 
     # should not be needed now that the NiftiArray objects
     # are handling the transposition of the arrays
