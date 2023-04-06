@@ -51,6 +51,17 @@ def test_downsample_segmentation_array():
 
     np.testing.assert_array_equal(expected, actual)
 
+    actual = downsample_segmentation_array(
+        arr=baseline,
+        downsample_by=(3, 1, 7))
+    expected = np.zeros((2, 20, 2), dtype=int)
+    for iy in range(20):
+        expected[0, iy, 0] = baseline[1, iy, 3]
+        expected[0, iy, 1] = baseline[1, iy, 10]
+        expected[1, iy, 0] = baseline[4, iy, 3]
+        expected[1, iy, 1] = baseline[4, iy, 10]
+
+
     with pytest.raises(RuntimeError, match="divisible"):
         downsample_segmentation_array(
             arr=baseline,
