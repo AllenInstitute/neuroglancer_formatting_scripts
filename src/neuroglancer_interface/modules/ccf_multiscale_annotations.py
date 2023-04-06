@@ -29,7 +29,8 @@ def write_out_ccf(
         use_compression=False,
         compression_blocksize=64,
         chunk_size=(256, 256, 256),
-        do_transposition=False) -> None:
+        do_transposition=False,
+        tmp_dir=None) -> None:
     """
     Write CCF annotations to disk in neuroglancer-friendly format
 
@@ -73,7 +74,8 @@ def write_out_ccf(
             use_compression=use_compression,
             compression_blocksize=compression_blocksize,
             chunk_size=chunk_size,
-            do_transposition=do_transposition)
+            do_transposition=do_transposition,
+            tmp_dir=tmp_dir)
 
     for scale_metadata in parent_info['scales']:
         do_chunking(metadata=scale_metadata,
