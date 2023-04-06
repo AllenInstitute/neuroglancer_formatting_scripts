@@ -6,7 +6,7 @@ from neuroglancer_interface.utils.url_utils import (
 
 
 def main():
-    bucket_name = "neuroglancer-vis-prototype/mouse3/230406_1152"
+    bucket_name = "neuroglancer-vis-prototype/mouse3/230406_1204"
     
     template_layer = get_template_layer(
         template_bucket=f"{bucket_name}/avg_template",
