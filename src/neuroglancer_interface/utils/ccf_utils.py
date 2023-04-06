@@ -61,3 +61,67 @@ def format_labels(labels):
     inline["properties"] = [properties]
     output["inline"] = inline
     return output
+
+
+def downsample_segmentation_array(
+        arr,
+        downsample_by):
+    """
+    Downsample a CCF annotation array by dividing voxels
+    into blocks of size downsample_by and assigning the
+    value from the central voxel.
+
+    Parameters
+    ----------
+    arr:
+        Array of CCF annotation
+    downsample_by:
+        Tuple of ints indicating the factor by which
+        to downsample each dimension.
+
+    Returns
+    -------
+    Downsampled array
+    """
+
+
+    # check that every element in downsample_by is odd (so that
+    # there is a center voxel)
+    for d in downsample_by:
+        if d <= 0:
+            raise RuntimeError(
+                f"downsample_by {downsample_by} not positive definite")
+
+    for d in downsample_by:
+        if d % 2 == 0:
+            raise RuntimeError(
+                f"downsample_by {downsample_by} are not all  odd")
+
+    # check that downsample_by is an integer divisor
+    # of array shape in all dimensions
+    for s, d in zip(arr.shape, downsample_by):
+        if s % d != 0:
+            raise RuntimeError(
+                f"array shape {arr.shape} is not integer divisible "
+                f"by downsample factors {downsample_by}")
+
+    new_shape = (arr.shape[0]//downsample_by[0],
+                 arr.shape[1]//downsample_by[1],
+                 arr.shape[2]//downsample_by[2])
+
+    new_arr = np.zeros(new_shape, dtype=arr.dtype)
+
+    for ix in range(new_shape[0]):
+        ix0 = ix*downsample_by[0]
+        ix_center = ix0 + (downsample_by[0]-1)//2
+        for iy in range(new_shape[1]):
+            iy0 = iy*downsample_by[1]
+            iy_center = iy0 + (downsample_by[1]-1)//2
+            for iz in range(new_shape[2]):
+                iz0 = iz*downsample_by[2]
+                iz_center = iz0 + (downsample_by[2]-1)//2
+                new_arr[ix, iy, iz] = arr[ix_center,
+                                          iy_center,
+                                          iz_center]
+
+    return new_arr
