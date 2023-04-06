@@ -102,6 +102,11 @@ def test_ccf_smoketest(
     expected = sub_dir / expected
     assert expected.is_dir()
 
+    # make sure that downsampling happened and more than
+    # one CCF resolution was written out
+    all_sub_dirs = [n for n in sub_dir.iterdir() if n.is_dir()]
+    assert len(all_sub_dirs) > 2
+
 
 def test_get_scale_downsampling_smoketest(
         ccf_nii_fixture,

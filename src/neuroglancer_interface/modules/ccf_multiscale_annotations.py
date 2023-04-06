@@ -140,6 +140,8 @@ def do_chunking(
         sitk_arr = _get_array_from_sitk(
             file_path,
             do_transposition=do_transposition)
+    elif file_path.name.endswith('.h5'):
+        sitk_arr = _get_array_from_h5(file_path)
     else:
         raise RuntimeError(
             f"unclear how to get array from file {file_path}")
@@ -185,6 +187,12 @@ def _get_array_from_sitk(file_path, do_transposition=False):
     return sitk_arr
 
 
+def _get_array_from_h5(file_path):
+    with h5py.File(file_path, 'r') as in_file:
+        data = in_file['data'][()]
+    return data
+
+
 def _write_chunk_uncompressed(file_path, data):
     with open(file_path, "wb") as out_file:
         data = data.tobytes("F")
@@ -196,7 +204,9 @@ def create_info_dict(
         use_compression=False,
         compression_blocksize=64,
         chunk_size=(256, 256, 256),
-        do_transposition=False) -> dict:
+        do_transposition=False,
+        downsample_min=64,
+        tmp_dir=None) -> dict:
     """
     Create the dict that will be JSONized to make the info file.
     Return that dict.
@@ -210,14 +220,36 @@ def create_info_dict(
 
     scale_list = []
     size_list = []
-    for pth in segmentation_path_list:
+    if len(segmentation_path_list) > 1:
+        for pth in segmentation_path_list:
+            this = get_scale_metadata(
+                        segmentation_path=pth,
+                        use_compression=use_compression,
+                        compression_blocksize=compression_blocksize,
+                        chunk_size=chunk_size,
+                        do_transposition=do_transposition)
+            scale_list.append(this)
+    else:
         this = get_scale_metadata(
-                    segmentation_path=pth,
-                    use_compression=use_compression,
-                    compression_blocksize=compression_blocksize,
-                    chunk_size=chunk_size,
-                    do_transposition=do_transposition)
+            segmentation_path=segmentation_path_list[0],
+            use_compression=use_compression,
+            compression_blocksize=compression_blocksize,
+            chunk_size=chunk_size,
+            do_transposition=do_transposition)
+
         scale_list.append(this)
+
+        downsampled_metadata = get_scale_metadata_with_downsampling(
+            segmentation_path=segmentation_path_list[0],
+            tmp_dir=tmp_dir,
+            downsample_min=downsample_min,
+            use_compression=use_compression,
+            chunk_size=chunk_size,
+            do_transposition=do_transposition)
+
+        scale_list += downsampled_metadata
+
+    for this in scale_list:
         size_list.append(this['size'][0]*this['size'][1]*this['size'][2])
 
     # from finest to coarsest resolution
