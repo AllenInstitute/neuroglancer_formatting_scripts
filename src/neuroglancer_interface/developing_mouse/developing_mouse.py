@@ -27,7 +27,8 @@ def  process_developing_mouse(
         n_test,
         output_dir,
         transpose_ccf=False,
-        tmp_dir=None):
+        tmp_dir=None,
+        downscale_cutoff=64):
 
     with open(config_path, 'rb') as in_file:
         config_data = json.load(in_file)
@@ -65,7 +66,8 @@ def  process_developing_mouse(
             compression_blocksize=32,
             chunk_size=(64, 64, 64),
             do_transposition=transpose_ccf,
-            tmp_dir=tmp_dir)
+            tmp_dir=tmp_dir,
+            downsampling_cutoff=downscale_cutoff)
 
         print_status("Done formatting CCF annotations")
 
@@ -80,7 +82,7 @@ def  process_developing_mouse(
             root_group=template_group,
             group_name=None,
             nii_file_path=config_data['template']['template'],
-            downscale_cutoff=64,
+            downscale_cutoff=downscale_cutoff,
             default_chunk=128,
             channel='red',
             do_transposition=transpose_ccf)
@@ -100,7 +102,7 @@ def  process_developing_mouse(
             config_list=config_list,
             root_group=cell_types_group,
             n_processors=n_processors,
-            downscale_cutoff=64,
+            downscale_cutoff=downscale_cutoff,
             default_chunk=128,
             do_transposition=False)
 
@@ -124,6 +126,7 @@ def main():
     parser.add_argument('--output_dir', type=str, default=None)
     parser.add_argument('--transpose_ccf', default=False, action='store_true')
     parser.add_argument('--tmp_dir', type=str, default=None)
+    parser.add_argument('--downscale_cutoff', type=int, default=64)
     args = parser.parse_args()
 
     process_developing_mouse(
@@ -133,7 +136,8 @@ def main():
         n_test=args.n_test,
         output_dir=args.output_dir,
         transpose_ccf=args.transpose_ccf,
-        tmp_dir=args.tmp_dir)
+        tmp_dir=args.tmp_dir,
+        downscale_cutoff=args.downscale_cutoff)
 
 if __name__ == "__main__":
     main()

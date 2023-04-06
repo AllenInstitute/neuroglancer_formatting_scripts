@@ -32,7 +32,8 @@ def write_out_ccf(
         compression_blocksize=64,
         chunk_size=(256, 256, 256),
         do_transposition=False,
-        tmp_dir=None) -> None:
+        tmp_dir=None,
+        downsampling_cutoff=64) -> None:
     """
     Write CCF annotations to disk in neuroglancer-friendly format
 
@@ -59,6 +60,14 @@ def write_out_ccf(
         If True, transpose the NIFTI volumes so that
         (x, y, z) -> (z, y, x)
 
+    tmp_dir:
+        Directory where temporary HDF5 files are written during
+        downsampling
+
+    downsampling_cutoff:
+        if applicable, do not downsample so far that any dimension
+        is smaller than this value
+
     Returns
     -------
     None
@@ -79,7 +88,8 @@ def write_out_ccf(
             compression_blocksize=compression_blocksize,
             chunk_size=chunk_size,
             do_transposition=do_transposition,
-            tmp_dir=tmp_dir)
+            tmp_dir=tmp_dir,
+            downsampling_cutoff=downsampling_cutoff)
 
     for scale_metadata in parent_info['scales']:
         do_chunking(metadata=scale_metadata,
@@ -212,7 +222,7 @@ def create_info_dict(
         compression_blocksize=64,
         chunk_size=(256, 256, 256),
         do_transposition=False,
-        downsample_min=64,
+        downsampling_cutoff=64,
         tmp_dir=None) -> dict:
     """
     Create the dict that will be JSONized to make the info file.
@@ -249,7 +259,7 @@ def create_info_dict(
         downsampled_metadata = get_scale_metadata_with_downsampling(
             segmentation_path=segmentation_path_list[0],
             tmp_dir=tmp_dir,
-            downsample_min=downsample_min,
+            downsample_min=downsampling_cutoff,
             use_compression=use_compression,
             chunk_size=chunk_size,
             do_transposition=do_transposition)
