@@ -85,6 +85,7 @@ def write_out_ccf(
     with open(output_dir / 'info', 'w') as out_file:
         out_file.write(json.dumps(parent_info, indent=2))
 
+
 def do_chunking(
         metadata: dict,
         parent_output_dir: pathlib.Path,
@@ -126,10 +127,13 @@ def do_chunking(
     if not file_path.is_file():
         raise RuntimeError(f"{file_path} is not a file")
 
-    nii_obj = get_nifti_obj(file_path,
-                            do_transposition=do_transposition)
-    sitk_arr = nii_obj.get_channel('red')['channel']
-    sitk_arr = np.round(sitk_arr).astype(np.uint16)
+    if file_path.name.endswith('.nii') or file_path.name.endswith('.nii.gz'):
+        sitk_arr = _get_array_from_sitk(
+            file_path,
+            do_transposition=do_transposition)
+    else:
+        raise RuntimeError(
+            f"unclear how to get array from file {file_path}")
 
     if not sitk_arr.shape == metadata['size']:
         raise RuntimeError(
@@ -162,6 +166,14 @@ def do_chunking(
                     _write_chunk_uncompressed(
                             file_path=this_file,
                             data=this_data)
+
+
+def _get_array_from_sitk(file_path, do_transposition=False):
+    nii_obj = get_nifti_obj(file_path,
+                            do_transposition=do_transposition)
+    sitk_arr = nii_obj.get_channel('red')['channel']
+    sitk_arr = np.round(sitk_arr).astype(np.uint16)
+    return sitk_arr
 
 
 def _write_chunk_uncompressed(file_path, data):
