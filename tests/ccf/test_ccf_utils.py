@@ -121,3 +121,8 @@ def test_create_ccf_downsample_pyramid():
                 (15*11, 1, 65*19)]
 
     assert actual == expected
+
+    actual = _create_pyramid_of_ccf_downsamples(
+        baseline_shape=(8, 16, 32),
+        downsample_cutoff=0)
+    assert actual == []
