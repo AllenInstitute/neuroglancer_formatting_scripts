@@ -111,17 +111,18 @@ def downsample_segmentation_array(
 
     new_arr = np.zeros(new_shape, dtype=arr.dtype)
 
-    for ix in range(new_shape[0]):
-        ix0 = ix*downsample_by[0]
-        ix_center = ix0 + (downsample_by[0]-1)//2
-        for iy in range(new_shape[1]):
-            iy0 = iy*downsample_by[1]
-            iy_center = iy0 + (downsample_by[1]-1)//2
-            for iz in range(new_shape[2]):
-                iz0 = iz*downsample_by[2]
-                iz_center = iz0 + (downsample_by[2]-1)//2
-                new_arr[ix, iy, iz] = arr[ix_center,
-                                          iy_center,
-                                          iz_center]
+    new_mesh_grid = np.meshgrid(
+            np.arange(new_shape[0]),
+            np.arange(new_shape[1]),
+            np.arange(new_shape[2]),
+            indexing='ij')
+
+    for ii in range(3):
+        new_mesh_grid[ii] = new_mesh_grid[ii]*downsample_by[ii]
+        new_mesh_grid[ii] += (downsample_by[ii]-1)//2
+
+    new_arr[:, :, :] = arr[new_mesh_grid[0],
+                           new_mesh_grid[1],
+                           new_mesh_grid[2]]
 
     return new_arr
