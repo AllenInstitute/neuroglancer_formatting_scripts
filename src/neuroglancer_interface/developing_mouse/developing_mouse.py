@@ -26,7 +26,8 @@ def  process_developing_mouse(
         clobber,
         n_test,
         output_dir,
-        transpose_ccf=False):
+        transpose_ccf=False,
+        tmp_dir=None):
 
     with open(config_path, 'rb') as in_file:
         config_data = json.load(in_file)
@@ -63,7 +64,8 @@ def  process_developing_mouse(
             use_compression=True,
             compression_blocksize=32,
             chunk_size=(64, 64, 64),
-            do_transposition=transpose_ccf)
+            do_transposition=transpose_ccf,
+            tmp_dir=tmp_dir)
 
         print_status("Done formatting CCF annotations")
 
@@ -121,6 +123,7 @@ def main():
     parser.add_argument('--n_test', type=int, default=None)
     parser.add_argument('--output_dir', type=str, default=None)
     parser.add_argument('--transpose_ccf', default=False, action='store_true')
+    parser.add_argument('--tmp_dir', type=str, default=None)
     args = parser.parse_args()
 
     process_developing_mouse(
@@ -129,7 +132,8 @@ def main():
         clobber=args.clobber,
         n_test=args.n_test,
         output_dir=args.output_dir,
-        transpose_ccf=args.transpose_ccf)
+        transpose_ccf=args.transpose_ccf,
+        tmp_dir=args.tmp_dir)
 
 if __name__ == "__main__":
     main()
