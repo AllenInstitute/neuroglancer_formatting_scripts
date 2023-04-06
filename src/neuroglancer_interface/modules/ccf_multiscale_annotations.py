@@ -52,6 +52,10 @@ def write_out_ccf(
     None
         Data is written to output_dir in correct format
     """
+    label_path = pathlib.Path(label_path)
+    segmentation_path_list = [
+        pathlib.Path(s) for s in segmentation_path_list]
+
     print(f"{chunk_size}")
     if not output_dir.exists():
         output_dir.mkdir()
