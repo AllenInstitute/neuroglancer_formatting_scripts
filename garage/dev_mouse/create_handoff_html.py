@@ -66,12 +66,18 @@ def write_html(
                       if n.is_file()]
     key_order = []
     numeric = []
+    key_to_other_cols = dict()
     for cell_type in cell_type_list:
         url = create_url(cell_type_dir=cell_type)
         assert cell_type.name not in key_to_link
         key_to_link[cell_type.name] = url
         key_order.append(cell_type.name)
         numeric.append(int(cell_type.name.split('.')[0]))
+        zattr_path = cell_type / ".zattrs"
+        zattr_data = json.load(open(zattr_path, "r"))
+        ct_sum = zattr_data["sum"]
+        key_to_other_cols[cell_type.name] = {"names": ["counts"], "values": [ct_sum]}
+
     numeric = np.array(numeric)
     key_order = np.array(key_order)
     sorted_dex = np.argsort(numeric)
@@ -82,7 +88,8 @@ def write_html(
         title="Mouse 3 clusters",
         key_to_link=key_to_link,
         key_order=key_orer,
-        div_name="cell_types")
+        div_name="cell_types",
+        key_to_other_cols=key_to_other_cols)
 
 def main():
     write_html(
