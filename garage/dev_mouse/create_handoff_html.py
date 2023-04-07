@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import pathlib
 
 from neuroglancer_interface.utils.url_utils import (
     get_final_url,
@@ -34,12 +35,11 @@ def create_url(
     zattr_data = json.load(open(zattr_path, "r"))
     max_planes = zattr_data["max_planes"]
 
-    datasets = zattr_data["multiscales"][0]["datasets"][0]
-    coord = datasets["coordinateTransformations"]
+    datasets = zattr_data["multiscales"][0]["datasets"]
     x_mm = None
-    for c in coord:
-        if c["path"] == "0":
-            scale = c["scale"]
+    for d in datasets:
+        if d["path"] == "0":
+            scale = d["coordinateTransformations"][0]["scale"]
             x_mm = float(scale[0])
             y_mm = float(scale[1])
             z_mm = float(scale[2])
@@ -50,7 +50,7 @@ def create_url(
         image_layer_list=[img_layer],
         template_layer=template_layer,
         segmentation_layer=segmentation_layer,
-        starting_position=(int(max_planes[0]), 550, 550)
+        starting_position=(int(max_planes[0]), 550, 550),
         x_mm=x_mm,
         y_mm=y_mm,
         z_mm=z_mm)
@@ -63,7 +63,7 @@ def write_html(
     cell_type_dir = pathlib.Path(cell_type_dir)
     key_to_link = dict()
     cell_type_list = [n for n in cell_type_dir.iterdir()
-                      if n.is_file()]
+                      if n.is_dir()]
     key_order = []
     numeric = []
     key_to_other_cols = dict()
@@ -72,11 +72,11 @@ def write_html(
         assert cell_type.name not in key_to_link
         key_to_link[cell_type.name] = url
         key_order.append(cell_type.name)
-        numeric.append(int(cell_type.name.split('.')[0]))
+        numeric.append(int(cell_type.name.split('.')[1]))
         zattr_path = cell_type / ".zattrs"
         zattr_data = json.load(open(zattr_path, "r"))
         ct_sum = zattr_data["sum"]
-        key_to_other_cols[cell_type.name] = {"names": ["counts"], "values": [ct_sum]}
+        key_to_other_cols[cell_type.name] = {"names": ["cluster", "counts"], "values": [cell_type.name, ct_sum]}
 
     numeric = np.array(numeric)
     key_order = np.array(key_order)
@@ -87,13 +87,14 @@ def write_html(
         output_path=output_path,
         title="Mouse 3 clusters",
         key_to_link=key_to_link,
-        key_order=key_orer,
+        key_order=key_order,
         div_name="cell_types",
-        key_to_other_cols=key_to_other_cols)
+        key_to_other_cols=key_to_other_cols,
+        search_by=["cluster"])
 
 def main():
     write_html(
-        cell_type_dir="/allen/aibs/technology/danielsf/mouse3_230406",
+        cell_type_dir="/allen/aibs/technology/danielsf/mouse3_230406/cell_types",
         output_path="/home/scott.daniel/neuroglancer_formatting_scripts/html/handoff_230406.html")
 
 
