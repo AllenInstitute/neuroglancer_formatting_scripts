@@ -61,3 +61,68 @@ def format_labels(labels):
     inline["properties"] = [properties]
     output["inline"] = inline
     return output
+
+
+def downsample_segmentation_array(
+        arr,
+        downsample_by):
+    """
+    Downsample a CCF annotation array by dividing voxels
+    into blocks of size downsample_by and assigning the
+    value from the central voxel.
+
+    Parameters
+    ----------
+    arr:
+        Array of CCF annotation
+    downsample_by:
+        Tuple of ints indicating the factor by which
+        to downsample each dimension.
+
+    Returns
+    -------
+    Downsampled array
+    """
+
+
+    # check that every element in downsample_by is odd (so that
+    # there is a center voxel)
+    for d in downsample_by:
+        if d <= 0:
+            raise RuntimeError(
+                f"downsample_by {downsample_by} not positive definite")
+
+    for d in downsample_by:
+        if d % 2 == 0:
+            raise RuntimeError(
+                f"downsample_by {downsample_by} are not all  odd")
+
+    # check that downsample_by is an integer divisor
+    # of array shape in all dimensions
+    for s, d in zip(arr.shape, downsample_by):
+        if s % d != 0:
+            raise RuntimeError(
+                f"array shape {arr.shape} is not integer divisible "
+                f"by downsample factors {downsample_by}")
+
+    new_shape = (arr.shape[0]//downsample_by[0],
+                 arr.shape[1]//downsample_by[1],
+                 arr.shape[2]//downsample_by[2])
+
+    new_arr = np.zeros(new_shape, dtype=arr.dtype)
+
+    new_mesh_grid = np.meshgrid(
+            np.arange(new_shape[0]),
+            np.arange(new_shape[1]),
+            np.arange(new_shape[2]),
+            indexing='ij')
+
+    for ii in range(3):
+        new_mesh_grid[ii] = new_mesh_grid[ii]*downsample_by[ii]
+        new_mesh_grid[ii] += (downsample_by[ii]-1)//2
+
+    new_arr[:, :, :] = arr[new_mesh_grid[0],
+                           new_mesh_grid[1],
+                           new_mesh_grid[2]]
+
+    return new_arr

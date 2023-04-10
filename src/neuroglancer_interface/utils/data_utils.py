@@ -1,4 +1,5 @@
 from typing import List, Any
+import json
 import pandas as pd
 import numpy as np
 import SimpleITK
@@ -27,6 +28,25 @@ blosc.use_threads = False
 def create_root_group(
         output_dir,
         clobber=False):
+    """
+    Create an OME-ZARR group at output_dir
+
+    Parameters
+    ----------
+    output_dir:
+        The path at twhich to create the OME-ZARR group
+
+    clobber:
+        If True, delete whatever is at output_dir before
+        proceeding. If False and  output_dir exists,
+        raise a RuntimeError
+
+    Returns
+    -------
+    A dict
+        "group": An OME-ZARR group object pointing to output_dir
+        "path": path to that parent directory
+    """
 
     if not isinstance(output_dir, pathlib.Path):
         output_dir = pathlib.Path(output_dir)
@@ -45,222 +65,98 @@ def create_root_group(
 
     store = parse_url(output_dir, mode="w").store
     root_group = zarr.group(store=store)
-
-    return root_group
+    obj = {"group": root_group, "path": output_dir}
+    return obj
 
 
 def write_nii_file_list_to_ome_zarr(
-        file_path_list,
-        group_name_list,
-        output_dir,
-        downscale=2,
-        n_processors=4,
-        clobber=False,
-        prefix=None,
-        root_group=None,
-        metadata_collector=None,
+        config_list,
+        root_group,
+        n_processors,
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
-        only_metadata=False,
-        default_chunk=128,
-        channel_list=None,
+        default_chunk=64,
         do_transposition=False):
     """
-    Convert a list of nifti files into OME-zarr format
-
     Parameters
-    -----------
-    file_path_list: List[pathlib.Path]
-        list of paths to files to be written
-
-    group_name_list: List[str]
-        list of the names of the OME-zarr groups to be written
-        (same order as file_path_list)
-
-    output_dir: pathlib.Path
-        The directory where the parent OME-zarr group will be
-        written
-
-    downscale: int
-        Factor by which to downscale images as you are writing
-        them (i.e. when you zoom out one level, by how much
-        are you downsampling the pixels)
-
-    n_processors: int
-        Number of independent processes to use.
-
-    clobber: bool
-        If False, do not overwrite an existing group (throw
-        an exception instead)
-
-    prefix: str
-        optional sub-group in which all data is written
-        (i.e. option to write groups to output_dir/prefix/)
-
+    ----------
+    config_list:
+        List of dicts like
+             "path": -> path to .nii file
+             "group": -> group under root_group where data will be written
+             "channel": -> optional channel to choose
     root_group:
-        Optional root group into which to write ome-zarr
-        group. If None, will be created.
-
-    default_chunk: int
-        default size for single dimension of chunk when writing
-        data to disk
-
+        Dict created by create_root_group
+    n_processors:
+        Number of independent workers to spin up
+    DownscalerClass:
+        Class that will handle downsampling the images
+    downscale_cutoff:
+        Stop downscaling a dimension when it gets this large
+    default_chunk:
+        Guess at ome-zarr data chunk size
     do_transposition:
-        If True, transpose the NIFTI volumes so that
-        (x, y, z) -> (z, y, x)
-
-    Returns
-    -------
-    the root group
-
-    Notes
-    -----
-    Importing zarr causes multiprocessing to emit a warning about
-    leaked semaphore objects. *Probably* this is fine. It's just
-    scary. The zarr developers are working on this
-
-    https://github.com/zarr-developers/numcodecs/issues/230
+        If true, swap X, Z axes and map Z -> -X
     """
-    t0 = time.time()
-    if not isinstance(file_path_list, list):
-        file_path_list = [file_path_list,]
-    if not isinstance(group_name_list, list):
-        group_name_list = [group_name_list,]
+    # check uniqueness of group
+    group_set = set()
+    for config in config_list:
+        g = config['group']
+        if g in group_set:
+            raise RuntimeError(
+                f"group {g} occurs more than once in config_list")
+        group_set.add(g)
 
-    if len(file_path_list) != len(group_name_list):
-        msg = f"\ngave {len(file_path_list)} file paths but\n"
-        msg += f"{len(group_name_list)} group names"
+    batches = []
+    for i_batch in range(n_processors):
+        batches.append([])
+    for i_config, config in enumerate(config_list):
+        i_batch = i_config % n_processors
+        batches[i_batch].append(config)
 
-    if root_group is None:
-        root_group = create_root_group(
-                        output_dir=output_dir,
-                        clobber=clobber)
+    process_list = []
+    for i_batch in range(n_processors):
+        p = multiprocessing.Process(
+                target=_write_nii_file_list_worker,
+                kwargs={
+                    'config_list': batches[i_batch],
+                    'root_group': root_group,
+                    'downscale_cutoff': downscale_cutoff,
+                    'default_chunk': default_chunk,
+                    'DownscalerClass': DownscalerClass,
+                    'do_transposition': do_transposition})
+        p.start()
+        process_list.append(p)
 
-    if prefix is not None:
-        parent_group = root_group.create_group(prefix)
-    else:
-        parent_group = root_group
-
-    if len(file_path_list) == 1:
-
-        _write_nii_file_list_worker(
-            file_path_list=file_path_list,
-            group_name_list=group_name_list,
-            root_group=parent_group,
-            downscale=downscale,
-            metadata_collector=metadata_collector,
-            DownscalerClass=DownscalerClass,
-            downscale_cutoff=downscale_cutoff,
-            only_metadata=only_metadata,
-            default_chunk=default_chunk,
-            channel_list=channel_list,
-            do_transposition=do_transposition)
-
-    else:
-        n_workers = max(1, n_processors-1)
-        n_workers = min(n_workers, len(file_path_list))
-        file_lists = []
-        group_lists = []
-        channel_sub_lists = []
-        for ii in range(n_workers):
-            file_lists.append([])
-            group_lists.append([])
-            if channel_list is not None:
-                channel_sub_lists.append([])
-            else:
-                channel_sub_lists.append(None)
-
-        for ii in range(len(file_path_list)):
-            jj = ii % n_workers
-            file_lists[jj].append(file_path_list[ii])
-            group_lists[jj].append(group_name_list[ii])
-            if channel_list is not None:
-                channel_sub_lists[jj].append(channel_list[ii])
-
-        process_list = []
-        for ii in range(n_workers):
-            p = multiprocessing.Process(
-                    target=_write_nii_file_list_worker,
-                    kwargs={'file_path_list': file_lists[ii],
-                            'group_name_list': group_lists[ii],
-                            'channel_list': channel_sub_lists[ii],
-                            'root_group': parent_group,
-                            'downscale': downscale,
-                            'metadata_collector': metadata_collector,
-                            'DownscalerClass': DownscalerClass,
-                            'downscale_cutoff': downscale_cutoff,
-                            'only_metadata': only_metadata,
-                            'default_chunk': default_chunk,
-                            'do_transposition': do_transposition})
-            p.start()
-            process_list.append(p)
-
-        for p in process_list:
-            p.join()
-
-    duration = time.time() - t0
-    if prefix is not None:
-        print(f"{prefix} took {duration:.2e} seconds")
+    for p in process_list:
+        p.join()
 
     return root_group
 
 
 def _write_nii_file_list_worker(
-        file_path_list,
-        group_name_list,
-        channel_list,
+        config_list,
         root_group,
-        downscale,
-        metadata_collector=None,
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
-        only_metadata=False,
         default_chunk=64,
         do_transposition=False):
-    """
-    Worker function to actually convert a subset of nifti
-    files to OME-zarr
 
-    Parameters
-    ----------
-    file_path_list: List[pathlib.Path]
-        List of paths to nifti files to convert
+    for config in config_list:
 
-    group_name_list: List[str]
-        List of the names of the OME-zarr groups to
-        write the nifti files to
-
-    root_group:
-        The parent group object as created by ome_zarr
-
-    downscale: int
-        The factor by which to downscale the images at each
-        level of zoom.
-
-    do_transposition:
-        If True, transpose the NIFTI volumes so that
-        (x, y, z) -> (z, y, x)
-    """
-
-    for idx in range(len(file_path_list)):
-        f_path = file_path_list[idx]
-        grp_name = group_name_list[idx]
-        if channel_list is not None:
-            channel = channel_list=channel_list[idx]
+        if 'channel' in config:
+            channel = config['channel']
         else:
-            channel = None
+            channel = 'red'
 
         write_nii_to_group(
             root_group=root_group,
-            group_name=grp_name,
-            channel=channel,
-            nii_file_path=f_path,
-            downscale=downscale,
-            metadata_collector=metadata_collector,
+            group_name=config['group'],
+            nii_file_path=config['path'],
             DownscalerClass=DownscalerClass,
             downscale_cutoff=downscale_cutoff,
-            only_metadata=only_metadata,
             default_chunk=default_chunk,
+            channel=channel,
             do_transposition=do_transposition)
 
 
@@ -268,13 +164,8 @@ def write_nii_to_group(
         root_group,
         group_name,
         nii_file_path,
-        downscale,
-        transpose=True,
-        metadata_collector=None,
-        metadata_key=None,
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
-        only_metadata=False,
         default_chunk=64,
         channel='red',
         do_transposition=False):
@@ -284,148 +175,93 @@ def write_nii_to_group(
     Parameters
     ----------
     root_group:
-        the ome_zarr group that the new group will
-        be a child of (an object created using the ome_zarr
-        library)
+        dict created by create_root_group
 
     group_name: str
         is the name of the group being created for this data
 
-    nii_file_path: Pathlib.path
+    nii_file_path: Pathlib.path or a list of Pathlib.paths
         is the path to the nii file being written
 
-    downscale: int
-        How much to downscale the image by at each level
-        of zoom.
+        If a list, the nii files will be written in and summed
+        to create a single OME-ZARR object
 
     do_transposition:
         If True, transpose the NIFTI volumes so that
         (x, y, z) -> (z, y, x)
     """
+
     if group_name is not None:
-        if not only_metadata:
-            this_group = root_group.create_group(f"{group_name}")
+        this_group = root_group["group"].create_group(f"{group_name}")
+        zattr_path = root_group["path"] / this_group.path
     else:
-        this_group = root_group
+        this_group = root_group["group"]
+        zattr_path = root_group["path"]
 
-    nii_obj = get_nifti_obj(nii_file_path,
-                            do_transposition=do_transposition)
+    zattr_path = zattr_path / '.zattrs'
 
-    nii_results = nii_obj.get_channel(
-                    channel=channel)
+    arr = None
+    x_scale = None
+    y_scale = None
+    z_scale = None
+    if not isinstance(nii_file_path, list):
+        nii_file_path = [nii_file_path]
 
-    x_scale = nii_results['scales'][0]
-    y_scale = nii_results['scales'][1]
-    z_scale = nii_results['scales'][2]
-
-    arr = nii_results['channel']
-
-    if metadata_collector is not None:
-
-        other_metadata = {
-            'x_mm': x_scale,
-            'y_mm': y_scale,
-            'z_mm': z_scale,
-            'path': str(nii_file_path.resolve().absolute())}
-
-        metadata_collector.collect_metadata(
-            data_array=arr,
-            rotation_matrix=nii_obj.rotation_matrix,
-            other_metadata=other_metadata,
-            metadata_key=group_name)
-
-    if not only_metadata:
-        write_array_to_group(
-            arr=arr,
-            group=this_group,
-            x_scale=x_scale,
-            y_scale=y_scale,
-            z_scale=z_scale,
-            downscale=downscale,
-            DownscalerClass=DownscalerClass,
-            downscale_cutoff=downscale_cutoff,
-            default_chunk=default_chunk)
-
-    print(f"wrote {nii_file_path} to {group_name}")
-
-
-def write_summed_nii_files_to_group(
-        file_path_list,
-        group,
-        downscale = 2,
-        DownscalerClass=XYZScaler,
-        downscale_cutoff=64,
-        default_chunk=64,
-        channel='red',
-        do_transposition=False):
-    """
-    Sum the arrays in all of the files in file_path list
-    into a single array and write that to the specified
-    OME-zarr group
-
-    downscale sets the amount by which to downscale the
-    image at each level of zoom
-    """
-
-    main_array = None
-    for file_path in file_path_list:
-        nii_obj = get_nifti_obj(file_path,
-                                do_transposition=do_transposition)
+    serialized_path = []
+    for this_path in nii_file_path:
+        this_path = pathlib.Path(this_path)
+        nii_obj = get_nifti_obj(
+            this_path,
+            do_transposition=do_transposition)
 
         nii_results = nii_obj.get_channel(
                         channel=channel)
 
-        this_array = nii_results['channel']
+        if arr is None:
+            x_scale = nii_results['scales'][0]
+            y_scale = nii_results['scales'][1]
+            z_scale = nii_results['scales'][2]
+            baseline_scales = (x_scale, y_scale, z_scale)
+            arr = nii_results['channel']
+        else:
+            these_scales = (nii_results['scales'][0],
+                 nii_results['scales'][1],
+                 nii_results['scales'][2])
+            if not np.allclose(these_scales, baseline_scales):
+                raise RuntimeError(
+                    f"scale mismatch\n{this_path}\n"
+                    f"{these_scales}\n"
+                    f"should be {baseline_scales}")
 
-        (this_x_scale,
-         this_y_scale,
-         this_z_scale) = nii_results['scales']
+            if arr.shape != nii_results['channel'].shape:
+                raise RuntimeError(
+                    f"shape mismatch\n{this_path}\n"
+                    f"{nii_results['channel'].shape}\n"
+                    f"should be {arr.shape}")
 
-        if main_array is None:
-            main_array = this_array
-            x_scale = this_x_scale
-            y_scale = this_y_scale
-            z_scale = this_z_scale
-            main_pth = file_path
-            continue
+            arr += nii_results['channel']
 
-        if this_array.shape != main_array.shape:
-            msg = f"\n{main_path} has shape {main_array.shape}\n"
-            msg += f"{file_path} has shape {this_array.shape}\n"
-            msg += "cannot sum"
-            raise RuntimeError(msg)
-
-        if not np.allclose([x_scale, y_scale, z_scale],
-                           [this_x_scale, this_y_scale, this_z_scale]):
-            msg = f"\n{main_path} has scales ("
-            msg += f"{x_scale}, {y_scale}, {z_scale})\n"
-            msg += f"{file_path} has scales ("
-            msg += f"{this_x_scale}, {this_y_scale}, {this_z_scale})\n"
-            msg += "cannot sum"
-            raise RuntimeError
-
-        main_array += this_array
+        serialized_path.append(str(this_path.resolve().absolute()))
 
     write_array_to_group(
-        arr=main_array,
-        group=group,
+        arr=arr,
+        group=this_group,
         x_scale=x_scale,
         y_scale=y_scale,
         z_scale=z_scale,
-        downscale=downscale,
         DownscalerClass=DownscalerClass,
         downscale_cutoff=downscale_cutoff,
-        default_chunk=default_chunk)
+        default_chunk=default_chunk,
+        zattr_path=zattr_path)
 
+    zattr_data = json.load(open(zattr_path, 'rb'))
+    assert 'nii_file_path' not in zattr_data
+    zattr_data['nii_file_path'] = serialized_path
 
-def _get_nx_ny(
-        arr,
-        downscaler):
+    with open(zattr_path, 'w') as out_file:
+        out_file.write(json.dumps(zattr_data, indent=2))
 
-    list_of_nx_ny = downscaler.create_empty_pyramid(
-                          base=arr)
-
-    return list_of_nx_ny
+    print(f"wrote {nii_file_path} to {group_name}")
 
 
 def write_array_to_group(
@@ -434,17 +270,20 @@ def write_array_to_group(
         x_scale: float,
         y_scale: float,
         z_scale: float,
-        downscale: int = 1,
         DownscalerClass=XYZScaler,
         downscale_cutoff=64,
         default_chunk=64,
-        axis_order=('x', 'y', 'z'),
-        storage_options=None):
+        storage_options=None,
+        zattr_path=None):
     """
     Write a numpy array to an ome-zarr group
 
     Parameters
     ----------
+    arr:
+        the 3D numpy array of data to be converted to
+        OME-ZARR
+
     group:
         The ome_zarr group object to which the data will
         be written
@@ -458,15 +297,21 @@ def write_array_to_group(
     z_scale: float
         The physical scale of one z pixel in millimeters
 
-    downscale: int
-        The amount by which to downscale the image at each
-        level of zoom
+    DownscalerClass:
+        The class to be used for downscaling the image
+        (if None, there will be no downscaling)
 
-    axis_order:
-        controls the order in which axes are written out to .zattrs
-        (note x_scale, y_scale, z_scale will correspond to the 0th,
-        1st, and 2nd dimensions in the data, without regard to what
-        the axis names are; this needs to be fixed later)
+    downscale_cutoff:
+        Stop downscaling a dimension before it ends up smaller
+        than this.
+
+    default_chunk:
+        Attempt to guess chunk size of data
+
+    zattr_path:
+       Path where we expect .zattrs to be written.
+       This is provided so that additional metadata
+       can be recorded in that file.
     """
 
     # neuroglancer does not support 64 bit floats
@@ -481,15 +326,13 @@ def write_array_to_group(
                    z_scale],
          'type': 'scale'}]]
 
-    if downscale > 1:
+    if DownscalerClass is not None:
         scaler = DownscalerClass(
                    method='gaussian',
-                   downscale=downscale,
+                   downscale=1,
                    downscale_cutoff=downscale_cutoff)
 
-        list_of_nx_ny = _get_nx_ny(
-                            arr=arr,
-                            downscaler=scaler)
+        list_of_nx_ny = scaler.create_empty_pyramid(base=arr)
 
         for nxny in list_of_nx_ny:
             this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
@@ -501,13 +344,13 @@ def write_array_to_group(
         scaler = None
 
     axes = [
-        {"name": axis_order[0],
+        {"name": "x",
          "type": "space",
          "unit": "millimeter"},
-        {"name": axis_order[1],
+        {"name": "y",
          "type": "space",
          "unit": "millimeter"},
-        {"name": axis_order[2],
+        {"name": "z",
          "type": "space",
          "unit": "millimeter"}]
 
@@ -529,6 +372,33 @@ def write_array_to_group(
         coordinate_transformations=coord_transform,
         axes=axes,
         storage_options=these_storage_opts)
+
+    if zattr_path is not None:
+
+        max_x = np.argmax(np.sum(arr, axis=(1, 2)))
+        max_y = np.argmax(np.sum(arr, axis=(0, 2)))
+        max_z = np.argmax(np.sum(arr, axis=(0, 1)))
+
+        # write additional metadata to zattrs
+        zattr_data = json.load(open(zattr_path, 'rb'))
+        assert 'max_planes' not in zattr_data
+        zattr_data['max_planes'] = [int(max_x), int(max_y), int(max_z)]
+        assert 'dtype' not in zattr_data
+        zattr_data['dtype'] = str(arr.dtype)
+        assert 'sum' not in zattr_data
+        zattr_data['sum'] = float(arr.sum())
+
+        assert 'quantiles' not in zattr_data
+        valid = (arr>0.0)
+        q_values = ('0.25', '0.50', '0.75', '0.80', '0.90')
+        q = np.quantile(arr[valid], [float(v) for v in q_values])
+        quantiles = {
+            k:float(v) for k, v in zip(q_values, q)}
+        quantiles['1.0'] = float(arr.max())
+        zattr_data['quantiles'] = quantiles
+
+        with open(zattr_path, 'w') as out_file:
+            out_file.write(json.dumps(zattr_data, indent=2))
 
 
 def get_celltype_lookups_from_rda_df(

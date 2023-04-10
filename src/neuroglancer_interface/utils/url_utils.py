@@ -6,8 +6,6 @@ def get_final_url(
         image_layer_list,
         template_layer=None,
         segmentation_layer=None,
-        template_bucket='mouse1-template-prototype',
-        segmentation_bucket='mouse1-segmentation-prototype',
         starting_position=None,
         x_mm=0.01,
         y_mm=0.01,

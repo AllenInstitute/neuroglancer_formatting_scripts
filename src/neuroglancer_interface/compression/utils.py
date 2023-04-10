@@ -54,7 +54,6 @@ def compress_ccf_data(
     header_offset = n_blocks*2
     header_list = []
     running_offset = header_offset
-    print('writing data')
     for i_block in range(n_blocks):
         this_encoding = encoding_list[i_block]
 
@@ -85,7 +84,6 @@ def compress_ccf_data(
                 f"header\n{this_header}\nlen {len(this_header)}")
         header_list.append(this_header)
 
-    print(f"writing compressed data to {file_path}")
     with open(file_path, 'wb') as out_file:
         # specify that this is just one channel
         out_file.write((1).to_bytes(4, byteorder='little'))

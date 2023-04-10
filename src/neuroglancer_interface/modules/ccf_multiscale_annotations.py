@@ -1,14 +1,25 @@
 from typing import List
+import h5py
 import json
 import pathlib
 import SimpleITK
 import numpy as np
+import tempfile
+
+from neuroglancer_interface.utils.utils import (
+    mkstemp_clean,
+    _clean_up,
+    get_prime_factors)
+
 from neuroglancer_interface.utils.ccf_utils import (
     get_labels,
     format_labels,
-    get_dummy_labels)
+    get_dummy_labels,
+    downsample_segmentation_array)
+
 from neuroglancer_interface.compression.utils import (
     compress_ccf_data)
+
 from neuroglancer_interface.classes.nifti_array import (
     get_nifti_obj)
 
@@ -20,7 +31,9 @@ def write_out_ccf(
         use_compression=False,
         compression_blocksize=64,
         chunk_size=(256, 256, 256),
-        do_transposition=False) -> None:
+        do_transposition=False,
+        tmp_dir=None,
+        downsampling_cutoff=64) -> None:
     """
     Write CCF annotations to disk in neuroglancer-friendly format
 
@@ -47,26 +60,38 @@ def write_out_ccf(
         If True, transpose the NIFTI volumes so that
         (x, y, z) -> (z, y, x)
 
+    tmp_dir:
+        Directory where temporary HDF5 files are written during
+        downsampling
+
+    downsampling_cutoff:
+        if applicable, do not downsample so far that any dimension
+        is smaller than this value
+
     Returns
     -------
     None
         Data is written to output_dir in correct format
     """
-    print(f"{chunk_size}")
+    tmp_dir = tempfile.mkdtemp(dir=tmp_dir)
+
+    label_path = pathlib.Path(label_path)
+    segmentation_path_list = [
+        pathlib.Path(s) for s in segmentation_path_list]
+
     if not output_dir.exists():
         output_dir.mkdir()
-    print(segmentation_path_list)
-    print("getting parent info")
+
     parent_info = create_info_dict(
             segmentation_path_list=segmentation_path_list,
             use_compression=use_compression,
             compression_blocksize=compression_blocksize,
             chunk_size=chunk_size,
-            do_transposition=do_transposition)
-    print("got parent info")
+            do_transposition=do_transposition,
+            tmp_dir=tmp_dir,
+            downsampling_cutoff=downsampling_cutoff)
 
     for scale_metadata in parent_info['scales']:
-        print("chunking ", scale_metadata)
         do_chunking(metadata=scale_metadata,
                     parent_output_dir=output_dir,
                     do_transposition=do_transposition)
@@ -84,6 +109,8 @@ def write_out_ccf(
 
     with open(output_dir / 'info', 'w') as out_file:
         out_file.write(json.dumps(parent_info, indent=2))
+
+    _clean_up(tmp_dir)
 
 def do_chunking(
         metadata: dict,
@@ -126,10 +153,15 @@ def do_chunking(
     if not file_path.is_file():
         raise RuntimeError(f"{file_path} is not a file")
 
-    nii_obj = get_nifti_obj(file_path,
-                            do_transposition=do_transposition)
-    sitk_arr = nii_obj.get_channel('red')['channel']
-    sitk_arr = np.round(sitk_arr).astype(np.uint16)
+    if file_path.name.endswith('.nii') or file_path.name.endswith('.nii.gz'):
+        sitk_arr = _get_array_from_sitk(
+            file_path,
+            do_transposition=do_transposition)
+    elif file_path.name.endswith('.h5'):
+        sitk_arr = _get_array_from_h5(file_path)
+    else:
+        raise RuntimeError(
+            f"unclear how to get array from file {file_path}")
 
     if not sitk_arr.shape == metadata['size']:
         raise RuntimeError(
@@ -163,7 +195,19 @@ def do_chunking(
                             file_path=this_file,
                             data=this_data)
 
-    print(f"chunked {file_path}")             
+
+def _get_array_from_sitk(file_path, do_transposition=False):
+    nii_obj = get_nifti_obj(file_path,
+                            do_transposition=do_transposition)
+    sitk_arr = nii_obj.get_channel('red')['channel']
+    sitk_arr = np.round(sitk_arr).astype(np.uint16)
+    return sitk_arr
+
+
+def _get_array_from_h5(file_path):
+    with h5py.File(file_path, 'r') as in_file:
+        data = in_file['data'][()]
+    return data
 
 
 def _write_chunk_uncompressed(file_path, data):
@@ -177,7 +221,9 @@ def create_info_dict(
         use_compression=False,
         compression_blocksize=64,
         chunk_size=(256, 256, 256),
-        do_transposition=False) -> dict:
+        do_transposition=False,
+        downsampling_cutoff=64,
+        tmp_dir=None) -> dict:
     """
     Create the dict that will be JSONized to make the info file.
     Return that dict.
@@ -191,14 +237,36 @@ def create_info_dict(
 
     scale_list = []
     size_list = []
-    for pth in segmentation_path_list:
+    if len(segmentation_path_list) > 1:
+        for pth in segmentation_path_list:
+            this = get_scale_metadata(
+                        segmentation_path=pth,
+                        use_compression=use_compression,
+                        compression_blocksize=compression_blocksize,
+                        chunk_size=chunk_size,
+                        do_transposition=do_transposition)
+            scale_list.append(this)
+    else:
         this = get_scale_metadata(
-                    segmentation_path=pth,
-                    use_compression=use_compression,
-                    compression_blocksize=compression_blocksize,
-                    chunk_size=chunk_size,
-                    do_transposition=do_transposition)
+            segmentation_path=segmentation_path_list[0],
+            use_compression=use_compression,
+            compression_blocksize=compression_blocksize,
+            chunk_size=chunk_size,
+            do_transposition=do_transposition)
+
         scale_list.append(this)
+
+        downsampled_metadata = get_scale_metadata_with_downsampling(
+            segmentation_path=segmentation_path_list[0],
+            tmp_dir=tmp_dir,
+            downsample_min=downsampling_cutoff,
+            use_compression=use_compression,
+            chunk_size=chunk_size,
+            do_transposition=do_transposition)
+
+        scale_list += downsampled_metadata
+
+    for this in scale_list:
         size_list.append(this['size'][0]*this['size'][1]*this['size'][2])
 
     # from finest to coarsest resolution
@@ -216,7 +284,6 @@ def create_info_dict(
     result['num_channels'] = 1
     result['scales'] = scale_list
 
-    print("created info dict")
     return result
 
 
@@ -231,18 +298,11 @@ def get_scale_metadata(
 
     These need to be ordered from native resolution to zoomed out resolution
     """
-    print("in get_scale_metadata")
+    segmentation_path  = pathlib.Path(segmentation_path)
     nii_obj = get_nifti_obj(segmentation_path,
                             do_transposition=do_transposition)
     scale_mm = nii_obj.scales
     img_shape = nii_obj.shape
-    print(f"got {segmentation_path} -- {scale_mm} {img_shape}")
-
-    # should not be needed now that the NiftiArray objects
-    # are handling the transposition of the arrays
-    #img_shape = (img_shape[2], img_shape[1], img_shape[0])
-
-    voxel_offset = (0, 0, 0)
 
     result = dict()
     result['chunk_sizes'] = [chunk_size]
@@ -267,3 +327,116 @@ def get_scale_metadata(
     result['local_file_path'] = str(segmentation_path.resolve().absolute())
 
     return result
+
+
+def get_scale_metadata_with_downsampling(
+        segmentation_path,
+        tmp_dir,
+        downsample_min=64,
+        chunk_size=(256, 256, 256),
+        use_compression=False,
+        compression_blocksize=64,
+        do_transposition=False) -> dict:
+    """
+    Get the dict representing a single scale of a segmentation volume
+    generated by downscaling a baseline segmentation at segmentation_path
+
+    These need to be ordered from native resolution to zoomed out resolution
+
+    Return a list of dicts representing the downsampled arrays, which have
+    been written to tempfile.
+    """
+    segmentation_path  = pathlib.Path(segmentation_path)
+    nii_obj = get_nifti_obj(segmentation_path,
+                            do_transposition=do_transposition)
+    scale_mm = nii_obj.scales
+    img_shape = nii_obj.shape
+
+    downsample_pyramid = _create_pyramid_of_ccf_downsamples(
+        baseline_shape=img_shape,
+        downsample_cutoff=downsample_min)
+
+    baseline_array = _get_array_from_sitk(
+        segmentation_path,
+        do_transposition=do_transposition)
+
+    config_list = []
+    for downsample_by in downsample_pyramid:
+
+        new_array = downsample_segmentation_array(
+            arr=baseline_array,
+            downsample_by=downsample_by)
+
+        tmp_path = mkstemp_clean(
+            dir=tmp_dir,
+            suffix='.h5')
+        tmp_path = pathlib.Path(tmp_path)
+        with h5py.File(tmp_path, 'w') as out_file:
+            out_file.create_dataset(
+                'data',
+                data=new_array)
+
+        result = dict()
+        result['chunk_sizes'] = [chunk_size]
+        if not use_compression:
+            result['encoding'] = 'raw'
+        else:
+            result['encoding'] = 'compressed_segmentation'
+            result['compressed_segmentation_block_size'] = [
+                compression_blocksize,
+                compression_blocksize,
+                compression_blocksize]
+
+        mm_to_nm = 10**6
+        x_nm = int(mm_to_nm*scale_mm[0]*downsample_by[0])
+        y_nm = int(mm_to_nm*scale_mm[1]*downsample_by[1])
+        z_nm = int(mm_to_nm*scale_mm[2]*downsample_by[2])
+
+        result['key'] = f"{x_nm}_{y_nm}_{z_nm}"
+
+        result['resolution'] = (x_nm, y_nm, z_nm)
+        result['size'] = new_array.shape
+        result['local_file_path'] = str(tmp_path.resolve().absolute())
+        config_list.append(result)
+
+    return config_list
+
+
+def _create_pyramid_of_ccf_downsamples(
+        baseline_shape,
+        downsample_cutoff):
+    """
+    Create list of downsample_by tuples provided that no dimension
+    goes below downsample_cutoff
+    """
+    # grab odd prime factors of the dimensions of the array
+    factors = []
+    for ii in range(3):
+        these = [n for n in get_prime_factors(baseline_shape[ii])
+                 if n%2==1]
+        factors.append(these)
+
+    current_downsample = [1, 1, 1]
+    keep_going = True
+    pyramid = []
+    while keep_going:
+        keep_going = False
+
+        this = []
+
+        for ii in range(3):
+            if len(factors[ii]) == 0:
+                this.append(1)
+                continue
+
+            candidate = current_downsample[ii]*factors[ii][0]
+            if baseline_shape[ii] // candidate >= downsample_cutoff:
+                factors[ii].pop(0)
+                current_downsample[ii] = candidate
+                keep_going = True
+            else:
+                candidate = current_downsample[ii]
+            this.append(candidate)
+        if keep_going:
+            pyramid.append(tuple(this))
+    return pyramid
