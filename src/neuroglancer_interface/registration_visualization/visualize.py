@@ -26,6 +26,9 @@ from neuroglancer_interface.utils.url_utils import(
     get_segmentation_layer,
     get_template_layer)
 
+from neuroglancer_interface.utils.html_utils import (
+    write_basic_table)
+
 
 def print_status(msg):
     print(f"===={msg}====")
@@ -126,9 +129,16 @@ def create_url(
 
     template_layer_list = []
     for ii, el in enumerate(processed_datasets['template']):
+        if 'merfish' in el['tag'].lower():
+            range_max = 150
+        else:
+            range_max = 700
+
         template = get_template_layer(
             template_bucket=f"{bucket_name}/{bucket_prefix}/{el['s3']}",
-            public_name=el['tag'])
+            public_name=el['tag'],
+            range_max=range_max)
+
         if ii == 0:
             template['visible'] = True
         else:
@@ -156,10 +166,13 @@ def create_url(
 
 def run(
     config_path,
-    tmp_dir):
+    tmp_dir,
+    bucket_name='neuroglancer-vis-prototype',
+    bucket_prefix='junkURL',
+    output_path='registration_test.html'):
 
     bucket_name = 'neuroglancer-vis-prototype'
-    bucket_prefix = 'scratch/230425/junkURL'
+    bucket_prefix = f'scratch/230425/{bucket_prefix}'
 
     config_data = json.load(open(config_path, 'rb'))
     data_created = convert_registration_data(
@@ -176,7 +189,13 @@ def run(
         bucket_name=bucket_name,
         bucket_prefix=bucket_prefix)
 
-    print(url)
+    write_basic_table(
+        output_path=output_path,
+        title='Registration visualization',
+        key_to_link={'view': url},
+        key_order=['view'],
+        key_to_other_cols={'view': {'names': [], 'values': []}},
+        div_name='view')
 
 def main():
     parser = argparse.ArgumentParser()
