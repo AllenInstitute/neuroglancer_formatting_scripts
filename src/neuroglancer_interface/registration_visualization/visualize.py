@@ -4,6 +4,7 @@ import pathlib
 import shutil
 import SimpleITK
 import tempfile
+import datetime
 
 from neuroglancer_interface.utils.utils import (
     _clean_up)
@@ -122,6 +123,7 @@ def upload_data(
         bucket_prefix=bucket_prefix,
         n_processors=6)
 
+
 def create_url(
         processed_datasets,
         bucket_prefix,
@@ -167,12 +169,13 @@ def create_url(
 def run(
     config_path,
     tmp_dir,
-    bucket_name='neuroglancer-vis-prototype',
     bucket_prefix='junkURL',
     output_path='registration_test.html'):
 
     bucket_name = 'neuroglancer-vis-prototype'
-    bucket_prefix = f'scratch/230425/{bucket_prefix}'
+    now = datetime.datetime.now()
+    suffix = f"{now.year}-{now.month}-{now.day}-{now.hour}-{now.minute}"
+    bucket_prefix = f"registration-vis/{bucket_prefix}/{suffix}"
 
     config_data = json.load(open(config_path, 'rb'))
     data_created = convert_registration_data(
@@ -199,9 +202,18 @@ def run(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_path', type=str, default=None)
-    parser.add_argument('--tmp_dir', type=str, default=None)
-    parser.add_argument('--clean_up', action='store_true', default=False)
+    parser.add_argument('--config_path', type=str, default=None,
+        help='path to the JSONized config')
+    parser.add_argument('--bucket_prefix', type=str, default=None,
+        help='human-readable name for director in bucket where data will be '
+        'loaded')
+    parser.add_argument('--output_path', type=str, default=None,
+        help='path to html file that will be written')
+    parser.add_argument('--tmp_dir', type=str, default=None,
+        help='path to a directory where temporary data products will be written')
+    parser.add_argument('--clean_up', action='store_true', default=False,
+        help='if run with this flag, temp dir will be automatically cleaned up '
+        '(even if an Exception occurs)')
     args = parser.parse_args()
 
     tmp_dir = pathlib.Path(
@@ -211,6 +223,8 @@ def main():
     try:
         run(
             config_path=args.config_path,
+            bucket_prefix=args.bucket_prefix,
+            output_path=args.output_path,
             tmp_dir=tmp_dir)
 
     finally:
