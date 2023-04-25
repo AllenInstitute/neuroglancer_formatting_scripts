@@ -42,23 +42,26 @@ def process_registration(
     template_dir = None
 
     ccf_config = config_data["ccf"]
-    if len(ccf_data) > 0:
+    if len(ccf_config) > 0:
         ccf_dir = tmp_dir /"ccf"
 
         if not ccf_dir.exists():
             ccf_dir.mkdir(parents=True)
 
         for ccf_data in ccf_config:
-            print_stats(f"processing {ccf_data['nii_path']}")
+            print_status(f"processing {ccf_data['nii_path']}")
+            this_dir = ccf_dir / ccf_data["tag"]
+            if not this_dir.exists():
+                this_dir.mkdir(parents=True)
             write_out_ccf(
                 segmentation_path_list = [
                     pathlib.Path(ccf_data["nii_path"])],
-                label_path=ccf_data["labels"],
-                output_dir=ccf_dir/ccf_data["tag"],
+                label_path=ccf_data["label_path"],
+                output_dir=this_dir,
                 use_compression=True,
                 compression_blocksize=23,
                 chunk_size=(64, 64, 64),
-               do_transposition=False,
+                do_transposition=False,
                 tmp_dir=junk_dir,
                 downsampling_cutoff=64)
                     
@@ -68,11 +71,11 @@ def process_registration(
         template_group = create_root_group(output_dir=template_dir)
 
         for template_data in template_config:
-            print_stats(f"processing {template_data['nii_path']}")
+            print_status(f"processing {template_data['nii_path']}")
             write_nii_to_group(
                 root_group=template_group,
                 group_name=template_data["tag"],
-                nii_file_path=tenplate_data["nii_path"],
+                nii_file_path=template_data["nii_path"],
                 downscale_cutoff=64,
                 default_chunk=128,
                 channel='red',
