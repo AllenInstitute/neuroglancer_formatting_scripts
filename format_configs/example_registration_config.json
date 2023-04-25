@@ -51,7 +51,7 @@
    {
      "tag": "Landmark-undilated/CCF",
      "nii_path": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_638850/alignment/Mouse3_LandmarkReg_04052023/0001_CoarseLevel/mouse3_v2_CCFLandmarksGlobWarpedNN.nii.gz",
-     "label_path": "allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_638850/alignment/Mouse3_LandmarkReg_04052023/0000_RegistrationInput/itksnap_ccf_landmark_file.txt"
+     "label_path": "/allen/programs/celltypes/workgroups/rnaseqanalysis/mFISH/michaelkunst/MERSCOPES/mouse/atlas/mouse_638850/alignment/Mouse3_LandmarkReg_04052023/0000_RegistrationInput/itksnap_ccf_landmark_file.txt"
    }
   ]
 }

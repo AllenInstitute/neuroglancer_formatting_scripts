@@ -20,7 +20,8 @@ from neuroglancer_interface.utils.data_utils import (
     write_nii_to_group)
 
 from neuroglancer_interface.utils.s3_utils import (
-    upload_to_bucket)
+    upload_to_bucket,
+    _upload_to_bucket)
 
 from neuroglancer_interface.utils.url_utils import(
     get_final_url,
@@ -110,6 +111,7 @@ def convert_registration_data(
 
 def upload_data(
         processed_datasets,
+        config_path,
         bucket_prefix='scratch/230425/junk2',
         bucket_name='neuroglancer-vis-prototype',
         n_processors=6):
@@ -123,6 +125,11 @@ def upload_data(
         bucket_name=bucket_name,
         bucket_prefix=bucket_prefix,
         n_processors=n_processors)
+
+    _upload_to_bucket(
+        bucket_name=bucket_name,
+        file_path_list=[pathlib.Path(config_path)],
+        key_list=[f"{bucket_prefix}/config.json"])
 
 
 def create_url(
@@ -186,6 +193,7 @@ def run(
     print(data_created)
 
     upload_data(processed_datasets=data_created,
+        config_path=config_path,
         bucket_name=bucket_name,
         bucket_prefix=bucket_prefix,
         n_processors=n_processors)
