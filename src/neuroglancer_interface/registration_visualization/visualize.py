@@ -23,7 +23,7 @@ def print_status(msg):
     print(f"===={msg}====")
 
 
-def process_registration(
+def convert_registration_data(
         config_data,
         tmp_dir):
     """
@@ -35,6 +35,10 @@ def process_registration(
         pathlib.Path pointing to temporary directory where processed
         data will be written out.
     """
+
+    datasets_created = dict()
+    datasets_created['ccf'] = []
+    datasets_created['template'] = []
 
     junk_dir = tempfile.mkdtemp(dir=tmp_dir)
 
@@ -64,7 +68,11 @@ def process_registration(
                 do_transposition=False,
                 tmp_dir=junk_dir,
                 downsampling_cutoff=64)
-                    
+            datasets_created['ccf'].append(
+                {'tag': ccf_data['tag'],
+                 's3': str(this_dir.relative_to(tmp_dir).resolve().absolute()),
+                 'path': this_dir})
+
     template_config = config_data["template"]
     if len(template_config) > 0:
         template_dir = tmp_dir / "template"
@@ -81,6 +89,25 @@ def process_registration(
                 channel='red',
                 do_transposition=False)     
 
+            datasets_created['template'].append(
+                {'tag': template_data['tag'],
+                 's3': f"template/{template_data['tag']}",
+                 'path': template_dir/template_data['tag']})
+
+    return datasets_created
+
+
+def run(
+    config_path,
+    tmp_dir):
+
+    config_data = json.load(open(config_path, 'rb'))
+    data_created = convert_registration_data(
+        config_data=config_data,
+        tmp_dir=tmp_dir)
+    print(data_created)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=str, default=None)
@@ -92,14 +119,15 @@ def main():
         tempfile.mkdtemp(dir=args.tmp_dir))
     print_status(f"writing data to {tmp_dir}")
 
-    config_data = json.load(open(args.config_path, 'rb'))
-    process_registration(
-        config_data=config_data,
-        tmp_dir=tmp_dir)
+    try:
+        run(
+            config_path=args.config_path,
+            tmp_dir=tmp_dir)
 
-    if args.clean_up:
-        pring_status(f"cleaning up {tmp_dir}")
-        _clean_up(tmp_dir)
+    finally:
+        if args.clean_up:
+            print_status(f"cleaning up {tmp_dir}")
+            _clean_up(tmp_dir)
 
 
 if __name__ == "__main__":
