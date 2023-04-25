@@ -170,7 +170,8 @@ def run(
     config_path,
     tmp_dir,
     bucket_prefix='junkURL',
-    output_path='registration_test.html'):
+    output_path='registration_test.html',
+    n_processors=6):
 
     bucket_name = 'neuroglancer-vis-prototype'
     now = datetime.datetime.now()
@@ -185,7 +186,8 @@ def run(
 
     upload_data(processed_datasets=data_created,
         bucket_name=bucket_name,
-        bucket_prefix=bucket_prefix)
+        bucket_prefix=bucket_prefix,
+        n_processors=n_processors)
 
     url = create_url(
         processed_datasets=data_created,
@@ -214,6 +216,8 @@ def main():
     parser.add_argument('--clean_up', action='store_true', default=False,
         help='if run with this flag, temp dir will be automatically cleaned up '
         '(even if an Exception occurs)')
+    parser.add_argument('--n_processors', type=int, default=6,
+        help='number of processors to use to call boto3 in parallel')
     args = parser.parse_args()
 
     tmp_dir = pathlib.Path(
@@ -225,7 +229,8 @@ def main():
             config_path=args.config_path,
             bucket_prefix=args.bucket_prefix,
             output_path=args.output_path,
-            tmp_dir=tmp_dir)
+            tmp_dir=tmp_dir,
+            n_processors=args.n_processors)
 
     finally:
         if args.clean_up:
