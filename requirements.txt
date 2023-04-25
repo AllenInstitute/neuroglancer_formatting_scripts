@@ -7,3 +7,4 @@ task-queue
 pandas
 dask
 h5py
+s3
