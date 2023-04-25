@@ -111,7 +111,8 @@ def convert_registration_data(
 def upload_data(
         processed_datasets,
         bucket_prefix='scratch/230425/junk2',
-        bucket_name='neuroglancer-vis-prototype'):
+        bucket_name='neuroglancer-vis-prototype',
+        n_processors=6):
 
     data_to_load = []
     for k in ('ccf', 'template'):
@@ -121,7 +122,7 @@ def upload_data(
         data_list=data_to_load,
         bucket_name=bucket_name,
         bucket_prefix=bucket_prefix,
-        n_processors=6)
+        n_processors=n_processors)
 
 
 def create_url(
