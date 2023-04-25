@@ -18,6 +18,8 @@ from neuroglancer_interface.utils.data_utils import (
     write_nii_file_list_to_ome_zarr,
     write_nii_to_group)
 
+from neuroglancer_interface.utils.s3_utils import (
+    upload_to_bucket)
 
 def print_status(msg):
     print(f"===={msg}====")
@@ -70,7 +72,7 @@ def convert_registration_data(
                 downsampling_cutoff=64)
             datasets_created['ccf'].append(
                 {'tag': ccf_data['tag'],
-                 's3': str(this_dir.relative_to(tmp_dir).resolve().absolute()),
+                 's3': str(this_dir.relative_to(tmp_dir)),
                  'path': this_dir})
 
     template_config = config_data["template"]
@@ -96,6 +98,20 @@ def convert_registration_data(
 
     return datasets_created
 
+def upload_data(
+        processed_datasets,
+        bucket_prefix='scratch/230425/junk2'):
+
+    data_to_load = []
+    for k in ('ccf', 'template'):
+        for el in processed_datasets[k]:
+            data_to_load.append(el)
+    upload_to_bucket(
+        data_list=data_to_load,
+        bucket_name='neuroglancer-vis-prototype',
+        bucket_prefix=bucket_prefix,
+        n_processors=6)
+
 
 def run(
     config_path,
@@ -106,6 +122,8 @@ def run(
         config_data=config_data,
         tmp_dir=tmp_dir)
     print(data_created)
+
+    upload_data(processed_datasets=data_created)
 
 
 def main():

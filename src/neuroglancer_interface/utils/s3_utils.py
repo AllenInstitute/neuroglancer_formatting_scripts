@@ -60,7 +60,7 @@ def create_bucket(
 
 
 def upload_to_bucket(
-        dir_list: List[pathlib.Path],
+        data_list: List[dict],
         bucket_name: str,
         bucket_prefix: str,
         n_processors: int):
@@ -69,9 +69,9 @@ def upload_to_bucket(
 
     Parameters
     ----------
-    dir_list: List[pathlib.Path]
-        list of directories whose contents need to be uploaded
-        to S3
+    data_list: List[dict]
+        for each dict, 's3' points to where under bucket_prefix
+        the data will be loaded; 'path' is the path to the directory
 
     bucket_name: str
         Name of the bucket to which the data will be uploaded
@@ -88,13 +88,15 @@ def upload_to_bucket(
 
     full_path_list = []
     full_key_list = []
-    for parent_path in dir_list:
+    for data_dict in data_list:
+        print(data_dict)
+        parent_path = data_dict['path']
         data_path_list = [n for n in parent_path.rglob('**/*')
                           if n.is_file()]
         for pth in data_path_list:
-            target_key = str(pth.relative_to(parent_path.parent))
+            target_key = str(pth.relative_to(parent_path))
             target_key = target_key.replace('\\','/')
-            target_key = f"{bucket_prefix}/{target_key}"
+            target_key = f"{bucket_prefix}/{data_dict['s3']}/{target_key}"
             full_path_list.append(pth)
             full_key_list.append(target_key)
 
