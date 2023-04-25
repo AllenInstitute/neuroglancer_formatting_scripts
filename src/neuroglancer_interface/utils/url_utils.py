@@ -23,9 +23,17 @@ def get_final_url(
 
     layer_list = image_layer_list
     if template_layer is not None:
-        layer_list.append(template_layer)
+        if isinstance(template_layer, list):
+            for l in template_layer:
+                layer_list.append(l)
+        else:
+            layer_list.append(template_layer)
     if segmentation_layer is not None:
-        layer_list.append(segmentation_layer)
+        if isinstance(segmentation_layer, list):
+            for l in segmentation_layer:
+                layer_list.append(l)
+        else:
+            layer_list.append(segmentation_layer)
 
     layers = dict()
     layers["dimensions"] = {"x": [float(x_mm*0.001), "m"],

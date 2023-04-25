@@ -21,6 +21,12 @@ from neuroglancer_interface.utils.data_utils import (
 from neuroglancer_interface.utils.s3_utils import (
     upload_to_bucket)
 
+from neuroglancer_interface.utils.url_utils import(
+    get_final_url,
+    get_segmentation_layer,
+    get_template_layer)
+
+
 def print_status(msg):
     print(f"===={msg}====")
 
@@ -100,7 +106,8 @@ def convert_registration_data(
 
 def upload_data(
         processed_datasets,
-        bucket_prefix='scratch/230425/junk2'):
+        bucket_prefix='scratch/230425/junk2',
+        bucket_name='neuroglancer-vis-prototype'):
 
     data_to_load = []
     for k in ('ccf', 'template'):
@@ -108,14 +115,51 @@ def upload_data(
             data_to_load.append(el)
     upload_to_bucket(
         data_list=data_to_load,
-        bucket_name='neuroglancer-vis-prototype',
+        bucket_name=bucket_name,
         bucket_prefix=bucket_prefix,
         n_processors=6)
+
+def create_url(
+        processed_datasets,
+        bucket_prefix,
+        bucket_name):
+
+    template_layer_list = []
+    for ii, el in enumerate(processed_datasets['template']):
+        template = get_template_layer(
+            template_bucket=f"{bucket_name}/{bucket_prefix}/{el['s3']}",
+            public_name=el['tag'])
+        if ii == 0:
+            template['visible'] = True
+        else:
+            template['visible'] = False
+        template_layer_list.append(template)
+
+    ccf_layer_list = []
+    for ii, el in enumerate(processed_datasets['ccf']):
+        ccf = get_segmentation_layer(
+            segmentation_bucket=f"{bucket_name}/{bucket_prefix}/{el['s3']}",
+            segmentation_name=el['tag'])
+        if ii == 0:
+            ccf['visible'] = True
+        else:
+            ccf['visible'] = False
+        ccf_layer_list.append(ccf)
+
+    url = get_final_url(
+        image_layer_list = [],
+        template_layer=template_layer_list,
+        segmentation_layer=ccf_layer_list)
+
+    return url
 
 
 def run(
     config_path,
     tmp_dir):
+
+    bucket_name = 'neuroglancer-vis-prototype'
+    bucket_prefix = 'scratch/230425/junkURL'
 
     config_data = json.load(open(config_path, 'rb'))
     data_created = convert_registration_data(
@@ -123,8 +167,16 @@ def run(
         tmp_dir=tmp_dir)
     print(data_created)
 
-    upload_data(processed_datasets=data_created)
+    upload_data(processed_datasets=data_created,
+        bucket_name=bucket_name,
+        bucket_prefix=bucket_prefix)
 
+    url = create_url(
+        processed_datasets=data_created,
+        bucket_name=bucket_name,
+        bucket_prefix=bucket_prefix)
+
+    print(url)
 
 def main():
     parser = argparse.ArgumentParser()
