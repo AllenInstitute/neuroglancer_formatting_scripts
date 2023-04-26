@@ -78,7 +78,7 @@ def convert_registration_data(
                 use_compression=True,
                 compression_blocksize=23,
                 chunk_size=(64, 64, 64),
-                do_transposition=False,
+                do_transposition=True,
                 tmp_dir=junk_dir,
                 downsampling_cutoff=64)
             datasets_created['ccf'].append(
@@ -100,7 +100,7 @@ def convert_registration_data(
                 downscale_cutoff=64,
                 default_chunk=128,
                 channel='red',
-                do_transposition=False)     
+                do_transposition=True)     
 
             datasets_created['template'].append(
                 {'tag': template_data['tag'],
