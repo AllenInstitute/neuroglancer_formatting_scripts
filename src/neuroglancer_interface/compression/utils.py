@@ -168,12 +168,19 @@ def encode_block(data):
         byte_stream = bits_to_bytes(bit_stream)
 
     expected_len = np.ceil(ct*n_bits/8).astype(int)
+
+    # because compression must be in integer multiples
+    # of 32 bits (I think)
+    if expected_len % 4 > 0:
+        expected_len += (4-(expected_len % 4))
+
     if len(byte_stream) != expected_len:
         raise RuntimeError(
             f"len bytes {len(byte_stream)}\n"
             f"expected {expected_len}\n"
             f"{(nx, ny, nz)}\n"
-            f"{n_bits}")
+            f"{n_bits}\n"
+            f"len(bit_stream) {len(bit_stream)}")
 
     return {'encoded_data': byte_stream,
             'lookup_table': encoding['bytes'],
@@ -216,7 +223,7 @@ def block_to_bits(block, encoder_dict, n_bits):
 
     for i_bit in range(n_bits):
         detections = block & bit_masks[i_bit]
-        bit_stream[i_bit::n_bits] = (detections > 0)
+        bit_stream[i_bit:detections.size*n_bits:n_bits] = (detections > 0)
 
     return bit_stream
 
