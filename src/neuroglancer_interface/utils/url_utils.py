@@ -41,10 +41,12 @@ def get_final_url(
 
     # to align layers with segmentation
     transform = {
-            "matrix": [[1, 0, 0, 0.5], [0, 1, 0, 0.5], [0, 0, 1, 0.5]],
+            "matrix": [[1, 0, 0, -0.5],
+                       [0, 1, 0, -0.5],
+                       [0, 0, 1, -0.5]],
             "outputDimensions": dimensions}
     for layer in layer_list:
-        if layer["type"] == "segmentation":
+        if layer["type"] != "segmentation":
             continue
         orig_source = layer["source"]
         new_source = {"url": orig_source,
