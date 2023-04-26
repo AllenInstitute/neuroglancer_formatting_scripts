@@ -137,6 +137,14 @@ def create_url(
         bucket_prefix,
         bucket_name):
 
+    # get scale
+    template0 = processed_datasets['template'][0]
+    zattr_path = pathlib.Path(
+        template0['path'])/'.zattrs'
+    zattr_data = json.load(open(zattr_path, 'rb'))
+    datasets = zattr_data['multiscales'][0]['datasets']
+    scales = datasets[0]['coordinateTransformations'][0]['scale']
+
     template_layer_list = []
     for ii, el in enumerate(processed_datasets['template']):
         if 'merfish' in el['tag'].lower():
@@ -169,7 +177,10 @@ def create_url(
     url = get_final_url(
         image_layer_list = [],
         template_layer=template_layer_list,
-        segmentation_layer=ccf_layer_list)
+        segmentation_layer=ccf_layer_list,
+        x_mm=scales[0],
+        y_mm=scales[1],
+        z_mm=scales[2])
 
     return url
 

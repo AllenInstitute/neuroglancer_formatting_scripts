@@ -35,10 +35,24 @@ def get_final_url(
         else:
             layer_list.append(segmentation_layer)
 
+    dimensions = {"x": [float(x_mm*0.001), "m"],
+                  "y": [float(y_mm*0.001), "m"],
+                  "z": [float(z_mm*0.001), "m"]}
+
+    # to align layers with segmentation
+    transform = {
+            "matrix": [[1, 0, 0, 0.5], [0, 1, 0, 0.5], [0, 0, 1, 0.5]],
+            "outputDimensions": dimensions}
+    for layer in layer_list:
+        if layer["type"] == "segmentation":
+            continue
+        orig_source = layer["source"]
+        new_source = {"url": orig_source,
+                      "transform": transform}
+        layer["source"] = new_source
+
     layers = dict()
-    layers["dimensions"] = {"x": [float(x_mm*0.001), "m"],
-                            "y": [float(y_mm*0.001), "m"],
-                            "z": [float(z_mm*0.001), "m"]}
+    layers["dimensions"] = dimensions
     layers["crossSectionScale"] = cross_section_scale
     layers["projectionScale"] = projection_scale
     layers["layers"] = layer_list
