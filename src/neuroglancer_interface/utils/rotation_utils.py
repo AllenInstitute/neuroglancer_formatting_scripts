@@ -40,12 +40,23 @@ def get_coord_mesh(data_shape):
     Return a 3xN array encoding the 3D matrix coordinates
     of voxels in a data array with N total voxels
     """
+
+    max_d_log2 = np.log2(max(data_shape))
+    if max_d_log2 < 8:
+        mesh_dtype = np.uint8
+    elif max_d_log2 < 16:
+        mesh_dtype = np.uint16
+    elif max_d_log2 < 32:
+        mesh_dtype = np.uint32
+    else:
+        mesh_dtype = np.uint
+
     (xx_mesh,
      yy_mesh,
      zz_mesh) = np.meshgrid(
-                    np.arange(data_shape[0], dtype=int),
-                    np.arange(data_shape[1], dtype=int),
-                    np.arange(data_shape[2], dtype=int))
+                    np.arange(data_shape[0], dtype=mesh_dtype),
+                    np.arange(data_shape[1], dtype=mesh_dtype),
+                    np.arange(data_shape[2], dtype=mesh_dtype))
 
     xx_mesh = xx_mesh.flatten()
     yy_mesh = yy_mesh.flatten()
@@ -62,10 +73,18 @@ def rotate_matrix(
     rotate the data according to the specified rotation matrix
     """
     data_idx = get_coord_mesh(data.shape)
-    rotated_idx = np.round(np.dot(rotation_matrix, data_idx)).astype(int)
+    rotated_idx = np.dot(np.array(rotation_matrix).astype(np.float32),
+                         data_idx)
 
     for ix in range(3):
         rotated_idx[ix, :] -= rotated_idx[ix, :].min()
+
+    this_i_info = np.iinfo(data_idx.dtype)
+    if rotated_idx.min() < 0:
+        raise RuntimeError("got negative minimum index")
+    if rotated_idx.max() > this_i_info.max:
+        raise RuntimeError("max index too great")
+    rotated_idx = np.round(rotated_idx).astype(data_idx.dtype)
 
     new_shape = (rotated_idx[0].max()+1,
                  rotated_idx[1].max()+1,
