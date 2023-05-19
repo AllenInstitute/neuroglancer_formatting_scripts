@@ -119,15 +119,29 @@ class NiftiArray(object):
         """
         Will be cast so that arr.shape matches img.GetSize()
         """
+        needs_rotation = True
+        if np.allclose(self.rotation_matrix,
+                           np.identity(3),
+                           atol=0.0,
+                           rtol=1.0e-5):
+            needs_rotation = False
         expected_shape = self.shape  # just to provoke metadata read
         img = self._img
         arr = SimpleITK.GetArrayFromImage(img).astype(np.float32)
         if len(arr.shape) == 3:
-            return rotate_matrix(arr, self.rotation_matrix)
+            if needs_rotation:
+                return rotate_matrix(arr, self.rotation_matrix)
+            else:
+                return arr
         elif len(arr.shape) == 4:
-            return np.stack([rotate_matrix(arr[:, :, :, ix],
-                                            self.rotation_matrix)
-                             for ix in range(arr.shape[3])]).transpose(1,2,3,0)
+            if needs_rotation:
+                return np.stack([rotate_matrix(arr[:, :, :, ix],
+                                                self.rotation_matrix)
+                                 for ix in range(arr.shape[3])]).transpose(1,2,3,0)
+            else:
+                return np.stack([
+                    arr[:, :, :, ix]
+                    for ix in range(arr.shape[3])]).transpose(1,2,3,0)
         else:
             raise RuntimeError(
                 f"Cannot parse array of shape {arr.shape}")
