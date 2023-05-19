@@ -16,11 +16,19 @@ class NiftiArray(object):
     If do_transposition, then transpose the NIFTI volume such
     that (x, y, z) -> (z, y, x), mimicking the transposition
     between SimpleITK.Image.GetSize() and array.shape
+
+    posxposz = True will change the transposiiton rotation
+    matrix so that +x < - > +z (instead of +x -> +z, +z -> -x)
     """
 
-    def __init__(self, nifti_path, do_transposition=False):
+    def __init__(
+            self,
+            nifti_path,
+            do_transposition=False,
+            posxposz=False):
 
         self._do_transposition = do_transposition
+        self._posxposz = posxposz
         self.nifti_path = pathlib.Path(nifti_path)
 
         if not self.nifti_path.is_file():
@@ -35,10 +43,16 @@ class NiftiArray(object):
         if not hasattr(self, '_rotation_matrix'):
             #self._rotation_matrix = self._get_rotation_matrix()
             if self.do_transposition:
-                self._rotation_matrix = np.array(
-                    [[0.0, 0.0, -1.0],
-                     [0.0, 1.0, 0.0],
-                     [1.0, 0.0, 0.0]])
+                if self._posxposz:
+                    self._rotation_matrix = np.array(
+                        [[0.0, 0.0, 1.0],
+                         [0.0, 1.0, 0.0],
+                         [1.0, 0.0, 0.0]])
+                else:
+                    self._rotation_matrix = np.array(
+                        [[0.0, 0.0, -1.0],
+                         [0.0, 1.0, 0.0],
+                         [1.0, 0.0, 0.0]])
             else:
                 self._rotation_matrix = np.array(
                                 [[1.0, 0.0, 0.0],
@@ -182,8 +196,13 @@ class NiftiArray(object):
 
 class NiftiArrayCollection(object):
 
-    def __init__(self, nifti_dir_path, do_transposition=False):
+    def __init__(
+            self,
+            nifti_dir_path,
+            do_transposition=False,
+            posxposz=False):
         self._do_transposition = do_transposition
+        self._posxposz = posxposz
         nifti_dir_path = pathlib.Path(nifti_dir_path)
         if not nifti_dir_path.is_dir():
             raise RuntimeError(
@@ -219,7 +238,8 @@ class NiftiArrayCollection(object):
         if not hasattr(self, '_scales'):
             k = list(self.channel_lookup.keys())[0]
             this = NiftiArray(self.channel_lookup[k],
-                              do_transposition=self.do_transposition)
+                              do_transposition=self.do_transposition,
+                              posxposz=self._posxposz)
             self._scales = this.scales
         return self._scales
 
@@ -229,7 +249,8 @@ class NiftiArrayCollection(object):
             self._shape = None
             for k in self.channel_lookup:
                 this = NiftiArray(self.channel_lookup[k],
-                                  do_transposition=self.do_transposition)
+                                  do_transposition=self.do_transposition,
+                                  posxposz=self._posxposz)
                 if self._shape is None:
                     self._shape = this.shape
                 else:
@@ -242,20 +263,23 @@ class NiftiArrayCollection(object):
         this_path = self.channel_lookup[channel]
         nifti_array = NiftiArray(
                         this_path,
-                        do_transposition=self.do_transposition)
+                        do_transposition=self.do_transposition,
+                        posxposz=self._posxposz)
 
         return nifti_array.get_channel(
                     channel=None)
 
 
-def get_nifti_obj(nifti_path, do_transposition=False):
+def get_nifti_obj(nifti_path, do_transposition=False, posxposz=False):
     nifti_path = pathlib.Path(nifti_path)
     if nifti_path.is_dir():
         return NiftiArrayCollection(nifti_path,
-                                    do_transposition=do_transposition)
+                                    do_transposition=do_transposition,
+                                    posxposz=posxposz)
     elif nifti_path.is_file():
         return NiftiArray(nifti_path,
-                          do_transposition=do_transposition)
+                          do_transposition=do_transposition,
+                          posxposz=posxposz)
 
     raise RuntimeError(
         f"{nifti_path} is neither file nor dir")

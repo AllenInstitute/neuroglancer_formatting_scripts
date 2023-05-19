@@ -168,7 +168,8 @@ def write_nii_to_group(
         downscale_cutoff=64,
         default_chunk=64,
         channel='red',
-        do_transposition=False):
+        do_transposition=False,
+        posxposz=False):
     """
     Write a single nifti file to an ome_zarr group
 
@@ -189,6 +190,10 @@ def write_nii_to_group(
     do_transposition:
         If True, transpose the NIFTI volumes so that
         (x, y, z) -> (z, y, x)
+
+    posxposz:
+         if True, will change the transposiiton rotation
+         matrix so that +x < - > +z (instead of +x -> +z, +z -> -x)
     """
 
     if group_name is not None:
@@ -212,7 +217,8 @@ def write_nii_to_group(
         this_path = pathlib.Path(this_path)
         nii_obj = get_nifti_obj(
             this_path,
-            do_transposition=do_transposition)
+            do_transposition=do_transposition,
+            posxposz=posxposz)
 
         nii_results = nii_obj.get_channel(
                         channel=channel)
