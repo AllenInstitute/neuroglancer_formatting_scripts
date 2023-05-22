@@ -22,7 +22,8 @@ def main():
     if not output_dir.exists():
         output_dir.mkdir()
 
-    input_list = [n for n in input_dir.iterdir() if n.is_dir()]
+    input_list = [n for n in input_dir.iterdir()
+                  if (n/'resampled_red.nii.gz').exists()]
 
     for dataset in input_list:
         root_group = create_root_group(output_dir/dataset.name)
