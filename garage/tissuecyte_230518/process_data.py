@@ -17,8 +17,8 @@ def main():
     parser.add_argument('--output_dir', type=str, default=None)
     args = parser.parse_args()
 
-    input_dir = pathlib.Path(input_dir)
-    outptut_dir = pathlib.Path(output_dir)
+    input_dir = pathlib.Path(args.input_dir)
+    output_dir = pathlib.Path(args.output_dir)
     if not output_dir.exists():
         output_dir.mkdir()
 
