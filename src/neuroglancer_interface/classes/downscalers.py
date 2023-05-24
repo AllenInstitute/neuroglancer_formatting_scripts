@@ -188,7 +188,7 @@ class XYZScaler(ScalerBase):
             base: Union[np.ndarray, dask.array.Array]
     ) -> List[Union[np.ndarray, dask.array.Array]]:
 
-        assert len(base.shape) == 3
+        #assert len(base.shape) == 3
 
         if isinstance(base, dask.array.Array):
             resize_func = dask_resize
@@ -202,9 +202,11 @@ class XYZScaler(ScalerBase):
 
         results = dict()
         for nxyz in list_of_nx_ny:
-            img = resize_func(base[:, :, :],
-                              nxyz,
-                              preserve_range=True)
+            img = np.zeros((3, nxyz[0], nxyz[1], nxyz[2]), dtype=base.dtype)
+            for cc in range(3):
+                img[cc, :, :, :] = resize_func(base[cc, :, :, :],
+                                  nxyz,
+                                  preserve_range=True)
             results[nxyz] = img
 
         output = [base]
@@ -239,9 +241,9 @@ class XYZScaler(ScalerBase):
                 base_shape = base.shape
             else:
                 base_shape = base.shape
-            nx = base_shape[0]
-            ny = base_shape[1]
-            nz = base_shape[2]
+            nx = base_shape[1]
+            ny = base_shape[2]
+            nz = base_shape[3]
 
             nx_factor_list = get_prime_factors(nx)
             ny_factor_list = get_prime_factors(ny)

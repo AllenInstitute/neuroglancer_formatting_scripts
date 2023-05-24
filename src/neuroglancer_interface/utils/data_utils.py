@@ -327,7 +327,7 @@ def write_array_to_group(
     shape = arr.shape
 
     coord_transform = [[
-        {'scale': [x_scale,
+        {'scale': [1, x_scale,
                    y_scale,
                    z_scale],
          'type': 'scale'}]]
@@ -341,15 +341,17 @@ def write_array_to_group(
         list_of_nx_ny = scaler.create_empty_pyramid(base=arr)
 
         for nxny in list_of_nx_ny:
-            this_coord = [{'scale': [x_scale*arr.shape[0]/nxny[0],
-                                     y_scale*arr.shape[1]/nxny[1],
-                                     z_scale*arr.shape[2]/nxny[2]],
+            this_coord = [{'scale': [1, x_scale*arr.shape[1]/nxny[0],
+                                     y_scale*arr.shape[2]/nxny[1],
+                                     z_scale*arr.shape[3]/nxny[2]],
                            'type': 'scale'}]
             coord_transform.append(this_coord)
     else:
         scaler = None
 
     axes = [
+        {"name": "c^",
+         "type": "channel"},
         {"name": "x",
          "type": "space",
          "unit": "millimeter"},
@@ -360,9 +362,9 @@ def write_array_to_group(
          "type": "space",
          "unit": "millimeter"}]
 
-    chunk_x = max(1, min(shape[0]//4, default_chunk))
-    chunk_y = max(1, min(shape[1]//4, default_chunk))
-    chunk_z = max(1, min(shape[2]//4, default_chunk))
+    chunk_x = max(1, min(shape[1]//4, default_chunk))
+    chunk_y = max(1, min(shape[2]//4, default_chunk))
+    chunk_z = max(1, min(shape[3]//4, default_chunk))
 
     these_storage_opts = {'chunks': (chunk_x, chunk_y, chunk_z)}
     if storage_options is not None:
