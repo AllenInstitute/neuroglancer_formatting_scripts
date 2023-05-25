@@ -89,6 +89,26 @@ def  process_developing_mouse(
 
         print_status("Done formatting avg template image")
 
+    if "boundary" in config_data:
+        print_status("Formatting boundary image")
+        template_dir = output_dir/"boundary"
+
+        template_group = create_root_group(
+           output_dir=template_dir)
+
+        write_nii_to_group(
+            root_group=template_group,
+            group_name=None,
+            nii_file_path=config_data['boundary']['template'],
+            downscale_cutoff=downscale_cutoff,
+            default_chunk=128,
+            channel='red',
+            do_transposition=transpose_ccf)
+
+        print_status("Done formatting avg template image")
+
+
+
     if "cell_types" in config_data:
         print_status("Formatting mfish data")
         if n_test is not None:
