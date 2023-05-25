@@ -198,7 +198,8 @@ def do_chunking(
 
 def _get_array_from_sitk(file_path, do_transposition=False):
     nii_obj = get_nifti_obj(file_path,
-                            do_transposition=do_transposition)
+                            do_transposition=do_transposition,
+                            posxposz=True)
     sitk_arr = nii_obj.get_channel('red')['channel']
     sitk_arr = np.round(sitk_arr).astype(np.uint16)
     return sitk_arr
@@ -300,7 +301,8 @@ def get_scale_metadata(
     """
     segmentation_path  = pathlib.Path(segmentation_path)
     nii_obj = get_nifti_obj(segmentation_path,
-                            do_transposition=do_transposition)
+                            do_transposition=do_transposition,
+                            posxposz=True)
     scale_mm = nii_obj.scales
     img_shape = nii_obj.shape
 
@@ -348,7 +350,8 @@ def get_scale_metadata_with_downsampling(
     """
     segmentation_path  = pathlib.Path(segmentation_path)
     nii_obj = get_nifti_obj(segmentation_path,
-                            do_transposition=do_transposition)
+                            do_transposition=do_transposition,
+                            posxposz=True)
     scale_mm = nii_obj.scales
     img_shape = nii_obj.shape
 

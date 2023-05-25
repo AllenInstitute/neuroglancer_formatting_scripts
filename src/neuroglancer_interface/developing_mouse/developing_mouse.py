@@ -83,9 +83,10 @@ def  process_developing_mouse(
             group_name=None,
             nii_file_path=config_data['template']['template'],
             downscale_cutoff=downscale_cutoff,
-            default_chunk=128,
+            default_chunk=64,
             channel='red',
-            do_transposition=transpose_ccf)
+            do_transposition=transpose_ccf,
+            posxposz=True)
 
         print_status("Done formatting avg template image")
 
@@ -101,9 +102,10 @@ def  process_developing_mouse(
             group_name=None,
             nii_file_path=config_data['boundary']['template'],
             downscale_cutoff=downscale_cutoff,
-            default_chunk=128,
+            default_chunk=64,
             channel='red',
-            do_transposition=transpose_ccf)
+            do_transposition=transpose_ccf,
+            posxposz=True)
 
         print_status("Done formatting avg template image")
 
@@ -123,7 +125,7 @@ def  process_developing_mouse(
             root_group=cell_types_group,
             n_processors=n_processors,
             downscale_cutoff=downscale_cutoff,
-            default_chunk=128,
+            default_chunk=64,
             do_transposition=False)
 
         print_status("Done formatting cell types data")
