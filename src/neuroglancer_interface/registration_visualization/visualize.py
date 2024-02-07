@@ -100,7 +100,8 @@ def convert_registration_data(
                 downscale_cutoff=64,
                 default_chunk=128,
                 channel='red',
-                do_transposition=True)     
+                do_transposition=True,
+                posxposz=True)     
 
             datasets_created['template'].append(
                 {'tag': template_data['tag'],
