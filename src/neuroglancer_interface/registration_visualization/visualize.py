@@ -189,11 +189,11 @@ def create_url(
 def run(
     config_path,
     tmp_dir,
+    bucket_name='neuroglancer-vis-prototype',
     bucket_prefix='junkURL',
     output_path='registration_test.html',
     n_processors=6):
 
-    bucket_name = 'neuroglancer-vis-prototype'
     now = datetime.datetime.now()
     suffix = f"{now.year}-{now.month}-{now.day}-{now.hour}-{now.minute}"
     bucket_prefix = f"registration-vis/{bucket_prefix}/{suffix}"
@@ -227,6 +227,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_path', type=str, default=None,
         help='path to the JSONized config')
+    parser.add_argument('--bucket_name', type=str,
+        default='neuroglancer-vis-prototype',
+        help=('name of S3 bucket to which to upload the OME-zarr data '
+              '(Default: neuroglancer-vis-prototype)'))
     parser.add_argument('--bucket_prefix', type=str, default=None,
         help='human-readable name for director in bucket where data will be '
         'loaded')
@@ -248,6 +252,7 @@ def main():
     try:
         run(
             config_path=args.config_path,
+            bucket_name=args.bucket_name,
             bucket_prefix=args.bucket_prefix,
             output_path=args.output_path,
             tmp_dir=tmp_dir,
